@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ForgeBoard Beginner — Wireframe Prototype</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --black: #000000;
+    --white: #FFFFFF;
+    --amber: #FFA600;
+    --gray-dark: #111111;
+    --gray-mid: #333333;
+    --gray-light: #888888;
+    --gray-dim: #555;
+    --cream: #ECE9DF;
+    --ink: #1F1E1C;
+  }
+
+  html { scroll-behavior: auto; }
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Instrument Sans', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* ---- NAV ---- */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 40px;
+    backdrop-filter: blur(12px);
+    background: rgba(0,0,0,0.55);
+    border-bottom: 1px solid rgba(255,166,0,0.08);
+  }
+  .logo { font-family:'Instrument Sans',sans-serif; font-weight: 800; font-size: 18px; letter-spacing: 0.5px; text-transform: uppercase; text-decoration: none; color: var(--white); }
+  .logo span { color: var(--amber); }
+  .logo-icon { vertical-align: middle; margin-right: 8px; position: relative; top: -1px; }
+  .logo small { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--gray-light); margin-left: 12px; font-weight: 400; text-transform: uppercase; }
+
+  .nav-main {
+    display: flex; gap: 28px; list-style: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #c8c8c8;
+  }
+  .nav-main a { color: inherit; text-decoration: none; transition: color .2s; padding-bottom: 2px; border-bottom: 1px solid transparent; }
+  .nav-main a:hover { color: var(--amber); }
+  .nav-main a.active { color: var(--white); border-bottom-color: var(--amber); }
+
+  .nav-cta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--black); background: var(--amber);
+    padding: 10px 20px; border-radius: 999px;
+    text-decoration: none; font-weight: 700;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,166,0,0.25); }
+
+  /* Small "PROTO" banner so user can tell this apart from the production page */
+  .proto-tag {
+    position: fixed; top: 14px; right: 180px; z-index: 60;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--amber);
+    border: 1px solid rgba(255,166,0,0.35);
+    padding: 4px 10px; border-radius: 4px;
+    background: rgba(255,166,0,0.05);
+    pointer-events: none;
+  }
+
+  /* ---- 3D Canvas ---- */
+  #canvas-container {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100vh; z-index: 1;
+  }
+  #three-canvas { width: 100%; height: 100%; display: block; }
+
+  /* ---- Loader ---- */
+  #loader {
+    position: fixed; inset: 0; z-index: 1000;
+    background: var(--black);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 0.8s ease, visibility 0.8s ease;
+  }
+  #loader.hidden { opacity: 0; visibility: hidden; }
+  #loader .progress-bar {
+    width: 200px; height: 2px; background: var(--gray-mid);
+    border-radius: 1px; overflow: hidden; margin-top: 24px;
+  }
+  #loader .progress-fill {
+    height: 100%; background: var(--amber); width: 0%;
+    transition: width 0.3s ease;
+  }
+  #loader p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--gray-light); margin-top: 16px;
+  }
+  #loader .brand {
+    font-family: 'Instrument Sans', sans-serif;
+    font-weight: 800; font-size: 24px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  #loader .brand span { color: var(--amber); }
+
+  /* ---- Scroll Content ---- */
+  .scroll-content {
+    position: relative; z-index: 10; pointer-events: none;
+  }
+  .scroll-content > * { pointer-events: auto; }
+
+  .section {
+    height: 100vh;
+    display: flex; align-items: center;
+    padding: 0 8vw;
+    position: relative;
+  }
+
+  .section-text {
+    max-width: 520px;
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  .section-text.right { margin-left: auto; }
+  .section-text.center { margin: 0 auto; text-align: center; }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::before { content: ''; width: 28px; height: 1px; background: var(--amber); }
+  .section-text.center .section-label { justify-content: center; }
+
+  .section-title {
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: clamp(30px, 4.5vw, 54px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -1.5px;
+    margin-bottom: 22px;
+  }
+  .section-title .amber { color: var(--amber); }
+
+  .section-desc {
+    font-size: 16px;
+    line-height: 1.7;
+    color: #bfbfbf;
+    font-weight: 400;
+  }
+
+  /* ---- Hero ---- */
+  .hero-section {
+    height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 0 8vw;
+  }
+
+  /* ---- Final CTA ---- */
+  .cta-row {
+    display: flex; gap: 14px; margin-top: 32px;
+    justify-content: center;
+  }
+  .btn-amber {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--black); background: var(--amber);
+    padding: 14px 26px; border-radius: 999px;
+    text-decoration: none; font-weight: 700;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .btn-amber:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,166,0,0.25); }
+  .btn-ghost {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--white);
+    padding: 14px 26px; border-radius: 999px;
+    text-decoration: none; font-weight: 600;
+    border: 1px solid rgba(255,166,0,0.35);
+    transition: border-color .2s, color .2s, background .2s;
+  }
+  .btn-ghost:hover { border-color: var(--amber); color: var(--amber); background: rgba(255,166,0,0.05); }
+
+  /* ---- Scroll hint ---- */
+  .scroll-hint {
+    position: fixed;
+    bottom: 32px; left: 50%; transform: translateX(-50%);
+    z-index: 20;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    opacity: 0; transition: opacity 0.5s ease;
+  }
+  .scroll-hint.visible { opacity: 1; }
+  .scroll-hint span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--gray-light);
+  }
+  .scroll-line {
+    width: 1px; height: 40px;
+    background: linear-gradient(to bottom, var(--amber), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+  @keyframes scrollPulse {
+    0%, 100% { opacity: 0.3; transform: scaleY(0.6); }
+    50% { opacity: 1; transform: scaleY(1); }
+  }
+
+  /* ---- Technical grid overlay — denser + more visible than production ---- */
+  /* Cranks from 0.025 → 0.06, and color shifts to amber to reinforce the
+     "datasheet / schematic" aesthetic instead of generic graph paper. */
+  .grid-overlay {
+    position: fixed; inset: 0; z-index: 2;
+    pointer-events: none;
+    opacity: 0.09;
+    background-image:
+      linear-gradient(rgba(255,166,0,0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,166,0,0.5) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* ---- Corner marks (datasheet fiducials) ---- */
+  .corner-marks {
+    position: fixed; inset: 100px 20px 20px 20px; z-index: 3; pointer-events: none;
+  }
+  .corner-marks::before, .corner-marks::after,
+  .corner-marks span::before, .corner-marks span::after {
+    content: ''; position: absolute; width: 12px; height: 12px;
+    border-color: rgba(255,166,0,0.55); border-style: solid; border-width: 0;
+  }
+  .corner-marks::before { top: 0; left: 0; border-top-width: 1px; border-left-width: 1px; }
+  .corner-marks::after  { top: 0; right: 0; border-top-width: 1px; border-right-width: 1px; }
+  .corner-marks span::before { bottom: 0; left: 0; border-bottom-width: 1px; border-left-width: 1px; }
+  .corner-marks span::after  { bottom: 0; right: 0; border-bottom-width: 1px; border-right-width: 1px; }
+
+  /* ---- ANNOTATION CALLOUTS ---- */
+  #callout-svg, #callouts {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    opacity: 0;
+  }
+  #callout-svg { z-index: 14; }
+  #callouts    { z-index: 15; }
+
+  .callout {
+    position: absolute;
+    color: #e8e8e8;
+    font-family: 'Instrument Sans', sans-serif;
+    white-space: nowrap;
+    line-height: 1.15;
+  }
+
+  .callout-title {
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.1px;
+    color: #ffffff;
+  }
+  .callout-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: #FFA600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 4px;
+    line-height: 1.3;
+  }
+
+  .explode-title {
+    position: fixed;
+    top: 12%; left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    opacity: 0;
+    z-index: 13;
+    pointer-events: none;
+  }
+  .explode-title .section-label { display: inline-block; }
+  .explode-title .section-label::before { display: none; }
+  .explode-title .section-title { font-size: clamp(28px, 3.5vw, 40px); margin-top: 6px; }
+
+  @media (max-width: 720px) {
+    nav { padding: 14px 20px; }
+    .nav-main { display: none; }
+    .section { padding: 0 6vw; }
+    #callouts { display: none; }
+    .corner-marks { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="brand">
+    <svg viewBox="0 0 100 110" width="48" height="53" fill="none" style="display:block;margin:0 auto 16px;"><circle cx="50" cy="50" r="36" stroke="#FFA600" stroke-width="8"/><path d="M 5 105 C 22 80 62 22 90 8" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="90" cy="8" r="3.5" stroke="#fff" stroke-width="1.5"/></svg>
+    <span>FORGE</span> BOARD
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <p>Loading wireframe · Beginner</p>
+</div>
+
+<!-- Nav -->
+<nav>
+  <a href="hero-b-arduino.html" class="logo"><svg class="logo-icon" viewBox="0 0 100 110" width="22" height="24" fill="none"><circle cx="50" cy="50" r="36" stroke="#FFA600" stroke-width="8"/><path d="M 5 105 C 22 80 62 22 90 8" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="90" cy="8" r="3.5" stroke="#fff" stroke-width="1.5"/></svg><span>FORGE</span> BOARD <small>Beginner · Wireframe</small></a>
+  <ul class="nav-main">
+    <li><a href="#" class="active">Overview</a></li>
+    <li><a href="#sec-final">Tech Specs</a></li>
+    <li><a href="hero-b-arduino.html">All Products</a></li>
+  </ul>
+  <a href="#" class="nav-cta">Buy</a>
+</nav>
+
+<div class="proto-tag">— Prototype · B3 wireframe</div>
+
+<!-- 3D Canvas -->
+<div id="canvas-container">
+  <canvas id="three-canvas"></canvas>
+</div>
+
+<!-- Grid overlay (datasheet aesthetic) -->
+<div class="grid-overlay"></div>
+
+<!-- Datasheet-style corner marks -->
+<div class="corner-marks"><span></span></div>
+
+<!-- Scroll hint -->
+<div class="scroll-hint" id="scroll-hint">
+  <span>Scroll to explore</span>
+  <div class="scroll-line"></div>
+</div>
+
+<!-- Scroll Content -->
+<div class="scroll-content">
+
+  <div class="section" id="sec-hero">
+    <div class="section-text" id="text-hero">
+      <p class="section-label">Processor</p>
+      <h2 class="section-title">Dual-core. <span class="amber">Vector-accelerated.</span></h2>
+      <p class="section-desc">ESP32-S3 at 240&nbsp;MHz with built-in vector instructions for edge AI, signal processing, and real-time control. Commercial IoT silicon — in your hand.</p>
+    </div>
+  </div>
+
+  <div class="section" id="sec-topdown">
+    <div class="section-text right" id="text-topdown">
+      <p class="section-label">Layout</p>
+      <h2 class="section-title">32 GPIO. <span class="amber">USB-C.</span><br>All accessible.</h2>
+      <p class="section-desc">Breadboard-friendly castellated headers, native USB-C 2.0, RST + BOOT buttons, addressable RGB + status LED. Every signal you need on 0.1″ pitch.</p>
+    </div>
+  </div>
+
+  <div class="section" id="sec-topdown2">
+    <div class="section-text right" id="text-topdown2">
+      <p class="section-label">Protected</p>
+      <h2 class="section-title">Built to <span class="amber">survive.</span></h2>
+      <p class="section-desc">Dual voltage regulator, ESD protection on every exposed pin, reverse-polarity protection on power rails. Plug in anything — the board survives, your project survives.</p>
+    </div>
+  </div>
+
+  <div class="section" id="sec-final">
+    <div class="section-text center" id="text-final">
+      <p class="section-label">Ready to forge?</p>
+      <h2 class="section-title">Your first blink,<br><span class="amber">faster.</span></h2>
+      <div class="cta-row">
+        <a href="#" class="btn-amber">Buy Beginner &rarr;</a>
+        <a href="#" class="btn-ghost">View Docs</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="sec-exploded">
+    <div class="explode-title" id="explode-title">
+      <p class="section-label">Inside the Forge</p>
+      <h2 class="section-title">What's <span class="amber">inside.</span></h2>
+    </div>
+  </div>
+
+  <svg id="callout-svg" aria-hidden="true"></svg>
+  <div id="callouts" aria-hidden="true"></div>
+
+</div>
+
+<script>
+// ============================================
+// FORCE PAGE TO START AT TOP
+// ============================================
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+window.scrollTo(0, 0);
+
+// ============================================
+// THREE.JS SCENE — STRIPPED FOR WIREFRAME AESTHETIC
+// ============================================
+// No PMREM env, no bloom, no shadows, no PBR materials. The entire visual
+// language is amber EdgesGeometry lines on black — occluded by flat-black
+// MeshBasicMaterial fills so front geometry hides edges behind it. This is
+// cheap to render (no lighting pass) and kills every "generic AI CAD" tell.
+gsap.registerPlugin(ScrollTrigger);
+
+const canvas = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x000000, 1);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 6, 0);
+
+// ============================================
+// LOAD GLB
+// ============================================
+const loader = new THREE.GLTFLoader();
+let model = null;
+const modelGroup = new THREE.Group();
+scene.add(modelGroup);
+
+const progressFill = document.getElementById('progress-fill');
+const loaderEl = document.getElementById('loader');
+
+loader.load(
+  'forgeboard_beginner_v2.glb',
+  function(gltf) {
+    try {
+    model = gltf.scene;
+    // Same pose logic as production page — see comments there.
+    model.rotation.set(-Math.PI / 2, 0, 0);
+
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const MODEL_SCALE = 2.3 / maxDim;
+    model.scale.setScalar(MODEL_SCALE);
+    window.__modelScale = MODEL_SCALE;
+
+    const box2 = new THREE.Box3().setFromObject(model);
+    const center2 = box2.getCenter(new THREE.Vector3());
+    model.position.sub(center2);
+
+    // Classification for the exploded-part-lift animation.
+    const PART_GROUPS = {
+      pcb: [], processor: [], usb_c_port: [], pin_headers: [],
+      buttons: [], leds: [], rgb_led: [],
+      caps: [], tantalum_caps: [], resistors: [], diodes: [],
+      voltage_reg: [], fuse: [], smd: []
+    };
+    window.PART_GROUPS = PART_GROUPS;
+
+    const MAT_TO_KEY = {
+      fb_pcb:          'pcb',
+      fb_shield:       'processor',
+      fb_usb_c:        'usb_c_port',
+      fb_pin_header:   'pin_headers',
+      fb_button:       'buttons',
+      fb_led:          'leds',
+      fb_rgb_led:      'rgb_led',
+      fb_cap:          'caps',
+      fb_cap_tantalum: 'tantalum_caps',
+      fb_resistor:     'resistors',
+      fb_diode:        'diodes',
+      fb_ic_small:     'voltage_reg',
+      fb_fuse:         'fuse',
+    };
+
+    // ---- OCCLUSION FILL — pure black MeshBasic so faces hide back edges ----
+    // polygonOffset pushes fills slightly back so the edge lines sit crisply
+    // on top without z-fighting. Without this the amber lines shimmer at
+    // grazing angles.
+    const occlusionMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1,
+    });
+
+    // ---- EDGE LINE MATERIALS — plain LineBasicMaterial (1px hairlines) ----
+    // Using LineBasicMaterial keeps the pipeline simple + reliable. WebGL caps
+    // linewidth at 1px on most platforms; that's exactly the hairline density
+    // we want for "technical drawing". Amber bg-color + antialiasing give the
+    // perceived line weight without any ShaderMaterial complexity.
+    const edgeMat = new THREE.LineBasicMaterial({
+      color: 0xffa600,
+      transparent: true,
+      opacity: 0.95,
+      depthWrite: false,
+      depthTest: true,
+    });
+
+    // Pin headers are dense — drop their opacity so they read as an array
+    // instead of a solid amber block.
+    const pinEdgeMat = new THREE.LineBasicMaterial({
+      color: 0xffa600,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+      depthTest: true,
+    });
+
+    model.traverse(function(child) {
+      if (!child.isMesh) return;
+
+      const matName = (child.material && child.material.name) || '';
+      const raw = child.name || '';
+      const normalized = raw.replace(/\(\d+,\d+,\d+\)/g, '').replace(/_+$/, '').trim();
+      const key = MAT_TO_KEY[matName] || (normalized in PART_GROUPS ? normalized : 'smd');
+
+      child.userData.partType = key;
+      child.userData.origX = child.position.x;
+      child.userData.origY = child.position.y;
+      child.userData.origZ = child.position.z;
+      PART_GROUPS[key].push(child);
+
+      // Replace PBR with flat-black occlusion fill. The amber edges do the
+      // entire visual job; the fill just prevents back-face edges from
+      // bleeding through.
+      child.material = occlusionMat;
+
+      // Amber edge outline. mergeVertices collapses duplicated verts so
+      // EdgesGeometry's angle threshold actually kicks in (STEP tessellators
+      // often emit split verts that keep every triangle edge "separate").
+      try {
+        const merged = (THREE.BufferGeometryUtils && THREE.BufferGeometryUtils.mergeVertices)
+          ? THREE.BufferGeometryUtils.mergeVertices(child.geometry, 1e-4)
+          : child.geometry;
+        const edges = new THREE.EdgesGeometry(merged, 30);    // tighter angle = more edges show
+        const thisMat = (key === 'pin_headers') ? pinEdgeMat : edgeMat;
+        const lines = new THREE.LineSegments(edges, thisMat);
+        lines.userData.isOutline = true;
+        child.add(lines);
+      } catch (err) {
+        console.warn('[wireframe] edge gen failed for', child.name, err);
+      }
+    });
+
+    modelGroup.add(model);
+
+    setTimeout(() => {
+      loaderEl.classList.add('hidden');
+      initAnimations();
+    }, 400);
+    } catch (err) {
+      console.error('[wireframe] init failed inside GLB callback:', err);
+      loaderEl.innerHTML = '<p style="font-family:JetBrains Mono,monospace;color:#FFA600;font-size:12px;padding:40px;text-align:center;max-width:600px">Wireframe init crashed — open DevTools console. Error: ' + (err && err.message) + '</p>';
+    }
+  },
+  function(xhr) {
+    if (xhr.total) {
+      const pct = (xhr.loaded / xhr.total) * 100;
+      progressFill.style.width = pct + '%';
+    }
+  },
+  function(error) {
+    console.error('GLB load failed:', error);
+    // Fallback placeholder so the scroll UI is still testable.
+    const geo = new THREE.BoxGeometry(3, 0.25, 1.7);
+    const edges = new THREE.EdgesGeometry(geo);
+    modelGroup.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffa600 })));
+    loaderEl.classList.add('hidden');
+    initAnimations();
+  }
+);
+
+// ============================================
+// SCROLL-DRIVEN CAMERA — same timeline as production page.
+// ============================================
+const camProxy = { angle: Math.PI * 0.30, height: 2.3, distance: 3.0, lookY: 0, upZ: 0 };
+
+function initAnimations() {
+  document.getElementById('scroll-hint').classList.add('visible');
+
+  gsap.to('#text-hero', { opacity: 1, y: 0, duration: 1.0, delay: 0.25, ease: 'power3.out' });
+
+  const masterTL = gsap.timeline({
+    scrollTrigger: {
+      trigger: '.scroll-content',
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 1,
+    }
+  });
+
+  const T1_CAM = { angle: Math.PI * 0.5, height: 4.8, distance: 0.001, upZ: -1 };
+  const T1_POS = { x: -1.55, z: 0 };
+  const T1_SCL = { x: 0.70, y: 0.70, z: 0.70 };
+  const T1_ROT = { y: 0 };
+
+  masterTL.to(camProxy,           { ...T1_CAM, ease: 'none' }, 0);
+  masterTL.to(modelGroup.position,{ ...T1_POS, ease: 'none' }, 0);
+  masterTL.to(modelGroup.scale,   { ...T1_SCL, ease: 'none' }, 0);
+  masterTL.to(modelGroup.rotation,{ ...T1_ROT, ease: 'none' }, 0);
+
+  masterTL.to(camProxy,           { ...T1_CAM, ease: 'none' }, 1);
+  masterTL.to(modelGroup.position,{ ...T1_POS, ease: 'none' }, 1);
+  masterTL.to(modelGroup.scale,   { ...T1_SCL, ease: 'none' }, 1);
+  masterTL.to(modelGroup.rotation,{ ...T1_ROT, ease: 'none' }, 1);
+
+  masterTL.to(camProxy,           { angle: Math.PI * 0.30, height: 2.3, distance: 3.0, upZ: 0, ease: 'none' }, 2);
+  masterTL.to(modelGroup.position,{ x: 0, z: 0, ease: 'none' }, 2);
+  masterTL.to(modelGroup.scale,   { x: 1, y: 1, z: 1, ease: 'none' }, 2);
+  masterTL.to(modelGroup.rotation,{ y: 0, ease: 'none' }, 2);
+
+  masterTL.to(camProxy,         { angle: Math.PI * 0.30, height: 2.3, distance: 3.6, upZ: 0, ease: 'none' }, 3);
+  masterTL.to(modelGroup.scale, { x: 0.85, y: 0.85, z: 0.85, ease: 'none' }, 3);
+
+  const S = window.__modelScale || 1;
+  const lift = (group, worldUp, worldForward = 0) => {
+    if (!group || !group.length) return;
+    const localUp      = worldUp / S;
+    const localForward = worldForward / S;
+    group.forEach(m =>
+      masterTL.to(m.position, {
+        z: m.userData.origZ + localUp,
+        y: m.userData.origY - localForward,
+        ease: 'none',
+      }, 3)
+    );
+  };
+  lift(window.PART_GROUPS.processor,     0.45);
+  lift(window.PART_GROUPS.usb_c_port,    0.30, 0.15);
+  lift(window.PART_GROUPS.rgb_led,       0.28);
+  lift(window.PART_GROUPS.buttons,       0.25);
+  lift(window.PART_GROUPS.pin_headers,  -0.25);
+
+  gsap.timeline({ scrollTrigger: { trigger: '#sec-hero', start: 'top top', end: 'bottom top', scrub: 1 } })
+    .to('#text-hero', { opacity: 0, y: -30, ease: 'none' }, 0)
+    .to('#scroll-hint', { opacity: 0, ease: 'none' }, 0);
+
+  const fadeIn = (sel, trigger) => gsap.timeline({
+    scrollTrigger: { trigger, start: 'top 70%', end: 'top 30%', scrub: 1 }
+  }).to(sel, { opacity: 1, y: 0, ease: 'none' });
+
+  const fadeOut = (sel, trigger) => gsap.timeline({
+    scrollTrigger: { trigger, start: 'bottom 70%', end: 'bottom 30%', scrub: 1 }
+  }).to(sel, { opacity: 0, y: -30, ease: 'none' });
+
+  fadeIn('#text-topdown',  '#sec-topdown');  fadeOut('#text-topdown',  '#sec-topdown');
+  fadeIn('#text-topdown2', '#sec-topdown2'); fadeOut('#text-topdown2', '#sec-topdown2');
+  fadeIn('#text-final',    '#sec-final');    fadeOut('#text-final',    '#sec-final');
+
+  gsap.timeline({
+    scrollTrigger: { trigger: '#sec-exploded', start: 'top 70%', end: 'top 30%', scrub: 1 }
+  }).to('#callouts, #callout-svg, #explode-title', { opacity: 1, ease: 'none' });
+}
+
+// ============================================
+// CALLOUTS — identical wiring to production
+// ============================================
+const CALLOUTS = [
+  { part: 'processor',   offset: { x: 0, y: 0.2, z:  0.0 }, side: 'left',  labelX: 0.18, labelY: 0.28, title: 'ESP32-S3',  sub: 'Dual Core · 240 MHz · Wi-Fi + BLE 5.0' },
+  { part: 'usb_c_port',  offset: { x: 0, y: 0.1, z:  0.0 }, side: 'left',  labelX: 0.18, labelY: 0.62, title: 'USB-C 2.0', sub: 'Native · Power + Data · Protected' },
+  { part: 'rgb_led',     offset: { x: 0, y: 0.1, z:  0.0 }, side: 'right', labelX: 0.82, labelY: 0.28, title: 'RGB LED',   sub: 'WS2812B · 16M colours' },
+  { part: 'buttons',     offset: { x: 0, y: 0.1, z:  0.0 }, side: 'right', labelX: 0.82, labelY: 0.50, title: 'RST + BOOT',sub: 'Tactile switches' },
+  { part: 'pin_headers', offset: { x: 0, y: 0.0, z:  0.0 }, side: 'right', labelX: 0.82, labelY: 0.72, title: '32 GPIO',   sub: 'Breadboard-ready · 0.1" pitch' },
+];
+
+(function buildCallouts() {
+  const host = document.getElementById('callouts');
+  const svg  = document.getElementById('callout-svg');
+  if (!host || !svg) return;
+
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('height', '100%');
+
+  CALLOUTS.forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = `callout ${c.side}`;
+    el.id = `co-${i}`;
+    el.innerHTML = `
+      <div class="callout-title">${c.title}</div>
+      ${c.sub ? `<div class="callout-sub">${c.sub}</div>` : ''}
+    `;
+    host.appendChild(el);
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('id', `cl-${i}`);
+    line.setAttribute('stroke', '#ffa600');
+    line.setAttribute('stroke-width', '0.75');
+    line.setAttribute('opacity', '0.85');
+    svg.appendChild(line);
+
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('id', `cd-${i}`);
+    dot.setAttribute('r', '3');
+    dot.setAttribute('fill', '#ffa600');
+    svg.appendChild(dot);
+
+    const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    ring.setAttribute('id', `cr-${i}`);
+    ring.setAttribute('r', '8');
+    ring.setAttribute('fill', 'none');
+    ring.setAttribute('stroke', '#ffa600');
+    ring.setAttribute('stroke-width', '0.6');
+    ring.setAttribute('opacity', '0.55');
+    svg.appendChild(ring);
+  });
+})();
+
+const _coVec = new THREE.Vector3();
+function updateCallouts() {
+  const groups = window.PART_GROUPS;
+  if (!groups) return;
+  const W = window.innerWidth, H = window.innerHeight;
+  CALLOUTS.forEach((c, i) => {
+    const meshes = groups[c.part];
+    if (!meshes || !meshes.length) return;
+    meshes[0].getWorldPosition(_coVec);
+    _coVec.x += c.offset.x;
+    _coVec.y += c.offset.y;
+    _coVec.z += c.offset.z;
+    _coVec.project(camera);
+    const tx = (_coVec.x * 0.5 + 0.5) * W;
+    const ty = (-_coVec.y * 0.5 + 0.5) * H;
+    const lx = c.labelX * W;
+    const ly = c.labelY * H;
+    const el = document.getElementById(`co-${i}`);
+    if (el) {
+      el.style.left = lx + 'px';
+      el.style.top  = ly + 'px';
+      el.style.transform = c.side === 'left'
+        ? 'translate(0, -50%)'
+        : 'translate(-100%, -50%)';
+    }
+    const innerX = c.side === 'left'
+      ? (el ? el.getBoundingClientRect().right : lx + 10)
+      : (el ? el.getBoundingClientRect().left  : lx - 10);
+    const line = document.getElementById(`cl-${i}`);
+    const dot  = document.getElementById(`cd-${i}`);
+    const ring = document.getElementById(`cr-${i}`);
+    if (line) {
+      line.setAttribute('x1', innerX + (c.side === 'left' ? 10 : -10));
+      line.setAttribute('y1', ly);
+      line.setAttribute('x2', tx);
+      line.setAttribute('y2', ty);
+    }
+    if (dot)  { dot.setAttribute('cx', tx);  dot.setAttribute('cy', ty); }
+    if (ring) { ring.setAttribute('cx', tx); ring.setAttribute('cy', ty); }
+  });
+}
+
+// ============================================
+// RENDER + RESIZE — no bloom, direct renderer.render()
+// ============================================
+function animate() {
+  requestAnimationFrame(animate);
+  camera.position.x = Math.cos(camProxy.angle) * camProxy.distance;
+  camera.position.z = Math.sin(camProxy.angle) * camProxy.distance;
+  camera.position.y = camProxy.height;
+  const uz = camProxy.upZ || 0;
+  const uy = Math.sqrt(Math.max(0, 1 - uz * uz));
+  camera.up.set(0, uy, uz);
+  updateCallouts();
+  camera.lookAt(0, camProxy.lookY, 0);
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+</script>
+</body>
+</html>

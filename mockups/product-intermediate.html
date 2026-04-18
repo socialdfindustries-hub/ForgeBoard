@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ForgeBoard Intermediate — Overview</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --black: #000000;
+    --white: #FFFFFF;
+    --amber: #FFA600;
+    --gray-dark: #111111;
+    --gray-mid: #333333;
+    --gray-light: #888888;
+    --gray-dim: #555;
+    --cream: #ECE9DF;
+    --ink: #1F1E1C;
+  }
+
+  html { scroll-behavior: auto; }
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Instrument Sans', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* ---- NAV ---- */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 40px;
+    backdrop-filter: blur(12px);
+    background: rgba(0,0,0,0.55);
+    border-bottom: 1px solid rgba(255,166,0,0.08);
+  }
+  .logo { font-family:'Instrument Sans',sans-serif; font-weight: 800; font-size: 18px; letter-spacing: 0.5px; text-transform: uppercase; text-decoration: none; color: var(--white); }
+  .logo span { color: var(--amber); }
+  .logo-icon { vertical-align: middle; margin-right: 8px; position: relative; top: -1px; }
+  .logo small { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--gray-light); margin-left: 12px; font-weight: 400; text-transform: uppercase; }
+
+  .nav-main {
+    display: flex; gap: 28px; list-style: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #c8c8c8;
+  }
+  .nav-main a { color: inherit; text-decoration: none; transition: color .2s; padding-bottom: 2px; border-bottom: 1px solid transparent; }
+  .nav-main a:hover { color: var(--amber); }
+  .nav-main a.active { color: var(--white); border-bottom-color: var(--amber); }
+
+  .nav-cta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--black); background: var(--amber);
+    padding: 10px 20px; border-radius: 999px;
+    text-decoration: none; font-weight: 700;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,166,0,0.25); }
+
+  /* ---- 3D Canvas ---- */
+  #canvas-container {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100vh; z-index: 1;
+  }
+  #three-canvas { width: 100%; height: 100%; display: block; }
+
+  /* ---- Loader ---- */
+  #loader {
+    position: fixed; inset: 0; z-index: 1000;
+    background: var(--black);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 0.8s ease, visibility 0.8s ease;
+  }
+  #loader.hidden { opacity: 0; visibility: hidden; }
+  #loader .progress-bar {
+    width: 200px; height: 2px; background: var(--gray-mid);
+    border-radius: 1px; overflow: hidden; margin-top: 24px;
+  }
+  #loader .progress-fill {
+    height: 100%; background: var(--amber); width: 0%;
+    transition: width 0.3s ease;
+  }
+  #loader p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--gray-light); margin-top: 16px;
+  }
+  #loader .brand {
+    font-family: 'Instrument Sans', sans-serif;
+    font-weight: 800; font-size: 24px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  #loader .brand span { color: var(--amber); }
+
+  /* ---- Scroll Content ---- */
+  .scroll-content {
+    position: relative; z-index: 10; pointer-events: none;
+  }
+  .scroll-content > * { pointer-events: auto; }
+
+  .section {
+    height: 100vh;
+    display: flex; align-items: center;
+    padding: 0 8vw;
+    position: relative;
+  }
+
+  .section-text {
+    max-width: 520px;
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  .section-text.right { margin-left: auto; }
+  .section-text.center { margin: 0 auto; text-align: center; }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::before { content: ''; width: 28px; height: 1px; background: var(--amber); }
+  .section-text.center .section-label { justify-content: center; }
+
+  .section-title {
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: clamp(30px, 4.5vw, 54px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -1.5px;
+    margin-bottom: 22px;
+  }
+  .section-title .amber { color: var(--amber); }
+
+  .section-desc {
+    font-size: 16px;
+    line-height: 1.7;
+    color: #bfbfbf;
+    font-weight: 400;
+  }
+
+  /* ---- Hero ---- */
+  .hero-section {
+    height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 0 8vw;
+  }
+
+  /* ---- Final CTA ---- */
+  .cta-row {
+    display: flex; gap: 14px; margin-top: 32px;
+    justify-content: center;
+  }
+  .btn-amber {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--black); background: var(--amber);
+    padding: 14px 26px; border-radius: 999px;
+    text-decoration: none; font-weight: 700;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .btn-amber:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,166,0,0.25); }
+  .btn-ghost {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--white);
+    padding: 14px 26px; border-radius: 999px;
+    text-decoration: none; font-weight: 600;
+    border: 1px solid rgba(255,166,0,0.35);
+    transition: border-color .2s, color .2s, background .2s;
+  }
+  .btn-ghost:hover { border-color: var(--amber); color: var(--amber); background: rgba(255,166,0,0.05); }
+
+  /* ---- Scroll hint ---- */
+  .scroll-hint {
+    position: fixed;
+    bottom: 32px; left: 50%; transform: translateX(-50%);
+    z-index: 20;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    opacity: 0; transition: opacity 0.5s ease;
+  }
+  .scroll-hint.visible { opacity: 1; }
+  .scroll-hint span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--gray-light);
+  }
+  .scroll-line {
+    width: 1px; height: 40px;
+    background: linear-gradient(to bottom, var(--amber), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+  @keyframes scrollPulse {
+    0%, 100% { opacity: 0.3; transform: scaleY(0.6); }
+    50% { opacity: 1; transform: scaleY(1); }
+  }
+
+  /* ---- Technical grid overlay — denser + more visible than production ---- */
+  /* Cranks from 0.025 → 0.06, and color shifts to amber to reinforce the
+     "datasheet / schematic" aesthetic instead of generic graph paper. */
+  .grid-overlay {
+    position: fixed; inset: 0; z-index: 2;
+    pointer-events: none;
+    opacity: 0.09;
+    background-image:
+      linear-gradient(rgba(255,166,0,0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,166,0,0.5) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* ---- ANNOTATION CALLOUTS ---- */
+  #callout-svg, #callouts {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    opacity: 0;
+  }
+  #callout-svg { z-index: 14; }
+  #callouts    { z-index: 15; }
+
+  .callout {
+    position: absolute;
+    color: #e8e8e8;
+    font-family: 'Instrument Sans', sans-serif;
+    white-space: nowrap;
+    line-height: 1.15;
+  }
+  .callout.left  { text-align: right; }
+  .callout.right { text-align: left;  }
+
+  .callout-title {
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 0.1px;
+    color: #ffffff;
+  }
+  .callout-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #FFA600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-top: 6px;
+    line-height: 1.35;
+  }
+
+  .explode-title {
+    position: fixed;
+    top: 12%; left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    opacity: 0;
+    z-index: 13;
+    pointer-events: none;
+  }
+  .explode-title .section-label { display: inline-block; }
+  .explode-title .section-label::before { display: none; }
+  .explode-title .section-title { font-size: clamp(28px, 3.5vw, 40px); margin-top: 6px; }
+
+  @media (max-width: 720px) {
+    nav { padding: 14px 20px; }
+    .nav-main { display: none; }
+    .section { padding: 0 6vw; }
+    #callouts { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="brand">
+    <svg viewBox="0 0 100 110" width="48" height="53" fill="none" style="display:block;margin:0 auto 16px;"><circle cx="50" cy="50" r="36" stroke="#FFA600" stroke-width="8"/><path d="M 5 105 C 22 80 62 22 90 8" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="90" cy="8" r="3.5" stroke="#fff" stroke-width="1.5"/></svg>
+    <span>FORGE</span> BOARD
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <p>Loading board · Intermediate</p>
+</div>
+
+<!-- Nav -->
+<nav>
+  <a href="hero-b-arduino.html" class="logo"><svg class="logo-icon" viewBox="0 0 100 110" width="22" height="24" fill="none"><circle cx="50" cy="50" r="36" stroke="#FFA600" stroke-width="8"/><path d="M 5 105 C 22 80 62 22 90 8" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="90" cy="8" r="3.5" stroke="#fff" stroke-width="1.5"/></svg><span>FORGE</span> BOARD <small>Intermediate</small></a>
+  <ul class="nav-main">
+    <li><a href="#" class="active">Overview</a></li>
+    <li><a href="#sec-final">Tech Specs</a></li>
+    <li><a href="hero-b-arduino.html">All Products</a></li>
+  </ul>
+  <a href="#" class="nav-cta">Buy</a>
+</nav>
+
+<!-- 3D Canvas -->
+<div id="canvas-container">
+  <canvas id="three-canvas"></canvas>
+</div>
+
+<!-- Grid overlay (datasheet aesthetic) -->
+<div class="grid-overlay"></div>
+
+
+<!-- Scroll hint -->
+<div class="scroll-hint" id="scroll-hint">
+  <span>Scroll to explore</span>
+  <div class="scroll-line"></div>
+</div>
+
+<!-- Scroll Content -->
+<div class="scroll-content">
+
+  <div class="section" id="sec-hero">
+    <div class="section-text" id="text-hero">
+      <p class="section-label">Processor</p>
+      <h2 class="section-title">Dual-core. <span class="amber">Sensor-ready.</span></h2>
+      <p class="section-desc">ESP32-S3 at 240&nbsp;MHz, pre-wired to onboard DHT11, LDR, IR, and piezo buzzer. Real-world signals reach your code without a breadboard in sight.</p>
+    </div>
+  </div>
+
+  <div class="section" id="sec-topdown">
+    <div class="section-text right" id="text-topdown">
+      <p class="section-label">Sensors</p>
+      <h2 class="section-title">DHT11. LDR. IR.<br><span class="amber">Piezo.</span> Onboard.</h2>
+      <p class="section-desc">Temperature, light, proximity, audio — four sensor modalities, zero wiring. Flash, read, react. Prototyping moves from "set up the circuit" to "write the code".</p>
+    </div>
+  </div>
+
+  <div class="section" id="sec-topdown2">
+    <div class="section-text right" id="text-topdown2">
+      <p class="section-label">Power</p>
+      <h2 class="section-title">BMS. <span class="amber">Thermal-safe.</span></h2>
+      <p class="section-desc">Onboard 1S Li-ion BMS charges at up to 1 A with thermal shutdown. Run untethered, recharge over USB-C, and stay safe when the workload spikes.</p>
+    </div>
+  </div>
+
+  <div class="section" id="sec-final">
+    <div class="section-text center" id="text-final">
+      <p class="section-label">Ready to forge?</p>
+      <h2 class="section-title">Beyond basics,<br><span class="amber">into the real world.</span></h2>
+      <div class="cta-row">
+        <a href="#" class="btn-amber">Buy Intermediate &rarr;</a>
+        <a href="#" class="btn-ghost">View Docs</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="sec-exploded">
+    <div class="explode-title" id="explode-title">
+      <p class="section-label">Inside the Forge</p>
+      <h2 class="section-title">What's <span class="amber">inside.</span></h2>
+    </div>
+  </div>
+
+  <svg id="callout-svg" aria-hidden="true"></svg>
+  <div id="callouts" aria-hidden="true"></div>
+
+</div>
+
+<script>
+// ============================================
+// FORCE PAGE TO START AT TOP
+// ============================================
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+window.scrollTo(0, 0);
+
+// ============================================
+// THREE.JS SCENE — STRIPPED FOR WIREFRAME AESTHETIC
+// ============================================
+// No PMREM env, no bloom, no shadows, no PBR materials. The entire visual
+// language is amber EdgesGeometry lines on black — occluded by flat-black
+// MeshBasicMaterial fills so front geometry hides edges behind it. This is
+// cheap to render (no lighting pass) and kills every "generic AI CAD" tell.
+gsap.registerPlugin(ScrollTrigger);
+
+const canvas = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x000000, 1);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 6, 0);
+
+// ============================================
+// LOAD GLB
+// ============================================
+const loader = new THREE.GLTFLoader();
+let model = null;
+const modelGroup = new THREE.Group();
+scene.add(modelGroup);
+
+const progressFill = document.getElementById('progress-fill');
+const loaderEl = document.getElementById('loader');
+
+loader.load(
+  'forgeboard_intermediate.glb',
+  function(gltf) {
+    try {
+    model = gltf.scene;
+    // Same pose logic as production page — see comments there.
+    // Orient the intermediate board: component side up, USB-C toward viewer.
+    // Using YXZ Euler order applies Y first (spin around WORLD Y by 180°),
+    // THEN X (lay flat by -90°). Default XYZ order would apply the Y rotation
+    // around local Y = world -Z after the X rotation, flipping components to
+    // the underside. YXZ keeps "components up" while swinging USB-C to +X.
+    model.rotation.order = 'YXZ';
+    model.rotation.set(-Math.PI / 2, Math.PI, 0);
+
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    // 2.3 → 1.85 gives the board a tighter silhouette so callout columns have
+    // real space on either side instead of crowding the edges.
+    const MODEL_SCALE = 1.85 / maxDim;
+    model.scale.setScalar(MODEL_SCALE);
+    window.__modelScale = MODEL_SCALE;
+
+    const box2 = new THREE.Box3().setFromObject(model);
+    const center2 = box2.getCenter(new THREE.Vector3());
+    model.position.sub(center2);
+    // Lift the whole model up a touch so the title and labels aren't visually
+    // competing with it at the top of the viewport.
+    model.position.y += 0.25;
+
+    // Classification for the exploded-part-lift animation.
+    // Intermediate uses the ORIGINAL (non-classified) GLB — meshes are named
+    // empty_NN with generic Material_NN materials. Each mapping below was
+    // captured by click-to-identify on the live board (user clicked each part
+    // in the browser, console logged the mesh name). This is ground truth, no
+    // heuristics.
+    const PART_GROUPS = {
+      pcb: [], processor: [], usb_c_port: [], pin_headers: [],
+      buttons: [], dht11: [], buzzer: [], ldr: [], ir: [],
+      bms: [], power_pins: [], leds: [], smd: []
+    };
+    window.PART_GROUPS = PART_GROUPS;
+
+    const NAME_TO_KEY = {
+      // PCB
+      'empty_115': 'pcb',
+      // ESP32 module: body + top can + antenna trace (3 meshes, all lift together)
+      'empty_63':  'processor',
+      'empty_62':  'processor',
+      'empty_61':  'processor',
+      // USB-C connector: body + shield + all footprint pads (multi-mesh assembly)
+      'empty_38':  'usb_c_port',
+      'empty_20':  'usb_c_port',
+      'empty_29':  'usb_c_port',
+      'empty_9':   'usb_c_port',
+      'empty_10':  'usb_c_port',
+      'empty_11':  'usb_c_port',
+      'empty_21':  'usb_c_port',
+      'empty_22':  'usb_c_port',
+      'empty_23':  'usb_c_port',
+      'empty_25':  'usb_c_port',
+      'empty_26':  'usb_c_port',
+      'empty_27':  'usb_c_port',
+      'empty_28':  'usb_c_port',
+      // GPIO header rails (2 rails)
+      'empty_52':  'pin_headers',
+      'empty_113': 'pin_headers',
+      // Tactile button (RST or BOOT — user clicked one)
+      'empty_151': 'buttons',
+      // Sensors — each gets its own bucket so labels can point at each individually
+      'empty_40':  'dht11',
+      'empty_54':  'buzzer',
+      'empty_58':  'ldr',
+      'empty_59':  'ldr',
+      'empty_48':  'ir',
+      'empty_147': 'ir',
+      // Power system
+      'empty_56':  'bms',
+      'empty_49':  'power_pins',
+      // LED (single GPIO-controlled) — user-identified empty_114
+      'empty_114': 'leds',
+    };
+
+    // ---- OCCLUSION FILL — pure black MeshBasic so faces hide back edges ----
+    // polygonOffset pushes fills slightly back so the edge lines sit crisply
+    // on top without z-fighting. Without this the amber lines shimmer at
+    // grazing angles.
+    const occlusionMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1,
+    });
+
+    // ---- EDGE LINE MATERIALS — plain LineBasicMaterial (1px hairlines) ----
+    // Using LineBasicMaterial keeps the pipeline simple + reliable. WebGL caps
+    // linewidth at 1px on most platforms; that's exactly the hairline density
+    // we want for "technical drawing". Amber bg-color + antialiasing give the
+    // perceived line weight without any ShaderMaterial complexity.
+    const edgeMat = new THREE.LineBasicMaterial({
+      color: 0xffa600,
+      transparent: true,
+      opacity: 0.95,
+      depthWrite: false,
+      depthTest: true,
+    });
+
+    // Pin headers are dense — drop their opacity so they read as an array
+    // instead of a solid amber block.
+    const pinEdgeMat = new THREE.LineBasicMaterial({
+      color: 0xffa600,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+      depthTest: true,
+    });
+
+
+
+    model.traverse(function(child) {
+      if (!child.isMesh) return;
+
+      const raw = child.name || '';
+      let key = NAME_TO_KEY[raw];
+      if (!key) {
+        // Unmapped meshes: classify by size. Tiny cubes are pin tips — cluster
+        // them with pin_headers so they drop with the rails. Everything else
+        // (unidentified SMDs, passives, silkscreen) goes to 'smd' and lifts
+        // slightly with the crowd.
+        if (!child.geometry.boundingBox) child.geometry.computeBoundingBox();
+        const bb = child.geometry.boundingBox;
+        const dims = [
+          bb.max.x - bb.min.x,
+          bb.max.y - bb.min.y,
+          bb.max.z - bb.min.z,
+        ].sort((a, b) => b - a);
+        key = (dims[0] < 1.5) ? 'pin_headers' : 'smd';
+      }
+
+      child.userData.partType = key;
+      child.userData.origX = child.position.x;
+      child.userData.origY = child.position.y;
+      child.userData.origZ = child.position.z;
+      PART_GROUPS[key].push(child);
+
+      // Replace PBR with flat-black occlusion fill. The amber edges do the
+      // entire visual job; the fill just prevents back-face edges from
+      // bleeding through.
+      child.material = occlusionMat;
+
+      // Amber edge outline. mergeVertices collapses duplicated verts so
+      // EdgesGeometry's angle threshold actually kicks in (STEP tessellators
+      // often emit split verts that keep every triangle edge "separate").
+      try {
+        const merged = (THREE.BufferGeometryUtils && THREE.BufferGeometryUtils.mergeVertices)
+          ? THREE.BufferGeometryUtils.mergeVertices(child.geometry, 1e-4)
+          : child.geometry;
+        const edges = new THREE.EdgesGeometry(merged, 30);    // tighter angle = more edges show
+
+        const thisMat = (key === 'pin_headers') ? pinEdgeMat : edgeMat;
+        const lines = new THREE.LineSegments(edges, thisMat);
+        lines.userData.isOutline = true;
+        child.add(lines);
+      } catch (err) {
+        console.warn('[wireframe] edge gen failed for', child.name, err);
+      }
+    });
+
+    // ---- POST-TRAVERSE SPATIAL RECLASSIFY ----
+    // Tiny cubes around the ESP32 module are its castellated pads, but the
+    // size-fallback grouped them with the GPIO pin rails. Any tiny cube whose
+    // bbox-center sits inside the ESP32 bbox (plus a small margin) gets moved
+    // into 'processor' so it lifts as part of the module, not with the rails.
+    const espBox = new THREE.Box3();
+    PART_GROUPS.processor.forEach(m => {
+      if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+      espBox.union(m.geometry.boundingBox);
+    });
+    if (!espBox.isEmpty()) {
+      espBox.expandByScalar(2);   // mm margin (GLB is in raw CAD mm)
+      const tmpVec = new THREE.Vector3();
+      const movingIn = [];
+      for (const m of PART_GROUPS.pin_headers) {
+        if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+        m.geometry.boundingBox.getCenter(tmpVec);
+        if (espBox.containsPoint(tmpVec)) movingIn.push(m);
+      }
+      for (const m of movingIn) {
+        const i = PART_GROUPS.pin_headers.indexOf(m);
+        if (i > -1) PART_GROUPS.pin_headers.splice(i, 1);
+        PART_GROUPS.processor.push(m);
+        m.userData.partType = 'processor';
+      }
+      console.log(`[reclassify] moved ${movingIn.length} castellated-pad meshes → processor`);
+    }
+
+    // Same idea for USB-C: the connector ships as 10+ sub-meshes (shield,
+    // housing, pins, pads, solder fins). Any mesh bucketed into smd/pin_headers
+    // whose center lands inside the USB-C bbox belongs to the connector and
+    // should lift with it — otherwise the port visibly tears apart.
+    const usbBox = new THREE.Box3();
+    PART_GROUPS.usb_c_port.forEach(m => {
+      if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+      usbBox.union(m.geometry.boundingBox);
+    });
+    if (!usbBox.isEmpty()) {
+      usbBox.expandByScalar(1.5);
+      const tmpV = new THREE.Vector3();
+      const pulled = [];
+      ['pin_headers', 'smd'].forEach(srcKey => {
+        for (const m of PART_GROUPS[srcKey]) {
+          if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+          m.geometry.boundingBox.getCenter(tmpV);
+          if (usbBox.containsPoint(tmpV)) pulled.push({ m, srcKey });
+        }
+      });
+      for (const { m, srcKey } of pulled) {
+        const i = PART_GROUPS[srcKey].indexOf(m);
+        if (i > -1) PART_GROUPS[srcKey].splice(i, 1);
+        PART_GROUPS.usb_c_port.push(m);
+        m.userData.partType = 'usb_c_port';
+      }
+      console.log(`[reclassify] moved ${pulled.length} meshes → usb_c_port`);
+    }
+
+    // ---- SORT EACH GROUP BY SIZE DESC ----
+    // Callouts anchor on meshes[0]. For multi-mesh groups (pin_headers has
+    // rails + many pin cubes; usb_c_port has connector + pad meshes) we want
+    // the BIGGEST mesh first so the dot lands on the main body, not a pin tip.
+    const _sortBox = new THREE.Vector3();
+    for (const key of Object.keys(PART_GROUPS)) {
+      PART_GROUPS[key].sort((a, b) => {
+        if (!a.geometry.boundingBox) a.geometry.computeBoundingBox();
+        if (!b.geometry.boundingBox) b.geometry.computeBoundingBox();
+        a.geometry.boundingBox.getSize(_sortBox);
+        const vA = _sortBox.x * _sortBox.y * _sortBox.z;
+        b.geometry.boundingBox.getSize(_sortBox);
+        const vB = _sortBox.x * _sortBox.y * _sortBox.z;
+        return vB - vA;
+      });
+    }
+
+    // ---- CLICK TO IDENTIFY (debug) ----
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const allMeshes = [];
+    model.traverse(c => { if (c.isMesh) allMeshes.push(c); });
+    console.log(`[forgeboard/intermediate] ${allMeshes.length} meshes. Group counts:`,
+      Object.fromEntries(Object.entries(PART_GROUPS).map(([k, v]) => [k, v.length])));
+
+    window.addEventListener('click', (ev) => {
+      pointer.x = (ev.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(ev.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(allMeshes, false);
+      if (!hits.length) return;
+      const m = hits[0].object;
+      const b = new THREE.Box3().setFromObject(m);
+      const s = b.getSize(new THREE.Vector3());
+      console.log(`[click] name="${m.name}"  bucket=${m.userData.partType}  size=(${s.x.toFixed(2)}, ${s.y.toFixed(2)}, ${s.z.toFixed(2)})`);
+      // Flash the outline amber→cyan and back.
+      const outline = m.children.find(c => c.userData.isOutline);
+      if (outline) {
+        const orig = outline.material.color.getHex();
+        outline.material = outline.material.clone();
+        outline.material.color.setHex(0x00e5ff);
+        setTimeout(() => { outline.material.color.setHex(orig); }, 1500);
+      }
+    });
+
+    modelGroup.add(model);
+
+    setTimeout(() => {
+      loaderEl.classList.add('hidden');
+      initAnimations();
+    }, 400);
+    } catch (err) {
+      console.error('[wireframe] init failed inside GLB callback:', err);
+      loaderEl.innerHTML = '<p style="font-family:JetBrains Mono,monospace;color:#FFA600;font-size:12px;padding:40px;text-align:center;max-width:600px">Wireframe init crashed — open DevTools console. Error: ' + (err && err.message) + '</p>';
+    }
+  },
+  function(xhr) {
+    if (xhr.total) {
+      const pct = (xhr.loaded / xhr.total) * 100;
+      progressFill.style.width = pct + '%';
+    }
+  },
+  function(error) {
+    console.error('GLB load failed:', error);
+    // Fallback placeholder so the scroll UI is still testable.
+    const geo = new THREE.BoxGeometry(3, 0.25, 1.7);
+    const edges = new THREE.EdgesGeometry(geo);
+    modelGroup.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffa600 })));
+    loaderEl.classList.add('hidden');
+    initAnimations();
+  }
+);
+
+// ============================================
+// SCROLL-DRIVEN CAMERA — same timeline as production page.
+// ============================================
+const camProxy = { angle: Math.PI * 0.30, height: 2.3, distance: 3.0, lookY: 0, upZ: 0 };
+
+function initAnimations() {
+  document.getElementById('scroll-hint').classList.add('visible');
+
+  gsap.to('#text-hero', { opacity: 1, y: 0, duration: 1.0, delay: 0.25, ease: 'power3.out' });
+
+  const masterTL = gsap.timeline({
+    scrollTrigger: {
+      trigger: '.scroll-content',
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 1,
+    }
+  });
+
+  const T1_CAM = { angle: Math.PI * 0.5, height: 4.8, distance: 0.001, upZ: -1 };
+  const T1_POS = { x: -1.55, z: 0 };
+  const T1_SCL = { x: 0.70, y: 0.70, z: 0.70 };
+  const T1_ROT = { y: 0 };
+
+  masterTL.to(camProxy,           { ...T1_CAM, ease: 'none' }, 0);
+  masterTL.to(modelGroup.position,{ ...T1_POS, ease: 'none' }, 0);
+  masterTL.to(modelGroup.scale,   { ...T1_SCL, ease: 'none' }, 0);
+  masterTL.to(modelGroup.rotation,{ ...T1_ROT, ease: 'none' }, 0);
+
+  masterTL.to(camProxy,           { ...T1_CAM, ease: 'none' }, 1);
+  masterTL.to(modelGroup.position,{ ...T1_POS, ease: 'none' }, 1);
+  masterTL.to(modelGroup.scale,   { ...T1_SCL, ease: 'none' }, 1);
+  masterTL.to(modelGroup.rotation,{ ...T1_ROT, ease: 'none' }, 1);
+
+  masterTL.to(camProxy,           { angle: Math.PI * 0.30, height: 2.3, distance: 3.0, upZ: 0, ease: 'none' }, 2);
+  masterTL.to(modelGroup.position,{ x: 0, z: 0, ease: 'none' }, 2);
+  masterTL.to(modelGroup.scale,   { x: 1, y: 1, z: 1, ease: 'none' }, 2);
+  masterTL.to(modelGroup.rotation,{ y: 0, ease: 'none' }, 2);
+
+  masterTL.to(camProxy,         { angle: Math.PI * 0.30, height: 2.3, distance: 3.6, upZ: 0, ease: 'none' }, 3);
+  masterTL.to(modelGroup.scale, { x: 0.85, y: 0.85, z: 0.85, ease: 'none' }, 3);
+
+  const S = window.__modelScale || 1;
+  const lift = (group, worldUp, worldForward = 0) => {
+    if (!group || !group.length) return;
+    const localUp      = worldUp / S;
+    const localForward = worldForward / S;
+    group.forEach(m =>
+      masterTL.to(m.position, {
+        z: m.userData.origZ + localUp,
+        y: m.userData.origY - localForward,
+        ease: 'none',
+      }, 3)
+    );
+  };
+  // Lifts by bucket. PCB stays, pin_headers + power_pins drop (rails go down
+  // revealing the board). ESP32 lifts highest (hero part). Sensors lift as a
+  // group. BMS lifts with USB-C since they're on the same edge.
+  const LIFT_AMOUNTS = {
+    processor:  0.48,
+    usb_c_port: 0.32,
+    bms:        0.30,
+    dht11:      0.40,
+    buzzer:     0.36,
+    ldr:        0.32,
+    ir:         0.34,
+    buttons:    0.26,
+    leds:       0.28,
+    smd:        0.20,
+    pin_headers: 0.35,   // rise with the sensor crowd (user: GPIO should go up)
+    power_pins:  0.28,
+  };
+  for (const [key, amount] of Object.entries(LIFT_AMOUNTS)) {
+    const forward = (key === 'usb_c_port') ? 0.15 : 0;
+    lift(window.PART_GROUPS[key], amount, forward);
+  }
+
+  gsap.timeline({ scrollTrigger: { trigger: '#sec-hero', start: 'top top', end: 'bottom top', scrub: 1 } })
+    .to('#text-hero', { opacity: 0, y: -30, ease: 'none' }, 0)
+    .to('#scroll-hint', { opacity: 0, ease: 'none' }, 0);
+
+  const fadeIn = (sel, trigger) => gsap.timeline({
+    scrollTrigger: { trigger, start: 'top 70%', end: 'top 30%', scrub: 1 }
+  }).to(sel, { opacity: 1, y: 0, ease: 'none' });
+
+  const fadeOut = (sel, trigger) => gsap.timeline({
+    scrollTrigger: { trigger, start: 'bottom 70%', end: 'bottom 30%', scrub: 1 }
+  }).to(sel, { opacity: 0, y: -30, ease: 'none' });
+
+  fadeIn('#text-topdown',  '#sec-topdown');  fadeOut('#text-topdown',  '#sec-topdown');
+  fadeIn('#text-topdown2', '#sec-topdown2'); fadeOut('#text-topdown2', '#sec-topdown2');
+  fadeIn('#text-final',    '#sec-final');    fadeOut('#text-final',    '#sec-final');
+
+  gsap.timeline({
+    scrollTrigger: { trigger: '#sec-exploded', start: 'top 70%', end: 'top 30%', scrub: 1 }
+  }).to('#callouts, #callout-svg, #explode-title', { opacity: 1, ease: 'none' });
+}
+
+// ============================================
+// CALLOUTS — identical wiring to production
+// ============================================
+// Callouts match the official brochure (Apr 2026). 5 on each side so every
+// brochure component on the intermediate board has a label. Each anchors to
+// a bucket populated from the user-verified NAME_TO_KEY mapping.
+const CALLOUTS = [
+  // LEFT — core + I/O + power
+  { part: 'processor',  offset: { x: 0, y: 0.2, z: 0.0 }, side: 'left',  labelX: 0.17, labelY: 0.16, title: 'ESP32-S3',           sub: 'Dual Core · 240 MHz · WiFi + BLE 5.0' },
+  { part: 'usb_c_port', offset: { x: 0, y: 0.1, z: 0.0 }, side: 'left',  labelX: 0.17, labelY: 0.34, title: 'USB-C 2.0',          sub: 'Power + Data · ESD protected' },
+  { part: 'bms',        offset: { x: 0, y: 0.1, z: 0.0 }, side: 'left',  labelX: 0.17, labelY: 0.52, title: 'Battery Charging (BMS)', sub: '4.2V 1S Li-ion · 1A · Thermal-safe' },
+  { part: 'buttons',    offset: { x: 0, y: 0.1, z: 0.0 }, side: 'left',  labelX: 0.17, labelY: 0.70, title: 'RST + BOOT',         sub: 'Tactile switches' },
+  { part: 'pin_headers',offset: { x: 0, y: 0.0, z: 0.0 }, side: 'left',  labelX: 0.17, labelY: 0.88, title: '19 GPIO Pins',       sub: 'SPI · I2C · UART · I2S · CAN · USB OTG' },
+  // RIGHT — sensor array + LED + power pins
+  { part: 'buzzer',     offset: { x: 0, y: 0.2, z: 0.0 }, side: 'right', labelX: 0.83, labelY: 0.14, title: 'Piezo Buzzer',       sub: 'Audio · alert output' },
+  { part: 'dht11',      offset: { x: 0, y: 0.2, z: 0.0 }, side: 'right', labelX: 0.83, labelY: 0.29, title: 'DHT11',              sub: 'Temperature + Humidity' },
+  { part: 'ldr',        offset: { x: 0, y: 0.2, z: 0.0 }, side: 'right', labelX: 0.83, labelY: 0.44, title: 'LDR Sensor',         sub: 'Photoresistor · ambient light' },
+  { part: 'ir',         offset: { x: 0, y: 0.2, z: 0.0 }, side: 'right', labelX: 0.83, labelY: 0.59, title: 'Infrared Sensor',    sub: '2× IR · proximity + remote' },
+  { part: 'leds',       offset: { x: 0, y: 0.2, z: 0.0 }, side: 'right', labelX: 0.83, labelY: 0.74, title: 'LED',                sub: 'GPIO-controlled status' },
+  { part: 'power_pins', offset: { x: 0, y: 0.0, z: 0.0 }, side: 'right', labelX: 0.83, labelY: 0.89, title: 'Power Supply Pins',  sub: 'VIN · 3V3 · GND' },
+];
+
+(function buildCallouts() {
+  const host = document.getElementById('callouts');
+  const svg  = document.getElementById('callout-svg');
+  if (!host || !svg) return;
+
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('height', '100%');
+
+  CALLOUTS.forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = `callout ${c.side}`;
+    el.id = `co-${i}`;
+    el.innerHTML = `
+      <div class="callout-title">${c.title}</div>
+      ${c.sub ? `<div class="callout-sub">${c.sub}</div>` : ''}
+    `;
+    host.appendChild(el);
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('id', `cl-${i}`);
+    line.setAttribute('stroke', '#ffa600');
+    line.setAttribute('stroke-width', '0.75');
+    line.setAttribute('opacity', '0.85');
+    svg.appendChild(line);
+
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('id', `cd-${i}`);
+    dot.setAttribute('r', '3');
+    dot.setAttribute('fill', '#ffa600');
+    svg.appendChild(dot);
+
+    const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    ring.setAttribute('id', `cr-${i}`);
+    ring.setAttribute('r', '8');
+    ring.setAttribute('fill', 'none');
+    ring.setAttribute('stroke', '#ffa600');
+    ring.setAttribute('stroke-width', '0.6');
+    ring.setAttribute('opacity', '0.55');
+    svg.appendChild(ring);
+  });
+})();
+
+const _coVec = new THREE.Vector3();
+
+// Labels are pinned to fixed screen-edge columns (clear of the board
+// silhouette). Their *vertical* position follows the projected anchor, and a
+// per-side stagger keeps them from overlapping. Leader = straight horizontal
+// line from label into the part.
+const LABEL_COL_LEFT  = 0.12;   // fraction of viewport W
+const LABEL_COL_RIGHT = 0.88;
+const LABEL_MIN_SPACING = 58;
+
+function updateCallouts() {
+  const groups = window.PART_GROUPS;
+  if (!groups) return;
+  scene.updateMatrixWorld(true);
+  const W = window.innerWidth, H = window.innerHeight;
+
+  // Pass 1 — project every anchor, compute raw label target.
+  const slots = CALLOUTS.map((c, i) => {
+    const meshes = groups[c.part];
+    const el   = document.getElementById(`co-${i}`);
+    const line = document.getElementById(`cl-${i}`);
+    const dot  = document.getElementById(`cd-${i}`);
+    const ring = document.getElementById(`cr-${i}`);
+    if (!meshes || !meshes.length) return { i, el, line, dot, ring, hidden: true };
+
+    const m0 = meshes[0];
+    if (!m0.geometry.boundingBox) m0.geometry.computeBoundingBox();
+    m0.geometry.boundingBox.getCenter(_coVec);
+    _coVec.applyMatrix4(m0.matrixWorld);
+    _coVec.x += c.offset.x;
+    _coVec.y += c.offset.y;
+    _coVec.z += c.offset.z;
+    _coVec.project(camera);
+    const tx = (_coVec.x * 0.5 + 0.5) * W;
+    const ty = (-_coVec.y * 0.5 + 0.5) * H;
+    const lx = (c.side === 'left' ? LABEL_COL_LEFT : LABEL_COL_RIGHT) * W;
+    return {
+      i, el, line, dot, ring, c,
+      tx, ty,
+      side: c.side,
+      lx,            // fixed edge-column
+      ly: ty,        // follows part vertically
+    };
+  });
+
+  // Pass 2 — stagger labels on the same side that would overlap vertically.
+  ['left', 'right'].forEach(side => {
+    const sideSlots = slots
+      .filter(s => !s.hidden && s.side === side)
+      .sort((a, b) => a.ly - b.ly);
+    for (let k = 1; k < sideSlots.length; k++) {
+      const prev = sideSlots[k - 1];
+      const cur  = sideSlots[k];
+      if (cur.ly - prev.ly < LABEL_MIN_SPACING) {
+        cur.ly = prev.ly + LABEL_MIN_SPACING;
+      }
+    }
+  });
+
+  // Pass 3 — commit DOM + SVG positions.
+  slots.forEach(s => {
+    if (s.hidden) {
+      if (s.el)   s.el.style.display = 'none';
+      if (s.line) s.line.setAttribute('stroke-opacity', '0');
+      if (s.dot)  s.dot.setAttribute('fill-opacity', '0');
+      if (s.ring) s.ring.setAttribute('stroke-opacity', '0');
+      return;
+    }
+    if (s.el)   s.el.style.display = '';
+    if (s.line) s.line.removeAttribute('stroke-opacity');
+    if (s.dot)  s.dot.removeAttribute('fill-opacity');
+    if (s.ring) s.ring.removeAttribute('stroke-opacity');
+
+    if (s.el) {
+      s.el.style.left = s.lx + 'px';
+      s.el.style.top  = s.ly + 'px';
+      s.el.style.transform = s.side === 'left'
+        ? 'translate(-100%, -50%)'   // label sits to the LEFT of (lx, ly)
+        : 'translate(0, -50%)';      // label sits to the RIGHT of (lx, ly)
+    }
+    // Leader line — from the inner edge of the label to the anchor dot.
+    const innerX = s.side === 'left' ? s.lx - 6 : s.lx + 6;
+    if (s.line) {
+      s.line.setAttribute('x1', innerX);
+      s.line.setAttribute('y1', s.ly);
+      s.line.setAttribute('x2', s.tx);
+      s.line.setAttribute('y2', s.ty);
+    }
+    if (s.dot)  { s.dot.setAttribute('cx', s.tx);  s.dot.setAttribute('cy', s.ty); }
+    if (s.ring) { s.ring.setAttribute('cx', s.tx); s.ring.setAttribute('cy', s.ty); }
+  });
+}
+
+// ============================================
+// RENDER + RESIZE — no bloom, direct renderer.render()
+// ============================================
+function animate() {
+  requestAnimationFrame(animate);
+  camera.position.x = Math.cos(camProxy.angle) * camProxy.distance;
+  camera.position.z = Math.sin(camProxy.angle) * camProxy.distance;
+  camera.position.y = camProxy.height;
+  const uz = camProxy.upZ || 0;
+  const uy = Math.sqrt(Math.max(0, 1 - uz * uz));
+  camera.up.set(0, uy, uz);
+  updateCallouts();
+  camera.lookAt(0, camProxy.lookY, 0);
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+</script>
+</body>
+</html>

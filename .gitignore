@@ -1,0 +1,38 @@
+# Brainstorm & planning artifacts
+.superpowers/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Rust / Tauri
+target/
+Cargo.lock
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Backups & logs
+*.bak
+*.log
+classify_log.txt
+glb_log.txt
+
+# Secrets / local
+.env
+.env.local
+*.pem
+*.key
