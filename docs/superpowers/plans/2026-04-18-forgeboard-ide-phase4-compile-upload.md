@@ -134,9 +134,11 @@ Register in `main.rs`: add `mod arduino;`.
 
 ```rust
 use std::process::Stdio;
-use tauri::Manager;
+use tauri::{Manager, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 
 /// Run arduino-cli with given args. Streams stdout line-by-line to the given event.
 /// Returns (exit_code, combined_stderr).

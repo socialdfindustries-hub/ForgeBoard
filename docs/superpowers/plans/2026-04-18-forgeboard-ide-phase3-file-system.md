@@ -620,6 +620,41 @@ git -c user.email="av@defenceforgeindustries.com" -c user.name="AV" commit -m "f
 
 ---
 
+## Task 8.5: Update TabBar to use `tab.name` (signal shape changed in Task 7)
+
+Phase 2's TabBar displays `{tab.path}` — but Task 7 changed `path` to be the absolute file path. We need to show `tab.name` (just the filename) instead.
+
+**Files:** Modify `src/components/TabBar.tsx`
+
+- [ ] **Step 1: Replace `{tab.path}` with `{tab.name}`**
+
+In `src/components/TabBar.tsx`, inside the tab button, change:
+```tsx
+<span class="tab-name">{tab.path}</span>
+```
+to:
+```tsx
+<span class="tab-name">{tab.name}</span>
+```
+
+Also verify the `path` key comparisons in `closeTab` still use the absolute `path` (they should — that's the unique identifier).
+
+- [ ] **Step 2: Verify the Breadcrumb component**
+
+`src/components/Breadcrumb.tsx` uses `tab.path` to display the current filename. Change to `tab.name`:
+```tsx
+<span class="current">{tab.name}</span>
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/components/TabBar.tsx src/components/Breadcrumb.tsx
+git -c user.email="av@defenceforgeindustries.com" -c user.name="AV" commit -m "fix: TabBar + Breadcrumb use tab.name instead of absolute path"
+```
+
+---
+
 ## Task 9: Rewrite FileSidebar from real sketch data
 
 **Files:** Modify `src/components/FileSidebar.tsx`
