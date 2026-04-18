@@ -675,8 +675,16 @@ function FilesView() {
         <span class="sb-new" onClick={async () => {
           const name = prompt("New sketch name:");
           if (!name) return;
-          try { const s = await projectApi.create(name); /* TODO: load into app */ }
-          catch (e) { alert(`Couldn't create: ${e}`); }
+          try {
+            const sketch = await projectApi.create(name);
+            // Load the new sketch using the same pattern as Phase 10's ExamplesView.open():
+            currentSketch.value = sketch;
+            const contents = new Map<string, string>();
+            for (const f of sketch.files) contents.set(f.path, await projectApi.readFile(f.path));
+            fileContents.value = contents;
+            openTabs.value = sketch.files.map((f) => ({ path: f.path, name: f.name, modified: false }));
+            activeTabIndex.value = 0;
+          } catch (e) { alert(`Couldn't create: ${e}`); }
         }}>+ new</span>
       </div>
       <div class="sb-body">
@@ -700,7 +708,7 @@ function FilesView() {
 
 Add imports at top:
 ```typescript
-import { currentSketch, activeRail, openTabs, activeTabIndex } from "../state/appState";
+import { currentSketch, activeRail, openTabs, activeTabIndex, fileContents } from "../state/appState";
 import { projectApi } from "../ipc/project";
 ```
 
@@ -748,7 +756,7 @@ git tag -a phase3-filesystem -m "Phase 3 complete: real disk I/O + sketch model"
 - ⏭ New-file dialog for adding files within a sketch — deferred to Phase 12 settings
 - ⏭ ⌘P fuzzy file search — deferred to Phase 12
 
-**Placeholder scan:** One TODO in the `+ new` button handler — flagged for Phase 12. Acceptable because Phase 3 delivers the core flow (open + edit + save) and new-sketch-from-sidebar is not critical path.
+**Placeholder scan:** Clean — no TODOs remaining. The `+ new` button now fully loads the created sketch into the app state (same pattern as Phase 10's ExamplesView.open).
 
 ---
 
