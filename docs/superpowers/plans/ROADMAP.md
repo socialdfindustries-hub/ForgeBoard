@@ -1,6 +1,6 @@
 # ForgeBoard IDE — Implementation Roadmap
 
-Fourteen phases, executed in order. Each phase ends with a shippable milestone, a smoke test, and a git tag. Solo-developer timeline: **~24 weeks (5-6 months)** full-time from scaffold to public v1.0.
+Twelve v1.0 phases, executed in order (numbered 1–14 — phases 6 & 7 are **deferred to v1.1+**). Each phase ends with a shippable milestone, a smoke test, and a git tag. Solo-developer timeline: **~20.5 weeks (~5 months)** full-time from scaffold to public v1.0.
 
 The full design spec is at [`../specs/2026-04-18-forgeboard-ide-design.md`](../specs/2026-04-18-forgeboard-ide-design.md).
 
@@ -15,8 +15,8 @@ The full design spec is at [`../specs/2026-04-18-forgeboard-ide-design.md`](../s
 | 3 | [File System](2026-04-18-forgeboard-ide-phase3-file-system.md) | Create/open/save sketches to disk, folder-per-sketch model | `phase3-filesystem` | 1 wk |
 | 4 | [Compile + Upload](2026-04-18-forgeboard-ide-phase4-compile-upload.md) | Check + Upload buttons functional via bundled arduino-cli | `phase4-compile-upload` | 1.5 wk |
 | 5 | [Serial Monitor](2026-04-18-forgeboard-ide-phase5-serial-monitor.md) | Live I/O: receive + send with history, line-ending selector | `phase5-serial` | 1 wk |
-| 6 | [Smart Help Framework](2026-04-18-forgeboard-ide-phase6-smart-help-framework.md) | Analyzer + wavy underlines + Findings panel + Dismiss/Pin | `phase6-smart-help-framework` | 1.5 wk |
-| 7 | [Smart Help Content](2026-04-18-forgeboard-ide-phase7-smart-help-content.md) | 500 curated YAML entries + snapshot tests | `phase7-content` | 2 wk |
+| 6 | ~~Smart Help Framework~~ ❌ **Deferred to v1.1+** | Plan preserved at [phase6 plan](2026-04-18-forgeboard-ide-phase6-smart-help-framework.md) | — | — |
+| 7 | ~~Smart Help Content~~ ❌ **Deferred to v1.1+** | Plan preserved at [phase7 plan](2026-04-18-forgeboard-ide-phase7-smart-help-content.md) | — | — |
 | 8 | [Boards View](2026-04-18-forgeboard-ide-phase8-boards-view.md) | Universal board support, on-demand core install, real BoardSelector | `phase8-boards-view` | 1.5 wk |
 | 9 | [Libraries View](2026-04-18-forgeboard-ide-phase9-libraries-view.md) | 8,940+ registry search, install, drag-drop ZIP, suggestions | `phase9-libraries` | 2 wk |
 | 10 | [Examples View](2026-04-18-forgeboard-ide-phase10-examples-view.md) | 40 curated examples, categorized browser, open-as-new-sketch | `phase10-examples` | 1 wk |
@@ -25,7 +25,7 @@ The full design spec is at [`../specs/2026-04-18-forgeboard-ide-design.md`](../s
 | 13 | [Polish + Walkthrough](2026-04-18-forgeboard-ide-phase13-polish-walkthrough.md) | Phosphor icons, animations, toasts, first-run tour | `phase13-polish` | 1 wk |
 | 14 | [Signing + Release](2026-04-18-forgeboard-ide-phase14-signing-release.md) | EV-signed installer, auto-updater, landing page, v1.0.0 tag | `phase14-release` | 2 wk |
 
-**TOTAL:** ~24 weeks. Phase 7 (content) can run in parallel with later framework phases.
+**TOTAL:** ~20.5 weeks for v1.0. Smart Help (former phases 6 & 7, ~3.5 wk) is deferred to v1.1+.
 
 ---
 
@@ -41,13 +41,11 @@ The full design spec is at [`../specs/2026-04-18-forgeboard-ide-design.md`](../s
  4 (Compile) ─→ 8 (Boards) ─→ 9 (Libraries)
  ↓                                  ↓
  5 (Serial) ─→ 11 (Plotter)       10 (Examples)
- ↓
- 6 (SH Framework) ─→ 7 (SH Content)
 
  All phases → 14 (Release)
 ```
 
-Phase 7 is the longest (content writing) and can run in parallel from week 7 onward.
+Smart Help (former phases 6 & 7) is deferred to v1.1+ and omitted from this graph.
 
 ---
 
@@ -65,15 +63,14 @@ Each phase adds signals; never rename or remove existing ones without updating c
 | `openTabs` | P1 (shape extended P3 to add `name`) | `TabBar`, `Breadcrumb`, `MonacoEditor`, autosave |
 | `activeTabIndex` | P1 | `TabBar`, `MonacoEditor`, `Breadcrumb`, palette |
 | `saveState` | P1 | `StatusBar`, `autosave` |
-| `fileContents` | P2 | `MonacoEditor`, `autosave`, `analyzer` |
+| `fileContents` | P2 | `MonacoEditor`, `autosave` |
 | `currentSketch` | P3 | `FileSidebar`, `Breadcrumb`, `project-state` |
-| `connectedBoard` / `connectedPort` / `selectedFqbn` | P1/P4 | `ActionBar`, `BoardSelector`, `PortSelector`, compile/upload, analyzer |
+| `connectedBoard` / `connectedPort` / `selectedFqbn` | P1/P4 | `ActionBar`, `BoardSelector`, `PortSelector`, compile/upload |
 | `buildPhase` / `buildOutput` | P4 | `ActionBar`, `BottomPanel` |
 | `serialLog` / `serialConnected` / `serialBaud` / `serialLineEnding` | P5 | `SerialMonitor`, `SerialPlotter`, `StatusBar` |
-| `findings` / `dismissedIds` / `pinnedIds` | P6 | `MonacoEditor` decorations, `FindingsPanel`, `StatusBar` |
 | `installedCores` / `installedBoards` / `detectedPorts` | P8 | `BoardsView`, `BoardSelector`, `PortSelector` |
-| `installedLibraries` | P9 | `LibrariesView`, analyzer suggestions |
-| `settings` | P12 | everywhere (font size, autosave, Smart Help on/off, etc.) |
+| `installedLibraries` | P9 | `LibrariesView` |
+| `settings` | P12 | everywhere (font size, autosave, etc.) |
 | `paletteOpen` | P12 | `CommandPalette`, shortcuts |
 | `toasts` | P13 | `ToastStack`, called from compile/upload/save/etc. |
 
@@ -90,8 +87,6 @@ Each phase registers new commands. Full list after Phase 14:
     project::commands::project_read_file,                           // P3
     project::commands::project_save_file,                           // P3
     project::commands::project_list_recent,                         // P3
-    project::commands::project_load_state,                          // P6
-    project::commands::project_save_state,                          // P6
     arduino::commands::arduino_list_boards,                         // P4
     arduino::commands::arduino_detect_ports,                        // P4
     arduino::commands::arduino_compile,                             // P4
@@ -110,7 +105,6 @@ Each phase registers new commands. Full list after Phase 14:
     serial::commands::serial_close,                                 // P5
     serial::commands::serial_write,                                 // P5
     serial::commands::serial_is_open,                               // P5
-    smart_help::commands::smart_help_analyze,                       // P6
     examples::commands::examples_list,                              // P10
     examples::commands::examples_open,                              // P10
     settings::commands::settings_load,                              // P12
@@ -125,7 +119,6 @@ mod commands;      // P1 — holds `ping.rs`
 mod project;       // P3
 mod arduino;       // P4 (core, library, compile, upload, board sub-modules)
 mod serial;        // P5
-mod smart_help;    // P6
 mod examples;      // P10
 mod settings;      // P12
 ```
@@ -148,7 +141,6 @@ mod settings;      // P12
 Final set:
 ```json
 "resources": [
-  "resources/smart-help.db",              // P6 — compiled YAML index
   "resources/examples-index.json",         // P10 — examples metadata
   "../content/examples/**/*",              // P10 — example source files
   "binaries/arduino-cli-x86_64-pc-windows-msvc.exe"  // P4
@@ -162,7 +154,6 @@ Plus `externalBin` for arduino-cli (P4).
 Final `package.json → scripts.postinstall`:
 ```
 powershell -ExecutionPolicy Bypass -File scripts/download-arduino-cli.ps1
-  && pnpm build:smart-help
   && pnpm build:examples
 ```
 
@@ -179,16 +170,14 @@ phase1-shell
     → phase3-filesystem
       → phase4-compile-upload
         → phase5-serial
-          → phase6-smart-help-framework
-            → phase7-content
-              → phase8-boards-view
-                → phase9-libraries
-                  → phase10-examples
-                    → phase11-plotter
-                      → phase12-settings-palette
-                        → phase13-polish
-                          → phase14-release
-                            → v1.0.0
+          → phase8-boards-view
+            → phase9-libraries
+              → phase10-examples
+                → phase11-plotter
+                  → phase12-settings-palette
+                    → phase13-polish
+                      → phase14-release
+                        → v1.0.0
 ```
 
 ---
@@ -201,7 +190,7 @@ For each phase in order:
 2. **Spawn a fresh subagent for each task** (recommended via `superpowers:subagent-driven-development`) OR execute inline with `superpowers:executing-plans`
 3. **Every task ends with a commit.** Every phase ends with a tag + smoke test
 4. **If a task fails the smoke test, fix it in the current commit before tagging the phase** — do not tag a broken phase
-5. **Move to the next phase only after the current phase is tagged**
+5. **Move to the next phase only after the current phase is tagged** — phases 6 & 7 are deferred, so Phase 5 is followed directly by Phase 8
 
 If a phase reveals a design issue with a later phase, add a "carry-over" note at the bottom of the later phase's plan before executing it.
 
@@ -211,6 +200,7 @@ If a phase reveals a design issue with a later phase, add a "carry-over" note at
 
 Tracked in the spec, out of scope for v1.0:
 
+- **Smart Help** — deterministic mistake detector: analyzer + wavy underlines + Findings panel + Dismiss/Pin, shipping with 500 curated YAML entries. Former Phases 6 & 7; plans preserved at [`phase6`](2026-04-18-forgeboard-ide-phase6-smart-help-framework.md) and [`phase7`](2026-04-18-forgeboard-ide-phase7-smart-help-content.md) for when it returns.
 - AI chat (separate launch beat: "Now with AI — free, passive, private")
 - macOS + Linux builds
 - Git integration
