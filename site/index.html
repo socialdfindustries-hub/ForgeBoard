@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.className+=" js"</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ForgeBoard — ESP32 &amp; STM32 dev boards, designed and built in India</title>
+<meta name="description" content="Four microcontroller boards, one toolchain. Spark, Sprint, Indus and Flint — USB‑C, protected, and made in India by Defence Forge Industries.">
+<meta name="theme-color" content="#141210">
+<meta property="og:title" content="ForgeBoard — ESP32 &amp; STM32 dev boards, designed and built in India">
+<meta property="og:description" content="Four microcontroller boards, one toolchain. Spark, Sprint, Indus and Flint — USB‑C, protected, and made in India by Defence Forge Industries.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/boards/hero-spark.webp">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logo-on-light.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css?v=7b69fa8e">
+<script src="js/fb-board.js?v=5781504d" defer></script>
+<script src="js/motion.js?v=7f712e3d" defer></script>
+</head>
+<body>
+<a href="#main" class="skip eyebrow">Skip to content</a>
+<header class="site-head eyebrow over-dark">
+  <a class="brand" href="./" aria-label="ForgeBoard home">
+    <img class="mark mark-on-light" src="assets/logo-on-light.webp" alt="" width="128" height="111" decoding="async">
+    <img class="mark mark-on-dark" src="assets/logo-on-dark.webp" alt="" width="128" height="112" decoding="async">
+    <span>ForgeBoard</span>
+  </a>
+  <nav class="site-nav" id="primary-nav" aria-label="Primary"><a href="./" aria-current="page">Home</a><a href="boards/">Boards</a><a href="compare/">Compare</a><a href="software/">Software</a><a href="docs/">Docs</a></nav>
+  <button class="nav-toggle eyebrow" aria-expanded="false" aria-controls="primary-nav">Menu</button>
+  <a class="order-link" href="contact/"><span class="order-dot" aria-hidden="true"></span>Order</a>
+</header>
+<main id="main" tabindex="-1">
+
+<section class="hero print" aria-labelledby="hero-title">
+  <div class="hero-meta eyebrow">
+    <span>Four boards · One toolchain</span>
+    <span>Designed &amp; built in India</span>
+    <span class="scroll-cue">Scroll to explore<i aria-hidden="true"></i></span>
+  </div>
+  <ul class="hero-boards">
+        <li style="height:56vh;margin-top:0">
+          <a href="boards/spark/" aria-label="ForgeBoard Spark — specs">
+            <fb-board fallback="assets/boards/hero-spark.webp" srcset="assets/boards/hero-spark-sm.webp 396w, assets/boards/hero-spark.webp 766w" sizes="(max-width:860px) 44vw, 22vw" alt="ForgeBoard Spark" tilt="12" style="width:100%;height:100%">
+              <noscript><img src="assets/boards/hero-spark-sm.webp" alt="ForgeBoard Spark" style="width:100%;height:100%;object-fit:contain"></noscript>
+            </fb-board>
+          </a>
+        </li>
+        <li style="height:50vh;margin-top:18vh">
+          <a href="boards/sprint/" aria-label="ForgeBoard Sprint — specs">
+            <fb-board fallback="assets/boards/hero-sprint.webp" srcset="assets/boards/hero-sprint-sm.webp 620w, assets/boards/hero-sprint.webp 1200w" sizes="(max-width:860px) 44vw, 22vw" alt="ForgeBoard Sprint" tilt="10" style="width:100%;height:100%">
+              <noscript><img src="assets/boards/hero-sprint-sm.webp" alt="ForgeBoard Sprint" style="width:100%;height:100%;object-fit:contain"></noscript>
+            </fb-board>
+          </a>
+        </li>
+        <li style="height:56vh;margin-top:-4vh">
+          <a href="boards/indus/" aria-label="ForgeBoard Indus — specs">
+            <fb-board fallback="assets/boards/hero-indus.webp" srcset="assets/boards/hero-indus-sm.webp 406w, assets/boards/hero-indus.webp 786w" sizes="(max-width:860px) 44vw, 22vw" alt="ForgeBoard Indus" tilt="12" style="width:100%;height:100%">
+              <noscript><img src="assets/boards/hero-indus-sm.webp" alt="ForgeBoard Indus" style="width:100%;height:100%;object-fit:contain"></noscript>
+            </fb-board>
+          </a>
+        </li>
+        <li style="height:56vh;margin-top:10vh">
+          <a href="boards/flint/" aria-label="ForgeBoard Flint — specs">
+            <fb-board fallback="assets/boards/hero-flint.webp" srcset="assets/boards/hero-flint-sm.webp 485w, assets/boards/hero-flint.webp 939w" sizes="(max-width:860px) 44vw, 22vw" alt="ForgeBoard Flint" tilt="14" style="width:100%;height:100%">
+              <noscript><img src="assets/boards/hero-flint-sm.webp" alt="ForgeBoard Flint" style="width:100%;height:100%;object-fit:contain"></noscript>
+            </fb-board>
+          </a>
+        </li>
+  </ul>
+  <h1 class="hero-title" id="hero-title">
+    <span>Start here.</span>
+    <span class="outline">Ship anywhere.</span>
+  </h1>
+</section>
+
+<section class="statement print" aria-label="Why ForgeBoard">
+  <div class="wrap rail">
+    <span class="eyebrow" style="color:var(--print-muted)">01 — Why</span>
+    <p><span class="sr-only">Four boards. One connector, one protection stack, one IDE. Easy to start with, hard to break — and built to be designed straight into the product.</span><span class="wd" aria-hidden="true" style="transition-delay:0ms">Four</span><span class="wd" aria-hidden="true" style="transition-delay:35ms">boards.</span><span class="wd" aria-hidden="true" style="transition-delay:70ms">One</span><span class="wd" aria-hidden="true" style="transition-delay:105ms">connector,</span><span class="wd" aria-hidden="true" style="transition-delay:140ms">one</span><span class="wd" aria-hidden="true" style="transition-delay:175ms">protection</span><span class="wd" aria-hidden="true" style="transition-delay:210ms">stack,</span><span class="wd" aria-hidden="true" style="transition-delay:245ms">one</span><span class="wd" aria-hidden="true" style="transition-delay:280ms">IDE.</span><span class="wd" aria-hidden="true" style="transition-delay:315ms">Easy</span><span class="wd" aria-hidden="true" style="transition-delay:350ms">to</span><span class="wd" aria-hidden="true" style="transition-delay:385ms">start</span><span class="wd" aria-hidden="true" style="transition-delay:420ms">with,</span><span class="wd" aria-hidden="true" style="transition-delay:455ms">hard</span><span class="wd" aria-hidden="true" style="transition-delay:490ms">to</span><span class="wd" aria-hidden="true" style="transition-delay:525ms">break</span><span class="wd" aria-hidden="true" style="transition-delay:560ms">—</span><span class="wd" aria-hidden="true" style="transition-delay:595ms">and</span><span class="wd" aria-hidden="true" style="transition-delay:630ms">built</span><span class="wd" aria-hidden="true" style="transition-delay:665ms">to</span><span class="wd" aria-hidden="true" style="transition-delay:700ms">be</span><span class="wd" aria-hidden="true" style="transition-delay:735ms">designed</span><span class="wd" aria-hidden="true" style="transition-delay:770ms">straight</span><span class="wd" aria-hidden="true" style="transition-delay:805ms">into</span><span class="wd" aria-hidden="true" style="transition-delay:840ms">the</span><span class="wd" aria-hidden="true" style="transition-delay:875ms">product.</span></p>
+  </div>
+</section>
+
+<section class="sect" aria-labelledby="lineup-h">
+  <div class="wrap stack" style="gap:56px">
+    <div class="lineup-head rv">
+      <span class="eyebrow mono-muted">02 — The boards</span>
+      <h2 class="h-xl" id="lineup-h">Four boards.<br>One family.</h2>
+      <a href="compare/" class="eyebrow link-ul">Compare all →</a>
+    </div>
+    <ul class="lineup">
+        <li class="rv">
+          <a class="card" href="boards/spark/">
+            <div class="card-art">
+              <span class="eyebrow tl">01</span>
+              <span class="eyebrow tr">ESP32‑S3</span>
+              <img src="assets/boards/spark-3d.webp" srcset="assets/boards/spark-3d-sm.webp 700w, assets/boards/spark-3d.webp 1500w" sizes="(max-width:860px) 74vw, 36vw" alt="ForgeBoard Spark board" loading="lazy" decoding="async">
+            </div>
+            <div class="card-foot">
+              <span class="stack" style="gap:2px">
+                <span class="card-name">Spark</span>
+                <span class="card-tag">Start here.</span>
+              </span>
+              <span class="eyebrow" style="white-space:nowrap">Specs →</span>
+            </div>
+          </a>
+        </li>
+        <li class="rv offset">
+          <a class="card" href="boards/sprint/">
+            <div class="card-art">
+              <span class="eyebrow tl">02</span>
+              <span class="eyebrow tr">ESP32‑S3</span>
+              <img src="assets/boards/sprint-3d.webp" srcset="assets/boards/sprint-3d-sm.webp 700w, assets/boards/sprint-3d.webp 1143w" sizes="(max-width:860px) 74vw, 36vw" alt="ForgeBoard Sprint board" loading="lazy" decoding="async">
+            </div>
+            <div class="card-foot">
+              <span class="stack" style="gap:2px">
+                <span class="card-name">Sprint</span>
+                <span class="card-tag">Ready before you are.</span>
+              </span>
+              <span class="eyebrow" style="white-space:nowrap">Specs →</span>
+            </div>
+          </a>
+        </li>
+        <li class="rv">
+          <a class="card" href="boards/indus/">
+            <div class="card-art">
+              <span class="eyebrow tl">03</span>
+              <span class="eyebrow tr">STM32G484</span>
+              <img src="assets/boards/indus-3d.webp" srcset="assets/boards/indus-3d-sm.webp 700w, assets/boards/indus-3d.webp 1480w" sizes="(max-width:860px) 74vw, 36vw" alt="ForgeBoard Indus board" loading="lazy" decoding="async">
+            </div>
+            <div class="card-foot">
+              <span class="stack" style="gap:2px">
+                <span class="card-name">Indus</span>
+                <span class="card-tag">For your toughest challenges.</span>
+              </span>
+              <span class="eyebrow" style="white-space:nowrap">Specs →</span>
+            </div>
+          </a>
+        </li>
+        <li class="rv offset">
+          <a class="card" href="boards/flint/">
+            <div class="card-art">
+              <span class="eyebrow tl">04</span>
+              <span class="eyebrow tr">ESP8266EX</span>
+              <img src="assets/boards/flint-3d.webp" srcset="assets/boards/flint-3d-sm.webp 700w, assets/boards/flint-3d.webp 1500w" sizes="(max-width:860px) 74vw, 36vw" alt="ForgeBoard Flint board" loading="lazy" decoding="async">
+            </div>
+            <div class="card-foot">
+              <span class="stack" style="gap:2px">
+                <span class="card-name">Flint</span>
+                <span class="card-tag">Small board. Long reach.</span>
+              </span>
+              <span class="eyebrow" style="white-space:nowrap">Specs →</span>
+            </div>
+          </a>
+        </li>
+    </ul>
+  </div>
+</section>
+
+<section class="sect" aria-labelledby="numbers-h">
+  <div class="wrap rail">
+    <span class="eyebrow mono-muted rv" id="numbers-h">03 — By the numbers</span>
+    <ul class="numbers"><li class="rv" style="transition-delay:0ms"><b>170 MHz</b><span class="eyebrow mono-muted">Cortex‑M4F · Indus</span></li><li class="rv" style="transition-delay:90ms"><b>–40→85 °C</b><span class="eyebrow mono-muted">industrial grade</span></li><li class="rv" style="transition-delay:180ms"><b>3× CAN FD</b><span class="eyebrow mono-muted">8 Mbit/s each</span></li><li class="rv" style="transition-delay:0ms"><b>20 µA</b><span class="eyebrow mono-muted">Flint asleep</span></li><li class="rv" style="transition-delay:90ms"><b>±15 kV</b><span class="eyebrow mono-muted">ESD protection</span></li><li class="rv" style="transition-delay:180ms"><b>USB‑C</b><span class="eyebrow mono-muted">on every board</span></li></ul>
+  </div>
+</section>
+
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track"><span>USB‑C on every board<i aria-hidden="true"></i></span><span>ESD protected<i aria-hidden="true"></i></span><span>Reverse‑polarity protected<i aria-hidden="true"></i></span><span>Arduino · PlatformIO · MicroPython<i aria-hidden="true"></i></span><span>RoHS · CE · FCC parts<i aria-hidden="true"></i></span><span>Designed &amp; built in India<i aria-hidden="true"></i></span><span>Ships across India<i aria-hidden="true"></i></span><span>Classroom &amp; bulk pricing<i aria-hidden="true"></i></span><span>USB‑C on every board<i aria-hidden="true"></i></span><span>ESD protected<i aria-hidden="true"></i></span><span>Reverse‑polarity protected<i aria-hidden="true"></i></span><span>Arduino · PlatformIO · MicroPython<i aria-hidden="true"></i></span><span>RoHS · CE · FCC parts<i aria-hidden="true"></i></span><span>Designed &amp; built in India<i aria-hidden="true"></i></span><span>Ships across India<i aria-hidden="true"></i></span><span>Classroom &amp; bulk pricing<i aria-hidden="true"></i></span></div>
+</div>
+
+<section class="print" style="margin-top:var(--sect);padding:var(--sect) var(--pad)" aria-labelledby="sw-h">
+  <div class="wrap stack" style="gap:64px">
+    <div class="rail rail-end rv">
+      <span class="eyebrow" style="color:var(--print-muted)">04 — Software</span>
+      <h2 class="h-xl" id="sw-h">One install.<br>Every board.</h2>
+    </div>
+    <div class="sw-grid">
+      <div class="sw-shot rv" style="aspect-ratio:1600/869"><img class="photo photo-screen" src="assets/photos/ide.webp" srcset="assets/photos/ide-sm.webp 800w, assets/photos/ide.webp 1600w" sizes="(max-width:860px) 92vw, 55vw" alt="The ForgeBoard IDE with a sketch open and the serial monitor below" loading="lazy" decoding="async"></div>
+      <div class="sw-side rv">
+        <div class="code">
+          <div class="code-bar eyebrow"><span>blink.ino</span><span>ForgeBoard IDE</span></div>
+          <pre>#include &lt;ForgeBoard.h&gt;
+
+void setup() { ForgeBoard.begin(); }
+
+void loop() {
+  ForgeBoard.led(<span class="amber">243, 154, 0</span>);
+  delay(500);
+  ForgeBoard.led(0, 0, 0);
+  delay(500);
+}</pre>
+        </div>
+        <p style="font-size:18px;line-height:1.45;color:#d9cbb0;max-width:38ch">Plug in over USB‑C. The IDE detects which ForgeBoard it is, loads the right examples and flashes with one click. Also: Arduino, PlatformIO, MicroPython, STM32Cube.</p>
+        <a href="software/" class="btn btn-brand">Download ForgeBoard IDE <span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sect" aria-labelledby="mii-h">
+  <div class="wrap rail">
+    <span class="eyebrow mono-muted rv">05 — Made in India</span>
+    <div class="stack" style="gap:56px">
+      <h2 class="h-xl rv" id="mii-h" style="max-width:14ch">Designed and manufactured in India.</h2>
+      <div class="mii-grid">
+        <div class="mii-main rv"><img class="photo" src="assets/photos/lab-wide.webp" srcset="assets/photos/lab-wide-sm.webp 800w, assets/photos/lab-wide.webp 1600w" sizes="(max-width:860px) 92vw, 45vw" alt="A ForgeBoard held up in a gloved hand in front of the pick-and-place machine" loading="lazy" decoding="async"></div>
+        <div class="mii-side rv">
+          <div class="shot"><img class="photo" src="assets/photos/board-detail.webp" srcset="assets/photos/board-detail-sm.webp 600w, assets/photos/board-detail.webp 1200w" sizes="(max-width:860px) 92vw, 30vw" alt="Close-up of the board between gloved fingertips" loading="lazy" decoding="async"></div>
+          <p style="font-size:18px;line-height:1.45;color:var(--muted);max-width:36ch">Defence Forge Industries is a DPIIT‑recognised startup at the AIC MIT‑ADT incubator. We design, build and support every ForgeBoard ourselves — priced in rupees, shipped across India.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <a href="contact/" class="rv">
+    <span class="eyebrow mono-muted">06 — Order</span>
+    <span class="h-pg">Let’s build<br>something<span>.</span></span>
+    <span class="eyebrow go">Single boards · classroom packs · bulk <span aria-hidden="true">→</span></span>
+  </a>
+</section>
+
+</main>
+<footer class="site-foot print">
+  <div class="foot-inner">
+    <div class="foot-cols">
+      <div class="eyebrow"><span>Boards</span><a href="boards/spark/">Spark</a><a href="boards/sprint/">Sprint</a><a href="boards/indus/">Indus</a><a href="boards/flint/">Flint</a><a href="compare/">Compare</a></div>
+      <div class="eyebrow"><span>Support</span><a href="docs/">Documentation</a><a href="software/">Software</a><a href="contact/">Contact</a><a href="mailto:contact@defenceforgeindustries.com">Email us</a></div>
+      <div class="eyebrow"><span>Company</span><a href="contact/">Defence Forge Industries</a><a href="contact/">Loni Kalbhor, Pune 412201</a><a href="tel:+919637764898">+91 96377 64898</a></div>
+      <p>Microcontroller boards designed and manufactured in India by Defence Forge Industries Pvt. Ltd.</p>
+    </div>
+    <img class="foot-mark" src="assets/logo-on-dark.webp" alt="" width="128" height="112" loading="lazy" decoding="async">
+    <p class="wordmark" aria-hidden="true">ForgeBoard</p>
+    <div class="foot-legal eyebrow">
+      <span>© 2026 Defence Forge Industries Pvt. Ltd.</span>
+      <span>CIN U29299MH2022PTC394626 · GST 27AAJCD7152J1ZC · Startup India DIPP121991</span>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
