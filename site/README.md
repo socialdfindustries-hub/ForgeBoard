@@ -59,14 +59,16 @@ js/vendor/          three.js r160, pinned
 assets/boards/      board renders (WebP)
 assets/photos/      IDE screenshot, lab photo + board close-up (WebP, 1x + 2x)
 assets/models/      board models (.glb)
+assets/video/       the pick-and-place clip (720p + a 540p phone encode) and its poster
 ```
 
 ## How the 3D works
 
-Photos sit in fixed-ratio frames and are cropped to fill them, except the
-IDE screenshot: its two frames take the screenshot's own proportions,
-computed from the file at build time, so a new screenshot of any size shows
-whole with nothing cut.
+Photos sit in fixed-ratio frames and are cropped to fill them. The IDE
+screenshot is shown zoomed in, the way IDE vendors show theirs: anchored at
+its top-left corner at 220% of the frame width, so the title bar, sidebar and
+editor read at a usable size and the bottom-right runs off the frame. Its two
+frames still take the screenshot's own proportions, computed at build time.
 
 On a product page `<fb-board>` shows nothing but a centred "Loading 3D"
 pill, counting up the download, until the model itself appears. The flat
@@ -98,6 +100,28 @@ python3 site/optimize_models.py "~/Desktop/Forgeboard/Infographics/GLB files"
 | Sprint | 7.0 MB | 4.3 MB | 102 → 21 |
 | Indus  | 5.9 MB | 3.3 MB | 985 → 16 |
 | Flint  | 2.8 MB | 1.5 MB | 531 → 13 |
+
+## Video
+
+The wide frame in the Made in India section is a 16 s clip of the
+pick-and-place line, next to the board close-up photo. It plays muted only
+while it is on screen and pauses when scrolled away;
+phones get the smaller encode. Reduced-motion and save-data visitors, slow
+connections and JS-off all get a plain `<video controls>` with the poster
+instead, so nobody is left with a frozen frame they cannot play.
+
+Encoded from the phone original with ffmpeg (`brew install ffmpeg`); the
+built-in `avconvert` has no bitrate control and produced 15 MB for the same clip.
+
+```
+ffmpeg -i in.mov -an -vf scale=1280:-2 -c:v libx264 -crf 28 -preset slow -profile:v high -level 4.0 -pix_fmt yuv420p -movflags +faststart -g 48 assets/video/line.mp4
+ffmpeg -i in.mov -an -vf scale=960:-2  -c:v libx264 -crf 29 -preset slow -profile:v main -level 3.1 -pix_fmt yuv420p -movflags +faststart -g 48 assets/video/line-sm.mp4
+```
+
+| file        | size   |
+|-------------|-------:|
+| line.mp4    | 3.9 MB |
+| line-sm.mp4 | 2.3 MB |
 
 three.js is vendored in `js/vendor/` (v0.160.0) and named `three` in each
 product page's import map, so the loader's bare import and the component's

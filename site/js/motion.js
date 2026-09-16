@@ -1,5 +1,5 @@
 /* ForgeBoard — motion layer.
- * Scroll reveals, mobile nav, board view switching and the enquiry form.
+ * Scroll reveals, mobile nav and the enquiry form.
  * Everything here is an enhancement: with JS off the site still reads.
  *
  * Deliberately NOT here: wheel hijacking and a custom cursor. Both were tried
@@ -66,35 +66,6 @@
   }
 
   /* ------------------------------------------------------------------ *
-   * Product page — 3D / top / bottom views
-   * ------------------------------------------------------------------ */
-  const views = document.querySelector('.views');
-  const stage = document.querySelector('.pdp-stage fb-board');
-  if (views && stage) {
-    views.addEventListener('click', (e) => {
-      const btn = e.target.closest('button');
-      if (!btn) return;
-      views.querySelectorAll('button').forEach((b) =>
-        b.setAttribute('aria-pressed', String(b === btn))
-      );
-      stage.setAttribute('alt', btn.dataset.alt || '');
-      stage.setAttribute('fallback', btn.dataset.img);
-      if (btn.dataset.srcset) stage.setAttribute('srcset', btn.dataset.srcset);
-      else stage.removeAttribute('srcset');
-
-      // Only the 3D view carries a model; the flat views are renders.
-      if (btn.dataset.model) {
-        stage.setAttribute('src', btn.dataset.model);
-        // Tapping 3D is an explicit request, so load it even on a phone,
-        // where it never loads on its own.
-        if (typeof stage.upgrade === 'function') stage.upgrade(true);
-      } else {
-        stage.removeAttribute('src');
-      }
-    });
-  }
-
-  /* ------------------------------------------------------------------ *
    * Header theme — the bar sits over dark panels and cream ones, so it
    * swaps its own colours and logo instead of blending.
    * ------------------------------------------------------------------ */
@@ -121,6 +92,38 @@
     sync();
     addEventListener('scroll', sync, { passive: true });
     addEventListener('resize', sync, { passive: true });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Line video (home, Made in India) — plays muted only while on screen.
+   * Stays a plain <video controls> for reduced motion, save-data, slow
+   * connections and JS-off, so nobody is left with a frozen poster.
+   * ------------------------------------------------------------------ */
+  const vid = document.querySelector('.line-video');
+  if (vid) {
+    const net = navigator.connection;
+    const lean = !!(net && (net.saveData || /(^|-)[23]g$/.test(net.effectiveType || '')));
+    if (!reduced && !lean) {
+      vid.removeAttribute('controls');
+      vid.muted = true;
+      // Phones get the smaller encode. Setting .src (not <source>) restarts
+      // resource selection; nothing has been fetched yet with preload=none.
+      const sm = vid.dataset.srcSm;
+      if (sm && matchMedia('(max-width:860px)').matches) vid.src = sm;
+
+      const play = () => {
+        const p = vid.play();
+        if (p && p.catch) p.catch(() => vid.setAttribute('controls', ''));
+      };
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(
+          (entries) => entries.forEach((e) => (e.isIntersecting ? play() : vid.pause())),
+          { rootMargin: '160px 0px', threshold: 0.01 },
+        ).observe(vid);
+      } else {
+        play();
+      }
+    }
   }
 
   /* ------------------------------------------------------------------ *

@@ -35,7 +35,7 @@ BOARDS = [
         "temp_note": "Dual voltage regulator, breadboard-friendly.",
         "tagline": (
             "Clean, uncluttered and hard to break. 32 pins on breadboard-friendly "
-            "headers, wireless built in, and the Arduino IDE ready on day one."
+            "headers, wireless built in, and the ForgeBoard IDE ready on day one."
         ),
         "highlights": [
             "Breadboard-friendly, 32 GPIO",
@@ -43,7 +43,7 @@ BOARDS = [
             "Survives static & reversed power",
             "USB-C — no adapter, no driver hunt",
             "RGB LED for your first “hello”",
-            "Arduino, MicroPython & CircuitPython",
+            "One-click flash from the ForgeBoard IDE",
         ],
         "specs": [
             ("Processor", "ESP32-S3 dual-core Xtensa 32-bit LX7, 240 MHz"),
@@ -60,7 +60,7 @@ BOARDS = [
             ("Programming", "USB-C, OTA over Wi-Fi / BLE"),
             ("Compliance", "RoHS · CE · FCC pre-certified components"),
         ],
-        "ides": ["Arduino IDE", "ESP-IDF v4.4+", "PlatformIO", "MicroPython", "CircuitPython"],
+        "works_with": ["ForgeBoard IDE", "USB-C flashing", "OTA over Wi-Fi & BLE"],
     },
     {
         "id": "sprint",
@@ -83,7 +83,7 @@ BOARDS = [
             "Wi-Fi & Bluetooth 5.0 built in",
             "19 GPIO still free for your parts",
             "USB-C, ESD & thermal protection",
-            "Arduino, MicroPython & CircuitPython",
+            "Updates over the air — Wi-Fi or BLE",
         ],
         "specs": [
             ("Processor", "ESP32-S3 dual-core Xtensa 32-bit LX7, 240 MHz"),
@@ -101,7 +101,7 @@ BOARDS = [
             ("Programming", "USB-C, OTA over Wi-Fi / BLE"),
             ("Compliance", "RoHS · CE · FCC pre-certified components"),
         ],
-        "ides": ["Arduino IDE", "ESP-IDF v4.4+", "PlatformIO", "MicroPython", "CircuitPython"],
+        "works_with": ["ForgeBoard IDE", "USB-C flashing", "OTA over Wi-Fi & BLE"],
     },
     {
         "id": "indus",
@@ -145,10 +145,7 @@ BOARDS = [
             ("Debug", "SWD (SWCLK, SWDIO, SWO) on headers"),
             ("Board size", "35 × 56 mm"),
         ],
-        "ides": [
-            "Arduino IDE (STM32duino)", "ForgeBoard IDE", "STM32CubeIDE",
-            "STM32CubeMX", "PlatformIO", "Keil MDK", "IAR",
-        ],
+        "works_with": ["ForgeBoard IDE", "USB-C flashing", "SWD debug"],
     },
     {
         "id": "flint",
@@ -171,7 +168,7 @@ BOARDS = [
             "Wi-Fi with +20 dBm on-board antenna",
             "USB-C, no driver hunt",
             "Reverse-polarity protected",
-            "Arduino, MicroPython & NodeMCU",
+            "Same ForgeBoard IDE as the rest",
         ],
         "specs": [
             ("Processor", "ESP8266EX Tensilica L106 32-bit RISC, 80 MHz (up to 160 MHz)"),
@@ -191,10 +188,7 @@ BOARDS = [
             ("Operating temp.", "–40 °C to +85 °C"),
             ("Board size", "50 × 30 mm"),
         ],
-        "ides": [
-            "Arduino IDE", "ForgeBoard IDE", "PlatformIO",
-            "MicroPython", "NodeMCU (Lua)", "ESP8266 RTOS SDK",
-        ],
+        "works_with": ["ForgeBoard IDE", "USB-C flashing", "On-board USB-to-serial"],
     },
 ]
 
@@ -205,24 +199,29 @@ STATEMENT = (
     "with, hard to break — and built to be designed straight into the product."
 )
 
-NUMBERS = [
-    ("170 MHz", "Cortex-M4F · Indus"),
-    ("–40→85 °C", "industrial grade"),
-    ("3× CAN FD", "8 Mbit/s each"),
-    ("20 µA", "Flint asleep"),
-    ("±15 kV", "ESD protection"),
-    ("USB-C", "on every board"),
+# Home §03: which board for which job. (board id, the situation, why that board)
+CHOOSER = [
+    ("spark", "Your first project",
+     "Breadboard-friendly, Wi-Fi and Bluetooth built in, and the ForgeBoard IDE ready on day one."),
+    ("sprint", "Sensors & IoT",
+     "Four sensors and a buzzer already on the board, and it charges a Li-ion cell."),
+    ("indus", "Your most ambitious project",
+     "Rated –40 to +85 °C, 3× CAN FD, motor-control timers and AES-256 in hardware."),
+    ("flint", "Small Wi-Fi nodes",
+     "20 µA asleep, Wi-Fi with an on-board antenna, and only 50 × 30 mm."),
 ]
 
+# What people build with them — the band under the chooser.
 TICKER = [
-    "USB-C on every board",
-    "ESD protected",
-    "Reverse-polarity protected",
-    "Arduino · PlatformIO · MicroPython",
-    "RoHS · CE · FCC parts",
-    "Designed & built in India",
-    "Ships across India",
-    "Classroom & bulk pricing",
+    "Robotics",
+    "Drones",
+    "Motor drives",
+    "CAN networks",
+    "Weather stations",
+    "Smart farms",
+    "Classrooms",
+    "Data loggers",
+    "Home automation",
 ]
 
 DOWNLOADS = [
@@ -234,7 +233,6 @@ DOWNLOADS = [
 ]
 
 COMPARE_ROWS = [
-    ("", [b["tag"] for b in BOARDS]),
     ("MCU", [b["mcu"] for b in BOARDS]),
     ("Clock", [b["clock"] for b in BOARDS]),
     ("Wireless", [b["wireless"] for b in BOARDS]),
@@ -267,6 +265,10 @@ HERO = [
     ("indus", "-4vh", "12", "56vh"),
     ("flint", "10vh", "14", "56vh"),
 ]
+
+# Canonical origin, used for absolute URLs (social previews, canonical links).
+# forgeboards.in redirects here.
+SITE_URL = "https://forgeboards.com"
 
 CONTACT = {
     "phone": "+91 96377 64898",
@@ -381,6 +383,7 @@ def shell(*, out_path: str, title: str, description: str, body: str,
     """
     r = depth_prefix(out_path)
     root = r or "./"          # "" would mean "this document", not the root
+    page_url = SITE_URL + "/" + out_path[: -len("index.html")]
     head_class = " over-dark" if over_dark else ""
 
     def cur(key: str) -> str:
@@ -428,7 +431,9 @@ def shell(*, out_path: str, title: str, description: str, body: str,
 <meta property="og:title" content="{e(title)}">
 <meta property="og:description" content="{e(description)}">
 <meta property="og:type" content="website">
-<meta property="og:image" content="{r}assets/boards/hero-spark.webp">
+<meta property="og:url" content="{page_url}">
+<meta property="og:image" content="{SITE_URL}/assets/boards/hero-spark.webp">
+<link rel="canonical" href="{page_url}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="{r}assets/logo-on-light.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -458,14 +463,14 @@ def shell(*, out_path: str, title: str, description: str, body: str,
     <div class="foot-cols">
       <div class="eyebrow"><span>Boards</span>{foot_boards}<a href="{r}compare/">Compare</a></div>
       <div class="eyebrow"><span>Support</span><a href="{r}docs/">Documentation</a><a href="{r}software/">Software</a><a href="{r}contact/">Contact</a><a href="mailto:{CONTACT['email']}">Email us</a></div>
-      <div class="eyebrow"><span>Company</span><a href="{r}contact/">Defence Forge Industries</a><a href="{r}contact/">Loni Kalbhor, Pune 412201</a><a href="{CONTACT['phone_href']}">{CONTACT['phone']}</a></div>
+      <div class="eyebrow"><span>Company</span><a href="{r}contact/">Defence Forge Industries</a><a href="{CONTACT['phone_href']}">{CONTACT['phone']}</a></div>
       <p>Microcontroller boards designed and manufactured in India by Defence Forge Industries Pvt. Ltd.</p>
     </div>
     <img class="foot-mark" src="{r}assets/logo-on-dark.webp" alt="" width="128" height="112" loading="lazy" decoding="async">
     <p class="wordmark" aria-hidden="true">ForgeBoard</p>
     <div class="foot-legal eyebrow">
       <span>© 2026 Defence Forge Industries Pvt. Ltd.</span>
-      <span>CIN {CONTACT['cin']} · GST {CONTACT['gst']} · Startup India {CONTACT['dipp']}</span>
+      <span class="foot-reg"><span>CIN {CONTACT['cin']}</span><span>GST {CONTACT['gst']}</span><span>Startup India {CONTACT['dipp']}</span></span>
     </div>
   </div>
 </footer>
@@ -480,7 +485,6 @@ def shell(*, out_path: str, title: str, description: str, body: str,
 # --------------------------------------------------------------------------
 
 def page_home() -> str:
-    ide_w, ide_h = webp_size("assets/photos/ide.webp")
     r = ""
 
     hero_items = []
@@ -521,9 +525,12 @@ def page_home() -> str:
           </a>
         </li>""")
 
-    nums = "".join(
-        f'<li class="rv" style="transition-delay:{(i%3)*90}ms"><b>{e(v)}</b><span class="eyebrow mono-muted">{e(k)}</span></li>'
-        for i, (v, k) in enumerate(NUMBERS)
+    by_id = {b["id"]: b for b in BOARDS}
+    pick = "".join(
+        f'<li class="rv" style="transition-delay:{(i%2)*90}ms">'
+        f'<a href="boards/{bid}/"><span class="eyebrow mono-muted">{e(need)}</span>'
+        f'<b>{e(by_id[bid]["name"])}<i aria-hidden="true">→</i></b><p>{e(why)}</p></a></li>'
+        for i, (bid, need, why) in enumerate(CHOOSER)
     )
 
     ticks = "".join(
@@ -564,10 +571,10 @@ def page_home() -> str:
   </div>
 </section>
 
-<section class="sect" aria-labelledby="numbers-h">
+<section class="sect" aria-labelledby="pick-h">
   <div class="wrap rail">
-    <span class="eyebrow mono-muted rv" id="numbers-h">03 — By the numbers</span>
-    <ul class="numbers">{nums}</ul>
+    <span class="eyebrow mono-muted rv" id="pick-h">03 — Which one?</span>
+    <ul class="pick">{pick}</ul>
   </div>
 </section>
 
@@ -582,7 +589,11 @@ def page_home() -> str:
       <h2 class="h-xl" id="sw-h">One install.<br>Every board.</h2>
     </div>
     <div class="sw-grid">
-      <div class="sw-shot rv" style="aspect-ratio:{ide_w}/{ide_h}"><img class="photo photo-screen" src="assets/photos/ide.webp" srcset="{srcset("assets/photos/ide.webp", "assets/photos/ide-sm.webp")}" sizes="(max-width:860px) 92vw, 55vw" alt="The ForgeBoard IDE with a sketch open and the serial monitor below" loading="lazy" decoding="async"></div>
+      <div class="sw-shot soon rv" style="aspect-ratio:16/9">
+        <img src="assets/logo-on-dark.webp" alt="" width="128" height="112" loading="lazy" decoding="async">
+        <span class="eyebrow">ForgeBoard IDE</span>
+        <b>Coming soon</b>
+      </div>
       <div class="sw-side rv">
         <div class="code">
           <div class="code-bar eyebrow"><span>blink.ino</span><span>ForgeBoard IDE</span></div>
@@ -597,8 +608,8 @@ void loop() {{
   delay(500);
 }}</pre>
         </div>
-        <p style="font-size:18px;line-height:1.45;color:#d9cbb0;max-width:38ch">Plug in over USB-C. The IDE detects which ForgeBoard it is, loads the right examples and flashes with one click. Also: Arduino, PlatformIO, MicroPython, STM32Cube.</p>
-        <a href="software/" class="btn btn-brand">Download ForgeBoard IDE <span aria-hidden="true">→</span></a>
+        <p style="font-size:18px;line-height:1.45;color:#d9cbb0;max-width:38ch">Plug in over USB-C. The IDE detects which ForgeBoard it is, loads the right examples and flashes with one click. Serial monitor and plotter built in.</p>
+        <span class="btn btn-brand">Coming soon</span>
       </div>
     </div>
   </div>
@@ -610,10 +621,14 @@ void loop() {{
     <div class="stack" style="gap:56px">
       <h2 class="h-xl rv" id="mii-h" style="max-width:14ch">Designed and manufactured in India.</h2>
       <div class="mii-grid">
-        <div class="mii-main rv"><img class="photo" src="assets/photos/lab-wide.webp" srcset="{srcset("assets/photos/lab-wide.webp", "assets/photos/lab-wide-sm.webp")}" sizes="(max-width:860px) 92vw, 45vw" alt="A ForgeBoard held up in a gloved hand in front of the pick-and-place machine" loading="lazy" decoding="async"></div>
+        <div class="mii-main rv">
+          <video class="line-video" poster="{asset('', 'assets/video/line-poster.webp')}" data-src-sm="{asset('', 'assets/video/line-sm.mp4')}" width="1280" height="720" muted playsinline loop preload="none" controls aria-label="The pick-and-place line placing components on a ForgeBoard">
+            <source src="{asset('', 'assets/video/line.mp4')}" type="video/mp4">
+          </video>
+        </div>
         <div class="mii-side rv">
           <div class="shot"><img class="photo" src="assets/photos/board-detail.webp" srcset="{srcset("assets/photos/board-detail.webp", "assets/photos/board-detail-sm.webp")}" sizes="(max-width:860px) 92vw, 30vw" alt="Close-up of the board between gloved fingertips" loading="lazy" decoding="async"></div>
-          <p style="font-size:18px;line-height:1.45;color:var(--muted);max-width:36ch">Defence Forge Industries is a DPIIT-recognised startup at the AIC MIT-ADT incubator. We design, build and support every ForgeBoard ourselves — priced in rupees, shipped across India.</p>
+          <p style="font-size:18px;line-height:1.45;color:var(--muted);max-width:36ch">Defence Forge Industries designs, builds and supports every ForgeBoard in India. Priced in rupees, shipped across the country, and backed by the engineers who made it.</p>
         </div>
       </div>
     </div>
@@ -684,16 +699,6 @@ def page_product(b: dict) -> str:
     idx = BOARDS.index(b)
 
     model_url = asset("../../", f"assets/models/{b['id']}.glb")
-    views = []
-    for key, label in (("3d", "3D"), ("top", "Top"), ("bottom", "Bottom")):
-        sel = "true" if key == "3d" else "false"
-        model = f' data-model="{model_url}"' if key == "3d" else ""
-        views.append(
-            f'<li><button type="button" aria-pressed="{sel}" class="eyebrow"'
-            f' data-img="../../{render(b["id"], key)}" data-srcset="{srcset(render(b["id"], key), render_sm(b["id"], key)).replace("assets/", "../../assets/")}"{model}'
-            f' data-alt="ForgeBoard {b["name"]} {label.lower()} view">{label}</button></li>'
-        )
-
     hls = "".join(
         f'<li class="rv"><span class="eyebrow">{str(i+1).zfill(2)}</span>{e(h)}</li>'
         for i, h in enumerate(b["highlights"])
@@ -703,7 +708,7 @@ def page_product(b: dict) -> str:
         f"<div><dt>{e(k)}</dt><dd>{e(v)}</dd></div>" for k, v in b["specs"]
     )
 
-    chips = "".join(f"<li>{e(i)}</li>" for i in b["ides"])
+    chips = "".join(f"<li>{e(i)}</li>" for i in b["works_with"])
     dls = "".join(
         f'<li><a href="../../docs/"><span>{e(d)}</span><span class="eyebrow mono-muted">Soon</span></a></li>'
         for d in DOWNLOADS
@@ -721,7 +726,6 @@ def page_product(b: dict) -> str:
 <article>
   <section class="pdp-hero">
     <nav class="crumb eyebrow" aria-label="Breadcrumb"><a href="../">Boards</a> <span aria-hidden="true">/</span> {e(b['name'])}</nav>
-    <ul class="views eyebrow" role="group" aria-label="Board views">{"".join(views)}</ul>
     <div class="pdp-stage">
       <fb-board src="{model_url}" fallback="../../{render(b['id'], '3d')}" srcset="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}" sizes="(max-width:860px) 88vw, 55vw" alt="ForgeBoard {b['name']} 3D view" tilt="14">
         <noscript><img src="../../{render_sm(b['id'], '3d')}" alt="ForgeBoard {b['name']} 3D view" style="width:100%;height:100%;object-fit:contain"></noscript>
@@ -783,7 +787,8 @@ def page_product(b: dict) -> str:
 
 def page_compare() -> str:
     heads = "".join(
-        f'<th scope="col"><a href="../boards/{b["id"]}/">{e(b["name"])}</a></th>' for b in BOARDS
+        f'<th scope="col"><a href="../boards/{b["id"]}/">{e(b["name"])}</a><span class="tag">{e(b["tag"])}</span></th>'
+        for b in BOARDS
     )
     rows = "".join(
         "<tr><th scope=\"row\" class=\"eyebrow\">{k}</th>{cells}</tr>".format(
@@ -818,7 +823,6 @@ def page_compare() -> str:
 
 
 def page_software() -> str:
-    ide_w, ide_h = webp_size("assets/photos/ide.webp")
     body = f"""
 <section class="page stack" style="gap:80px">
   <div class="rail">
@@ -827,27 +831,27 @@ def page_software() -> str:
       <h1 class="h-pg">ForgeBoard IDE.</h1>
       <p class="lede">One install for the whole family. Plug a board in over USB-C and the IDE detects which ForgeBoard it is, loads the right examples and flashes with one click. Serial monitor and plotter built in.</p>
       <div class="pdp-cta">
-        <a class="btn btn-ink" href="../contact/">Download for Windows</a>
-        <a class="btn btn-ghost" href="../contact/">macOS</a>
-        <a class="btn btn-ghost" href="../contact/">Linux</a>
+        <span class="btn btn-ink">Coming soon</span>
       </div>
-      <p class="eyebrow mono-muted">v1.0 · release notes with the public build</p>
+      <p class="eyebrow mono-muted">Windows · macOS · Linux</p>
     </div>
   </div>
-  <div class="rv" style="aspect-ratio:{ide_w}/{ide_h};border-radius:4px;overflow:hidden;background:#0f0d0b">
-    <img class="photo photo-screen" src="../assets/photos/ide.webp" srcset="{srcset("assets/photos/ide.webp", "assets/photos/ide-sm.webp").replace("assets/", "../assets/")}" sizes="(max-width:860px) 92vw, 88vw" alt="The ForgeBoard IDE with a sketch open and the serial monitor below" loading="lazy" decoding="async">
+  <div class="sw-shot soon rv" style="aspect-ratio:16/9">
+    <img src="../assets/logo-on-dark.webp" alt="" width="128" height="112" loading="lazy" decoding="async">
+    <span class="eyebrow">ForgeBoard IDE</span>
+    <b>Coming soon</b>
   </div>
   <ul class="sw-cols">
-    <li class="rv"><h2>Arduino IDE</h2><p>Add the ForgeBoard core through Boards Manager.</p><code>https://forgeboards.in/arduino/package_forgeboard_index.json</code></li>
-    <li class="rv"><h2>PlatformIO</h2><p>Board definitions for all four boards.</p><code>board = forgeboard_spark</code></li>
-    <li class="rv"><h2>MicroPython &amp; STM32Cube</h2><p>MicroPython and CircuitPython images for Spark, Sprint and Flint. STM32CubeIDE and CubeMX board files for Indus.</p><a href="../docs/" class="eyebrow link-ul">Firmware images →</a></li>
+    <li class="rv"><h2>Knows the board</h2><p>Plug in over USB-C. The IDE detects which ForgeBoard it is and sets up the pins, radios and sensors for you.</p><code>ForgeBoard.begin();</code></li>
+    <li class="rv"><h2>Examples that fit</h2><p>Every example is written for the board on your desk — nothing to port, nothing to guess.</p><code>File › Examples › ForgeBoard Sprint</code></li>
+    <li class="rv"><h2>Serial monitor &amp; plotter</h2><p>Print values and watch them plot live, without leaving the window.</p><a href="../docs/" class="eyebrow link-ul">Getting started →</a></li>
   </ul>
 </section>
 """
     return shell(
         out_path="software/index.html",
         title="Software — ForgeBoard IDE",
-        description="One install for every ForgeBoard. Plus Arduino, PlatformIO, MicroPython and STM32Cube support.",
+        description="One install for every ForgeBoard. Plug in, and the IDE detects the board, loads the right examples and flashes with one click.",
         body=body,
         nav_key="software",
     )

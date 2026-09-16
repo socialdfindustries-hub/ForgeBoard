@@ -35,6 +35,7 @@ _gz_lock = threading.Lock()
 
 mimetypes.add_type("model/gltf-binary", ".glb")
 mimetypes.add_type("image/webp", ".webp")
+mimetypes.add_type("video/mp4", ".mp4")
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("text/javascript", ".mjs")
 
@@ -86,9 +87,36 @@ class Handler(SimpleHTTPRequestHandler):
         else:
             encoding = None
 
-        self.send_response(200)
+        # Byte ranges on uncompressed files. iOS Safari will not play a video
+        # at all from a server that ignores Range, and every browser uses it
+        # to seek; the models and scripts are gzipped whole instead.
+        status, extra = 200, []
+        rng = self.headers.get("Range")
+        if rng and encoding is None and rng.startswith("bytes="):
+            total = len(body)
+            first, _, last = rng[6:].partition("-")
+            try:
+                start = int(first) if first else max(0, total - int(last))
+                end = int(last) if (first and last) else total - 1
+            except ValueError:
+                start, end = 0, -1
+            end = min(end, total - 1)
+            if 0 <= start <= end:
+                body = body[start:end + 1]
+                status = 206
+                extra.append(("Content-Range", f"bytes {start}-{end}/{total}"))
+            else:
+                self.send_response(416)
+                self.send_header("Content-Range", f"bytes */{total}")
+                self.end_headers()
+                return
+
+        self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Accept-Ranges", "bytes" if encoding is None else "none")
+        for k, v in extra:
+            self.send_header(k, v)
         if encoding:
             self.send_header("Content-Encoding", encoding)
         self.send_header("Vary", "Accept-Encoding")

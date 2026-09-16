@@ -17,7 +17,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent
 
 EXTERNAL = re.compile(r"^(https?:|mailto:|tel:|#|data:)")
-REFS = re.compile(r'(?:href|src)="([^"]+)"')
+REFS = re.compile(r'(?:href|src|poster)="([^"]+)"')
 DATA_REFS = re.compile(r'data-(?:img|model)="([^"]+)"')
 
 failures: list[str] = []
