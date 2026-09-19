@@ -49,13 +49,12 @@
 
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
-  const SPIN = 0.0038;        // idle rotation, radians per frame
   const IDLE_AFTER = 1400;    // ms of stillness before it resumes turning
   const MAX_PITCH = 1.0;      // ~57°, so it never tumbles over
 
   class FBBoard extends HTMLElement {
     static get observedAttributes() {
-      return ['src', 'fallback', 'srcset', 'sizes', 'tilt', 'motion', 'alt'];
+      return ['src', 'fallback', 'srcset', 'sizes', 'tilt', 'motion', 'alt', 'roll'];
     }
 
     connectedCallback() {
@@ -203,8 +202,13 @@
           if (Math.abs(this.yawV) < 1e-4) this.yawV = 0;
           if (Math.abs(this.pitchV) < 1e-4) this.pitchV = 0;
 
+          // Left alone, the board settles back to the pose it is labelled
+          // in rather than turning. A board that drifts while you are
+          // reading a callout moves the callout, and the labels are the
+          // point of this page. Dragging still turns it, and letting go
+          // still brings it home.
           const idle = performance.now() - this.lastInput > IDLE_AFTER;
-          if (idle && !this.yawV && !reduced()) this.yaw += SPIN;
+          if (idle && !this.yawV) this.yaw += (0 - this.yaw) * 0.04;
           if (idle && !this.pitchV) this.pitch += (0 - this.pitch) * 0.02;   // ease level
         }
         this.group.rotation.y = this.yaw;
@@ -355,14 +359,15 @@
         return {
           el, wire, at,
           side: el.dataset.side,
+          i: 0,
           local: new THREE.Vector3().fromArray(el.dataset.n.split(',').map(Number)),
           normal: new THREE.Vector3(),
-          y: 0, ready: false,
+          y: 0, len: 0,
         };
       });
 
       this.hs = {
-        layer, svg, items,
+        layer, svg, items, t0: performance.now(),
         left: items.filter((i) => i.side === 'l'),
         right: items.filter((i) => i.side !== 'l'),
         pos: new THREE.Vector3(),
@@ -436,6 +441,27 @@
         it.h = it.el.offsetHeight || 20;
       }
 
+      // First sight: the labels do not simply appear. Each comes up from
+      // nothing to its full strength, one after the next, and its wire draws
+      // itself out to the part it names — so you watch the board being
+      // annotated rather than finding it already covered in text. Once a
+      // label is up it stays exactly where it is, on its component.
+      const t = performance.now() - hs.t0;
+      const ease = (k) => 1 - Math.pow(1 - k, 3);
+      const reveal = (i) =>
+        ease(Math.max(0, Math.min(1, (t - 140 - i * 85) / 560)));
+
+      // Run the reveal down each column from the top, not in markup order,
+      // so it reads as a sweep. Ordered on the first frame, once the parts
+      // have actually been projected: the board is turned in its own plane,
+      // so its own axes no longer say which label is highest on screen.
+      if (!hs.ordered) {
+        hs.ordered = true;
+        [hs.left, hs.right].forEach((col) => {
+          col.slice().sort((a, b) => a.py - b.py).forEach((it, n) => { it.i = n; });
+        });
+      }
+
       const near = Math.min(...hs.items.map((i) => i.depth));
       const far = Math.max(...hs.items.map((i) => i.depth));
       const span = Math.max(far - near, 1e-4);
@@ -460,7 +486,7 @@
         // second is gentle, and is the depth cue.
         const facing = Math.max(0, Math.min(1, (it.facing - 0.04) / 0.30));
         const depth = 1 - ((it.depth - near) / span) * 0.45;
-        const vis = facing * depth;
+        const vis = facing * depth * reveal(it.i);
         if (vis !== it.shown) {
           it.shown = vis;
           el.style.opacity = vis.toFixed(3);
@@ -479,6 +505,19 @@
           'H' + x1.toFixed(1) +
           'L' + it.px.toFixed(1) + ' ' + it.py.toFixed(1));
         it.wire.style.opacity = vis.toFixed(3);
+        // Draw the wire on rather than fade it in: dash the whole length,
+        // then pull the gap back to nothing. Measured once it has a shape,
+        // and re-measured only while it is still arriving.
+        const k = reveal(it.i);
+        if (k < 1) {
+          const len = it.wire.getTotalLength() || 0;
+          it.wire.style.strokeDasharray = len.toFixed(1);
+          it.wire.style.strokeDashoffset = (len * (1 - k)).toFixed(1);
+        } else if (it.len !== -1) {
+          it.len = -1;
+          it.wire.style.strokeDasharray = 'none';
+          it.wire.style.strokeDashoffset = '0';
+        }
         // The wire belongs to its label, so it lights with it. Checked here
         // rather than pushed from the click handler, which has no way to
         // reach into the SVG.
@@ -574,6 +613,15 @@
       pivot.add(obj);
       group.add(pivot);
       scene.add(group);
+
+      // Turn the board in its own plane first, before anything is measured.
+      // These models lie flat with Y through the board, so a Y rotation
+      // spins the board the way you would turn it on a desk — it does not
+      // tip it. Everything downstream (the centring, the fit, the callout
+      // anchors, which are parented to this) follows from it, so the pose
+      // the page presents is a property of the board, not of the camera.
+      const roll = parseFloat(this.getAttribute('roll'));
+      if (!Number.isNaN(roll)) obj.rotation.y = (roll * Math.PI) / 180;
 
       let box = new THREE.Box3().setFromObject(obj);
       let size = box.getSize(new THREE.Vector3());

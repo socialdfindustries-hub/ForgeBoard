@@ -12,6 +12,7 @@ Writes only .html files. Never touches assets/, css/ or js/.
 from __future__ import annotations
 
 import html
+import math
 import pathlib
 import sys
 
@@ -309,6 +310,14 @@ CONTACT = {
 # wired, so the pattern gets proved on one board before it is repeated.
 CALLOUT_BOARDS = {"sprint"}
 
+# How far each board is turned in its own plane on its product page, in
+# degrees. Not a camera angle: the board is rotated, then framed, so the pose
+# is fixed and the labels sit still on it. Sprint's 225 deg is the pose the
+# design sheet draws — module upper right, antenna above it, buzzer and LDR
+# out to the left, the programming port at the top and the charge port at the
+# bottom. Solved against the model rather than eyeballed.
+BOARD_ROLL = {"sprint": 225}
+
 # (key, material, which one, title, second line, spec row, side)
 #
 # `which one`: None when the material is one part; "big" for the body rather
@@ -329,8 +338,10 @@ FEATURES = {
     "sprint": [
         ("dht", "DHT11_Blue", "big", "(DHT11)",
          "Temperature + Humidity", "Sensors", None),
+        # Within a millimetre of the centre line once turned, so the
+        # computed side is a coin toss; the sheet decides these two.
         ("led", "LED_0603_Yellow", None, "LED",
-         "", "LEDs", None),
+         "", "LEDs", "l"),
         ("buzzer", "Buzzer_Black", None, "Piezo Buzzer",
          "", "Sensors", None),
         ("ldr", "LDR_Face", None, "LDR Sensor",
@@ -342,7 +353,7 @@ FEATURES = {
          "", "Battery", None),
 
         ("usb", "USB_Shell_Steel", "z>0", "USB-C for programming",
-         "", "USB", None),
+         "", "USB", "r"),
         ("antenna", "Module_Antenna_Black", None, "WiFi + BLE 5.0",
          "", "Wi-Fi", None),
         ("mcu", "Module_Shield_Steel", None, "ESP32 S3",
@@ -479,10 +490,13 @@ def callouts(b: dict) -> str:
                 f"{b['id']}: callout {key!r} links to spec {spec!r}, "
                 f"which that board does not have")
 
-        # Which column: the half of the board the part is on, unless the
-        # table insists. At rest the board faces the camera square on, so the
-        # sign of its own x is the side of the screen it appears on.
-        side = side or ("l" if part.centre[0] < 0 else "r")
+        # Which column: the half of the board the part is on once the board
+        # has been turned into its pose, unless the table insists. The board
+        # faces the camera square on, so the sign of the turned x is the side
+        # of the screen the part appears on — no wire crosses the board.
+        roll = math.radians(BOARD_ROLL.get(b["id"], 0))
+        cx = part.centre[0] * math.cos(roll) + part.centre[2] * math.sin(roll)
+        side = side or ("l" if cx < 0 else "r")
         ax = ",".join(f"{v:.5f}" for v in part.anchor())
         nm = ",".join(f"{v:.0f}" for v in part.normal())
         sub_html = f'<i>{nb(e(sub))}</i>' if sub else ""
@@ -845,6 +859,8 @@ def page_product(b: dict) -> str:
     )
 
     size_note = f"Board size {b['size']}. " if b["size"] else ""
+    roll = BOARD_ROLL.get(b["id"], 0)
+    roll_attr = f' roll="{roll}"' if roll else ""
 
     body = f"""
 <article>
@@ -857,7 +873,7 @@ def page_product(b: dict) -> str:
         data-v-3d="../../{render(b['id'], '3d')}" data-s-3d="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}"
         data-v-top="../../{render(b['id'], 'top')}" data-s-top="{srcset(render(b['id'], 'top'), render_sm(b['id'], 'top')).replace('assets/', '../../assets/')}"
         data-v-bottom="../../{render(b['id'], 'bottom')}" data-s-bottom="{srcset(render(b['id'], 'bottom'), render_sm(b['id'], 'bottom')).replace('assets/', '../../assets/')}"
-        fallback="../../{render(b['id'], '3d')}" srcset="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}" sizes="(max-width:860px) 88vw, 55vw" alt="ForgeBoard {b['name']} 3D view" tilt="14">
+        fallback="../../{render(b['id'], '3d')}" srcset="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}" sizes="(max-width:860px) 88vw, 55vw" alt="ForgeBoard {b['name']} 3D view" tilt="14"{roll_attr}>
         <noscript><img src="../../{render_sm(b['id'], '3d')}" alt="ForgeBoard {b['name']} 3D view" style="width:100%;height:100%;object-fit:contain"></noscript>
       </fb-board>
       {callouts(b)}
