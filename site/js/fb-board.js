@@ -58,7 +58,7 @@
   // itself. The hemisphere light is deliberately outside it — that one is
   // diffuse only, it puts a highlight nowhere, and it is what keeps the
   // board visible as the rest comes down.
-  const GLOSS = 0.10;
+  const GLOSS = 0.20;
 
 
   /** Take the shine down without flattening the board.
