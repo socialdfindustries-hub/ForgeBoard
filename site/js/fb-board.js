@@ -56,7 +56,7 @@
   // one edge. It never comes near going round: the face you are reading
   // stays the face you are reading, and every callout keeps its part.
   const SWAY = 0.30;
-  const SWAY_MS = 13000;
+  const SWAY_MS = 9000;
 
   // How much the boards reflect, as a fraction of the lighting the models
   // were authored for. 1.0 is that original rig; this is a fifth of it.
