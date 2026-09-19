@@ -406,7 +406,10 @@
     const meter = document.querySelector('[data-hero="load"]');
     const meterNum = document.querySelector('[data-hero="num"]');
     const meterBar = document.querySelector('[data-hero="bar"]');
-    const showLoad = (frac) => {
+    const showLoad = (raw) => {
+      // Clamped: hosts gzip the models, and the progress event then reports
+      // inflated bytes against the compressed length, which counts past 100.
+      const frac = Math.max(0, Math.min(1, raw));
       if (meterNum) meterNum.textContent = String(Math.round(frac * 100)).padStart(3, '0');
       if (meterBar) meterBar.style.transform = 'scaleX(' + frac.toFixed(3) + ')';
     };

@@ -15,6 +15,8 @@ import html
 import pathlib
 import sys
 
+import hotspots
+
 ROOT = pathlib.Path(__file__).resolve().parent
 
 # --------------------------------------------------------------------------
@@ -284,6 +286,96 @@ CONTACT = {
 }
 
 # --------------------------------------------------------------------------
+# Board callouts
+#
+# What gets a label on the 3D board, and what each one says. The *position*
+# is not here: `hotspots.py` reads it out of the model at build time, by the
+# material the part is made of, so a callout cannot end up pointing at bare
+# board. All this table does is choose which parts are worth naming and what
+# to call them.
+#
+# The second field is the material, the third picks between parts when one
+# material covers several: "x<0" is the left half of the board as the top
+# render is framed (+x is render-right on every one of these boards), "big"
+# is the body rather than the pins or the lens sitting on it. Which button is
+# which comes from the silkscreen in the top renders, not from the model --
+# the model knows there are two buttons but not their names.
+#
+# `spec` ties the callout to a row of the spec table below, so hovering
+# either one lights the other. It must match a key in that board's `specs`.
+# --------------------------------------------------------------------------
+
+FEATURES = {
+    "spark": [
+        ("mcu", "Module_Shield_Steel", None, "ESP32-S3",
+         "Dual-core, 240 MHz, shielded.", "Processor"),
+        ("antenna", "Module_Antenna_Black", None, "Antenna",
+         "Wi-Fi and Bluetooth, etched into the board.", "Wi-Fi"),
+        ("usb", "USB_Shell_Steel", None, "USB-C",
+         "Power and programming, either way up.", "USB"),
+        ("rgb", "LED_Lens_Orange", None, "RGB LED",
+         "Addressable, on IO14 — your first “hello”.", "LEDs"),
+        ("rst", "Button_Cap_Black", "x<0", "RST",
+         "Restarts the board.", "Buttons"),
+        ("boot", "Button_Cap_Black", "x>0", "BOOT",
+         "Hold while resetting for flash mode.", "Buttons"),
+        ("reg", "IC_Body_Black", "x<0", "Regulator",
+         "Dual rail, 5–12 V in.", "Input"),
+    ],
+    "sprint": [
+        ("mcu", "Module_Shield_Steel", None, "ESP32-S3",
+         "Dual-core, 240 MHz, shielded.", "Processor"),
+        ("antenna", "Module_Antenna_Black", None, "Antenna",
+         "Wi-Fi and Bluetooth, etched into the board.", "Wi-Fi"),
+        ("usb", "USB_Shell_Steel", "z>0", "USB_PROG",
+         "Power and programming.", "USB"),
+        ("charge", "USB_Shell_Steel", "z<0", "USB_CHARGE",
+         "Charges the battery.", "Battery"),
+        ("rgb", "LED_Lens_Orange", None, "RGB LED",
+         "Addressable, on IO48.", "LEDs"),
+        ("buzzer", "Buzzer_Black", None, "Buzzer",
+         "Piezo, on IO47.", "Sensors"),
+        ("dht", "DHT11_Blue", "big", "DHT11",
+         "Temperature and humidity, on IO42.", "Sensors"),
+        ("ldr", "LDR_Face", None, "Light sensor",
+         "LDR — analogue on IO8, digital on IO21.", "Sensors"),
+        ("ir", "IR_Receiver_Black", "big", "IR receiver",
+         "Demodulated remote input, on IO9.", "Sensors"),
+        ("boot", "Button_Cap_Black", "z<0", "BOOT",
+         "Hold while resetting for flash mode.", "Buttons"),
+        ("rst", "Button_Cap_Black", "z>0", "RST",
+         "Restarts the board.", "Buttons"),
+    ],
+    "indus": [
+        ("mcu", "IC_Body_Black", "big", "STM32G484",
+         "Cortex-M4F, 170 MHz, industrial grade.", "Processor"),
+        ("xtal", "Crystal_Lid_Metal", None, "Crystal",
+         "External oscillator for timing that holds.", "Timers & PWM"),
+        ("usb", "USB_Shell_Steel", None, "USB-C",
+         "Power and programming, either way up.", "USB"),
+        ("rgb", "LED_Lens_Red", None, "RGB LED",
+         "Addressable, on PA12.", "LEDs"),
+        ("boot", "Button_Cap_Blue", "z<0", "BOOT",
+         "Hold while resetting for the bootloader.", "Buttons"),
+        ("rst", "Button_Cap_Blue", "z>0", "RST",
+         "Restarts the board.", "Buttons"),
+    ],
+    "flint": [
+        ("mcu", "Module_Shield_Steel", None, "ESP8266EX",
+         "80 MHz, up to 160, shielded.", "Processor"),
+        ("antenna", "Module_Antenna_Trace", "big", "Antenna",
+         "Wi-Fi, etched into the board.", "Wi-Fi"),
+        ("usb", "USB_Shell_Steel", None, "USB-C",
+         "Power and programming, either way up.", "USB"),
+        ("boot", "Button_Cap_Black", "x>0", "SW2 · BOOT",
+         "Hold while resetting for flash mode.", "Buttons"),
+        ("rst", "Button_Cap_Black", "x<0", "SW1",
+         "Restarts the board.", "Buttons"),
+    ],
+}
+
+
+# --------------------------------------------------------------------------
 # Helpers
 # --------------------------------------------------------------------------
 
@@ -369,6 +461,57 @@ def webp_size(rel: str) -> tuple[int, int]:
     return w, h
 
 
+def callouts(b: dict) -> str:
+    """The callout layer for a board, and the spec keys it links to.
+
+    Resolves every row of FEATURES against the board's own model, so the
+    positions are the parts' real positions. A feature whose material is
+    missing, or whose selector does not land on exactly one part, stops the
+    build rather than shipping a label pointing at nothing.
+
+    The markup is a plain list, readable and complete with no CSS and no
+    JavaScript. `fb-board` takes it over once the model is up and holds each
+    item over its part; until then, and on anything without WebGL, it reads
+    as what it is - a list of what is on the board.
+    """
+    rows = FEATURES.get(b["id"], [])
+    if not rows:
+        return ""
+
+    parts = hotspots.read(ROOT / "assets" / "models" / f"{b['id']}.glb",
+                          {r[1] for r in rows})
+    spec_keys = {k for k, _ in b["specs"]}
+
+    items = []
+    for key, material, where, label, blurb, spec in rows:
+        try:
+            part = hotspots.pick(parts, material, where)
+        except LookupError as exc:
+            raise SystemExit(
+                f"{b['id']}: callout {key!r} — {exc}") from None
+        if spec not in spec_keys:
+            raise SystemExit(
+                f"{b['id']}: callout {key!r} links to spec {spec!r}, "
+                f"which that board does not have")
+        ax = ",".join(f"{v:.5f}" for v in part.anchor())
+        nm = ",".join(f"{v:.0f}" for v in part.normal())
+        items.append(
+            f'<li class="hs-item"><button type="button" class="hs-pt" '
+            f'data-hs="{e(key)}" data-p="{ax}" data-n="{nm}" '
+            f'data-spec="{e(spec)}" aria-describedby="hs-{e(key)}-d">'
+            f'<span class="hs-dot" aria-hidden="true"></span>'
+            f'<span class="hs-card"><b>{nb(e(label))}</b>'
+            f'<em id="hs-{e(key)}-d">{nb(e(blurb))}</em></span></button></li>'
+        )
+
+    return (
+        '<div class="hs" data-hs-layer>'
+        '<p class="hs-lede eyebrow mono-muted">On the board</p>'
+        f'<ol class="hs-list">{"".join(items)}</ol>'
+        '</div>'
+    )
+
+
 def spec_line(b: dict) -> str:
     """The one-line spec shown under the hero board. Boards with no radio
     (Indus carries an em dash) simply drop that term."""
@@ -436,7 +579,14 @@ def shell(*, out_path: str, title: str, description: str, body: str,
             # No `crossorigin`: the loader fetches these same-origin, and a
             # CORS-mode preload is a different cache entry — the model would
             # come down twice.
-            + (f'<link rel="preload" href="{model_preload}" as="fetch">' if model_preload else '')
+            # crossorigin is not optional on an as="fetch" preload, even for
+            # a same-origin file: fetch() requests default to CORS mode, and a
+            # preload without the attribute is recorded with a different
+            # credentials mode, so the browser refuses to match the two. The
+            # preload is then dropped on the floor and three.js downloads the
+            # model a second time — the console says so in as many words.
+            + (f'<link rel="preload" href="{model_preload}" as="fetch" crossorigin>'
+               if model_preload else '')
             + script_tags
         )
 
@@ -693,7 +843,8 @@ def page_product(b: dict) -> str:
 
     model_url = asset("../../", f"assets/models/{b['id']}.glb")
     specs = "".join(
-        f"<div><dt>{e(k)}</dt><dd>{e(v)}</dd></div>" for k, v in b["specs"]
+        f'<div data-spec="{e(k)}"><dt>{e(k)}</dt><dd>{e(v)}</dd></div>'
+        for k, v in b["specs"]
     )
 
     chips = "".join(f"<li>{e(i)}</li>" for i in b["works_with"])
@@ -709,6 +860,7 @@ def page_product(b: dict) -> str:
   <section class="pdp-hero">
     <nav class="crumb eyebrow" aria-label="Breadcrumb"><a href="../">Boards</a> <span aria-hidden="true">/</span> {e(b['name'])}</nav>
     <div class="pdp-stage">
+      <div class="pdp-board">
       <fb-board src="{model_url}"
         data-model="{model_url}"
         data-v-3d="../../{render(b['id'], '3d')}" data-s-3d="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}"
@@ -717,6 +869,8 @@ def page_product(b: dict) -> str:
         fallback="../../{render(b['id'], '3d')}" srcset="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}" sizes="(max-width:860px) 88vw, 55vw" alt="ForgeBoard {b['name']} 3D view" tilt="14">
         <noscript><img src="../../{render_sm(b['id'], '3d')}" alt="ForgeBoard {b['name']} 3D view" style="width:100%;height:100%;object-fit:contain"></noscript>
       </fb-board>
+      {callouts(b)}
+      </div>
       <div class="pdp-views eyebrow" role="group" aria-label="Board view">
         <button type="button" data-view="3d" aria-pressed="true">3D</button>
         <button type="button" data-view="top" aria-pressed="false">Top</button>

@@ -18,9 +18,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../css/site.css?v=4a957be3">
-<script type="importmap">{"imports":{"three":"../../js/vendor/three.module.min.js"}}</script><link rel="modulepreload" href="../../js/vendor/three.module.min.js"><link rel="modulepreload" href="../../js/vendor/loaders/GLTFLoader.js"><link rel="preload" href="../../assets/models/flint.glb?v=ce9c1505" as="fetch"><script src="../../js/fb-board.js?v=a3b71d6d" defer></script>
-<script src="../../js/motion.js?v=2697ced6" defer></script>
+<link rel="stylesheet" href="../../css/site.css?v=6aee6052">
+<script type="importmap">{"imports":{"three":"../../js/vendor/three.module.min.js"}}</script><link rel="modulepreload" href="../../js/vendor/three.module.min.js"><link rel="modulepreload" href="../../js/vendor/loaders/GLTFLoader.js"><link rel="preload" href="../../assets/models/flint.glb?v=ce9c1505" as="fetch" crossorigin><script src="../../js/fb-board.js?v=5c23bdc8" defer></script>
+<script src="../../js/motion.js?v=3eb76d3e" defer></script>
 </head>
 <body>
 <a href="#main" class="skip eyebrow">Skip to content</a>
@@ -40,6 +40,7 @@
   <section class="pdp-hero">
     <nav class="crumb eyebrow" aria-label="Breadcrumb"><a href="../">Boards</a> <span aria-hidden="true">/</span> Flint</nav>
     <div class="pdp-stage">
+      <div class="pdp-board">
       <fb-board src="../../assets/models/flint.glb?v=ce9c1505"
         data-model="../../assets/models/flint.glb?v=ce9c1505"
         data-v-3d="../../assets/boards/flint-3d.webp" data-s-3d="../../assets/boards/flint-3d-sm.webp 700w, ../../assets/boards/flint-3d.webp 1500w"
@@ -48,6 +49,8 @@
         fallback="../../assets/boards/flint-3d.webp" srcset="../../assets/boards/flint-3d-sm.webp 700w, ../../assets/boards/flint-3d.webp 1500w" sizes="(max-width:860px) 88vw, 55vw" alt="ForgeBoard Flint 3D view" tilt="14">
         <noscript><img src="../../assets/boards/flint-3d-sm.webp" alt="ForgeBoard Flint 3D view" style="width:100%;height:100%;object-fit:contain"></noscript>
       </fb-board>
+      <div class="hs" data-hs-layer><p class="hs-lede eyebrow mono-muted">On the board</p><ol class="hs-list"><li class="hs-item"><button type="button" class="hs-pt" data-hs="mcu" data-p="-0.00010,0.00444,-0.01753" data-n="0,1,0" data-spec="Processor" aria-describedby="hs-mcu-d"><span class="hs-dot" aria-hidden="true"></span><span class="hs-card"><b>ESP8266EX</b><em id="hs-mcu-d">80 MHz, up to 160, shielded.</em></span></button></li><li class="hs-item"><button type="button" class="hs-pt" data-hs="antenna" data-p="-0.00155,0.00284,-0.02893" data-n="0,1,0" data-spec="Wi‑Fi" aria-describedby="hs-antenna-d"><span class="hs-dot" aria-hidden="true"></span><span class="hs-card"><b>Antenna</b><em id="hs-antenna-d">Wi‑Fi, etched into the board.</em></span></button></li><li class="hs-item"><button type="button" class="hs-pt" data-hs="usb" data-p="0.00039,0.00535,0.02136" data-n="0,1,0" data-spec="USB" aria-describedby="hs-usb-d"><span class="hs-dot" aria-hidden="true"></span><span class="hs-card"><b>USB‑C</b><em id="hs-usb-d">Power and programming, either way up.</em></span></button></li><li class="hs-item"><button type="button" class="hs-pt" data-hs="boot" data-p="0.01144,0.00404,-0.00930" data-n="0,1,0" data-spec="Buttons" aria-describedby="hs-boot-d"><span class="hs-dot" aria-hidden="true"></span><span class="hs-card"><b>SW2 · BOOT</b><em id="hs-boot-d">Hold while resetting for flash mode.</em></span></button></li><li class="hs-item"><button type="button" class="hs-pt" data-hs="rst" data-p="-0.01173,0.00404,-0.01416" data-n="0,1,0" data-spec="Buttons" aria-describedby="hs-rst-d"><span class="hs-dot" aria-hidden="true"></span><span class="hs-card"><b>SW1</b><em id="hs-rst-d">Restarts the board.</em></span></button></li></ol></div>
+      </div>
       <div class="pdp-views eyebrow" role="group" aria-label="Board view">
         <button type="button" data-view="3d" aria-pressed="true">3D</button>
         <button type="button" data-view="top" aria-pressed="false">Top</button>
@@ -74,7 +77,7 @@
         <p>Board size 50 × 30 mm. Operating range –40 °C to +85 °C. 20 µA in deep sleep.</p>
         <a href="../../docs/" class="eyebrow link-ul">Datasheet →</a>
       </div>
-      <dl class="specs"><div><dt>Processor</dt><dd>ESP8266EX Tensilica L106 32‑bit RISC, 80 MHz (up to 160 MHz)</dd></div><div><dt>Memory</dt><dd>4 MB SPI flash, 50 KB RAM</dd></div><div><dt>Wi‑Fi</dt><dd>IEEE 802.11 b/g/n (2.4 GHz), up to 72.2 Mbps, WPA / WPA2</dd></div><div><dt>Network</dt><dd>Integrated TCP/IP stack — IPv4, TCP, UDP, HTTP; station, soft‑AP &amp; combined</dd></div><div><dt>Radio</dt><dd>On‑board PCB antenna, integrated PA / LNA / balun, TX +20 dBm (802.11b)</dd></div><div><dt>Analogue</dt><dd>1× 10‑bit SAR ADC, 0–1.0 V</dd></div><div><dt>Interfaces</dt><dd>2× UART (UART1 TX‑only), SPI &amp; HSPI, I2S with DMA; software I2C (100 kHz), PWM, IR remote</dd></div><div><dt>GPIO</dt><dd>12 programmable pins on headers</dd></div><div><dt>USB</dt><dd>USB Type‑C 2.0, data + power, on‑board USB‑to‑serial, 50 bps to 2 Mbps</dd></div><div><dt>Power</dt><dd>1 A low‑noise CMOS LDO, 450 mV dropout, over‑current &amp; over‑temperature protection</dd></div><div><dt>Protection</dt><dd>Reverse‑polarity — P‑channel MOSFET (30 V, 4 A) + 40 V / 3 A Schottky</dd></div><div><dt>Power saving</dt><dd>80 mA average, 20 µA deep sleep</dd></div><div><dt>LEDs</dt><dd>2× LED (power, GPIO)</dd></div><div><dt>Buttons</dt><dd>RST + FLASH</dd></div><div><dt>Operating temp.</dt><dd>–40 °C to +85 °C</dd></div><div><dt>Board size</dt><dd>50 × 30 mm</dd></div></dl>
+      <dl class="specs"><div data-spec="Processor"><dt>Processor</dt><dd>ESP8266EX Tensilica L106 32‑bit RISC, 80 MHz (up to 160 MHz)</dd></div><div data-spec="Memory"><dt>Memory</dt><dd>4 MB SPI flash, 50 KB RAM</dd></div><div data-spec="Wi‑Fi"><dt>Wi‑Fi</dt><dd>IEEE 802.11 b/g/n (2.4 GHz), up to 72.2 Mbps, WPA / WPA2</dd></div><div data-spec="Network"><dt>Network</dt><dd>Integrated TCP/IP stack — IPv4, TCP, UDP, HTTP; station, soft‑AP &amp; combined</dd></div><div data-spec="Radio"><dt>Radio</dt><dd>On‑board PCB antenna, integrated PA / LNA / balun, TX +20 dBm (802.11b)</dd></div><div data-spec="Analogue"><dt>Analogue</dt><dd>1× 10‑bit SAR ADC, 0–1.0 V</dd></div><div data-spec="Interfaces"><dt>Interfaces</dt><dd>2× UART (UART1 TX‑only), SPI &amp; HSPI, I2S with DMA; software I2C (100 kHz), PWM, IR remote</dd></div><div data-spec="GPIO"><dt>GPIO</dt><dd>12 programmable pins on headers</dd></div><div data-spec="USB"><dt>USB</dt><dd>USB Type‑C 2.0, data + power, on‑board USB‑to‑serial, 50 bps to 2 Mbps</dd></div><div data-spec="Power"><dt>Power</dt><dd>1 A low‑noise CMOS LDO, 450 mV dropout, over‑current &amp; over‑temperature protection</dd></div><div data-spec="Protection"><dt>Protection</dt><dd>Reverse‑polarity — P‑channel MOSFET (30 V, 4 A) + 40 V / 3 A Schottky</dd></div><div data-spec="Power saving"><dt>Power saving</dt><dd>80 mA average, 20 µA deep sleep</dd></div><div data-spec="LEDs"><dt>LEDs</dt><dd>2× LED (power, GPIO)</dd></div><div data-spec="Buttons"><dt>Buttons</dt><dd>RST + FLASH</dd></div><div data-spec="Operating temp."><dt>Operating temp.</dt><dd>–40 °C to +85 °C</dd></div><div data-spec="Board size"><dt>Board size</dt><dd>50 × 30 mm</dd></div></dl>
     </div>
   </section>
 

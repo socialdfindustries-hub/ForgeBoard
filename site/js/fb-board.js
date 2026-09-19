@@ -81,8 +81,18 @@
       // A page that will show the real model shows only the loading pill
       // until it arrives. The flat render is the fallback for devices that
       // can't do 3D at all, and for the Top / Bottom views, which are renders.
-      if (this.getAttribute('src') && autoCapable() && !this.hasAttribute('hold-fallback')) this.mountEmpty();
-      else this.mount2d();
+      // The callout list is markup, so it is on the page before anything
+      // here runs. While a model is on its way it would sit under an empty
+      // stage and then vanish the moment the labels take over, so it is held
+      // back until we know which of the two this page is getting.
+      this.hsLayer = this.parentElement
+        && this.parentElement.querySelector('[data-hs-layer]');
+      if (this.getAttribute('src') && autoCapable() && !this.hasAttribute('hold-fallback')) {
+        if (this.hsLayer) this.hsLayer.classList.add('is-pending');
+        this.mountEmpty();
+      } else {
+        this.mount2d();
+      }
 
       // Flat-render tilt, driven by the cursor. Only used before the upgrade.
       this.onMove = (e) => {
@@ -205,6 +215,9 @@
         if (Math.abs(this.camera.position.z - want) > 1e-4) {
           this.camera.position.z += (want - this.camera.position.z) * 0.09;
         }
+        // After the camera has moved, so the labels are placed against the
+        // frame that is about to be drawn rather than the one before it.
+        if (this.hs) this.placeHotspots();
         if (this.visible !== false) this.renderer.render(this.scene, this.camera);
         return;
       }
@@ -246,6 +259,7 @@
     mount2d() {
       this.inner.innerHTML = '';
       this.group = null;
+      if (this.hsLayer) this.hsLayer.classList.remove('is-pending');
       this.style.cursor = '';
       this.style.touchAction = 'pan-y';   // flat render: let the page scroll
       this.classList.remove('is-3d');
@@ -274,6 +288,125 @@
       });
       this.renderer.dispose();
       this.renderer = this.scene = this.camera = this.group = null;
+      this.modelRoot = null;
+      if (this.hs) { this.hs.layer.classList.remove('is-live'); this.hs = null; }
+    }
+
+    /* ---------------- callouts ----------------
+     *
+     * The labels are HTML held over the board, not geometry in it: text that
+     * stays crisp at any zoom, selects, translates, and reaches a screen
+     * reader as a list. The cost is that HTML never enters the depth buffer,
+     * so a label cannot truly be hidden behind the board — every library
+     * that does this fakes it, and so does this.
+     *
+     * The fake: each callout carries the normal of the face it sits on. Turn
+     * the board and that normal turns with it; once it points away from the
+     * camera the label fades out, and the underside's set fades in. On a
+     * board — a flat slab with parts on one face — that is very close to
+     * exact, and it costs one dot product per label per frame.
+     *
+     * The markup is a plain list until this runs. Nothing here is required
+     * to read what is on the board.
+     * ---------------- */
+
+    mountHotspots() {
+      const layer = this.hsLayer;
+      if (!layer || !this.group || !this.modelRoot) return;
+      layer.classList.remove('is-pending');
+      const nodes = [...layer.querySelectorAll('.hs-pt')];
+      if (!nodes.length) return;
+      const THREE = this.THREE;
+
+      const items = nodes.map((el) => {
+        // An empty object parented to the model: three.js then carries it
+        // through the same centring, uprighting and spin as the geometry,
+        // and we never have to repeat that arithmetic here.
+        const at = new THREE.Object3D();
+        at.position.fromArray(el.dataset.p.split(',').map(Number));
+        this.modelRoot.add(at);
+        return {
+          el,
+          card: el.querySelector('.hs-card'),
+          at,
+          local: new THREE.Vector3().fromArray(el.dataset.n.split(',').map(Number)),
+          normal: new THREE.Vector3(),
+          shown: -1,
+        };
+      });
+
+      this.hs = {
+        layer, items,
+        pos: new THREE.Vector3(),
+        mid: new THREE.Vector3(),
+        toCam: new THREE.Vector3(),
+      };
+      layer.classList.add('is-live');
+      this.placeHotspots();
+    }
+
+    placeHotspots() {
+      const hs = this.hs;
+      const w = this.clientWidth, h = this.clientHeight;
+      if (!w || !h) return;
+      const cam = this.camera;
+      this.group.updateWorldMatrix(true, true);
+
+      // The board's own centre on screen. Cards are pushed away from it, so
+      // they fan outwards and sit off the board instead of over it.
+      hs.mid.set(0, 0, 0);
+      this.group.localToWorld(hs.mid);
+      hs.mid.project(cam);
+      const mx = (hs.mid.x * 0.5 + 0.5) * w;
+      const my = (-hs.mid.y * 0.5 + 0.5) * h;
+      const reach = Math.min(w, h) * 0.34;
+
+      for (const it of hs.items) {
+        it.at.getWorldPosition(hs.pos);
+
+        // Facing: +1 straight at the camera, 0 edge-on, negative turned away.
+        it.normal.copy(it.local).transformDirection(this.modelRoot.matrixWorld);
+        hs.toCam.copy(cam.position).sub(hs.pos).normalize();
+        const facing = it.normal.dot(hs.toCam);
+
+        hs.pos.project(cam);
+        const x = (hs.pos.x * 0.5 + 0.5) * w;
+        const y = (-hs.pos.y * 0.5 + 0.5) * h;
+
+        // Fade across the last 30 degrees rather than snapping at edge-on,
+        // so a slow turn hands the labels over instead of blinking them.
+        const vis = Math.max(0, Math.min(1, (facing - 0.06) / 0.34));
+        const el = it.el;
+        if (vis !== it.shown) {
+          it.shown = vis;
+          el.style.opacity = vis.toFixed(3);
+          // Off the back of the board it must not be clickable either, or a
+          // label you cannot see still takes the pointer.
+          el.style.pointerEvents = vis > 0.25 ? 'auto' : 'none';
+        }
+        el.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
+
+        // Where its card hangs. On anything with room, straight out from the
+        // middle of the board, so the cards fan outwards and sit off it
+        // rather than over it. On a phone there is no such room: every card
+        // goes to the same place at the foot of the stage, and only the dot
+        // moves, which is also why the leader line is off down there.
+        let dx = x - mx, dy = y - my;
+        const len = Math.hypot(dx, dy) || 1;
+        dx /= len; dy /= len;
+        const narrow = w < 700;
+        const cx = narrow ? w / 2 - x : dx * reach;
+        const cy = narrow ? h - 52 - y : dy * reach;
+        if (it.card) {
+          it.card.style.setProperty('--cx', cx.toFixed(1) + 'px');
+          it.card.style.setProperty('--cy', cy.toFixed(1) + 'px');
+          // The leader is one CSS line: how long, and which way round.
+          el.style.setProperty('--len', (reach - 10).toFixed(1) + 'px');
+          el.style.setProperty('--ang', Math.atan2(cy, cx).toFixed(3) + 'rad');
+          // Cards on the left of the board read right-to-left.
+          el.classList.toggle('is-left', dx < 0);
+        }
+      }
     }
 
     /* ---------------- WebGL upgrade ---------------- */
@@ -307,7 +440,13 @@
         this.pill.setAttribute('role', 'status');
         this.appendChild(this.pill);
       }
-      this.pill.textContent = pct > 0 ? `Loading 3D · ${Math.round(pct * 100)}%` : 'Loading 3D';
+      // Clamped, because the number can legitimately exceed 1. Hosts serve
+      // these models gzipped, and then `loaded` counts bytes after the
+      // browser has inflated them while `total` is the compressed
+      // Content-Length — so Spark, 3.9 MB inflated from 1.6 MB, counts its
+      // way to 242%. Nothing is wrong with the download; only the ratio is.
+      const k = Math.max(0, Math.min(1, pct));
+      this.pill.textContent = k > 0 ? `Loading 3D · ${Math.round(k * 100)}%` : 'Loading 3D';
     }
 
     hideLoading() {
@@ -380,7 +519,8 @@
       this.inner.innerHTML = '';
       this.inner.appendChild(canvas);
       this.img = null;
-      Object.assign(this, { renderer, scene, camera, group });
+      Object.assign(this, { renderer, scene, camera, group, modelRoot: obj, THREE });
+      this.mountHotspots();
       this.style.cursor = 'grab';
       this.style.touchAction = 'none';   // a drag on the model spins it, never the page
       this.classList.add('is-3d');

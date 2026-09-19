@@ -89,6 +89,73 @@
   }
 
   /* ------------------------------------------------------------------ *
+   * Callouts <-> spec table
+   *
+   * The dot on the board and the row in the table are the same fact told
+   * twice, so pointing at either lights both. `fb-board` owns where the dots
+   * are; this only owns which one is open.
+   *
+   * Click pins a callout, because on a touch screen there is no hover to
+   * rest, and because reading a spec while the board keeps turning under
+   * your finger is not reading. Pinned survives the pointer leaving; a
+   * second click, Escape, or a click on empty stage clears it.
+   * ------------------------------------------------------------------ */
+  const hsLayer = document.querySelector('[data-hs-layer]');
+  const specList = document.querySelector('.specs');
+  if (hsLayer) {
+    const pts = [...hsLayer.querySelectorAll('.hs-pt')];
+    const rowFor = (key) =>
+      specList && specList.querySelector('[data-spec="' + CSS.escape(key) + '"]');
+    let pinned = null;
+
+    const light = (pt, on) => {
+      const row = pt && rowFor(pt.dataset.spec);
+      if (row) row.classList.toggle('is-on', on);
+    };
+    const open = (pt) => {
+      if (pinned === pt) return;
+      if (pinned) { pinned.classList.remove('is-on'); light(pinned, false); }
+      pinned = pt;
+      if (pt) { pt.classList.add('is-on'); light(pt, true); }
+      hsLayer.classList.toggle('has-open', !!pt);
+    };
+
+    pts.forEach((pt) => {
+      // Hover only previews: it lights the spec row, it does not pin.
+      pt.addEventListener('pointerenter', () => { if (!pinned) light(pt, true); });
+      pt.addEventListener('pointerleave', () => { if (!pinned) light(pt, false); });
+      pt.addEventListener('focus', () => { if (!pinned) light(pt, true); });
+      pt.addEventListener('blur', () => { if (!pinned) light(pt, false); });
+      pt.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        open(pinned === pt ? null : pt);
+      });
+    });
+
+    // The other direction: the table lights the board.
+    if (specList) {
+      specList.querySelectorAll('[data-spec]').forEach((row) => {
+        const key = row.dataset.spec;
+        const mates = pts.filter((pt) => pt.dataset.spec === key);
+        if (!mates.length) return;
+        row.classList.add('has-pt');
+        const hover = (on) => {
+          if (pinned) return;
+          row.classList.toggle('is-on', on);
+          mates.forEach((pt) => pt.classList.toggle('is-on', on));
+          hsLayer.classList.toggle('has-open', on);
+        };
+        row.addEventListener('pointerenter', () => hover(true));
+        row.addEventListener('pointerleave', () => hover(false));
+      });
+    }
+
+    addEventListener('keydown', (ev) => { if (ev.key === 'Escape') open(null); });
+    const stage = document.querySelector('.pdp-stage');
+    if (stage) stage.addEventListener('click', () => open(null));
+  }
+
+  /* ------------------------------------------------------------------ *
    * Scroll rail
    *
    * A hairline across the top that fills as the page goes by. Written on a

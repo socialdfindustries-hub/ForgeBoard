@@ -714,7 +714,89 @@ table td,table th{font-variant-numeric:tabular-nums}
   overflow:hidden;padding-top:150px;
 }
 .pdp-stage{display:grid;place-items:center;min-height:0}
-.pdp-stage fb-board{width:min(64vw,820px);height:min(46vh,520px)}
+.pdp-board{position:relative;width:min(64vw,820px)}
+.pdp-stage fb-board{width:100%;height:min(46vh,520px)}
+
+/* ---------- board callouts ----------
+   Until the model is up this is a plain list of what is on the board: it
+   reads with no JavaScript, on a phone that never loads the model, and to a
+   screen reader. `is-live` is added only once fb-board has anchors to hold
+   it by, and from then on every item is placed by transform each frame. */
+.hs.is-pending{display:none}
+.hs-lede{display:block;margin:22px 0 10px;text-align:center}
+.hs-list{justify-content:center}
+.hs-list{display:flex;flex-wrap:wrap;gap:8px;list-style:none;padding:0;margin:0}
+.hs-pt{display:flex;align-items:baseline;gap:8px;text-align:left;
+  border:1px solid var(--line);border-radius:999px;padding:7px 14px;
+  color:var(--muted);transition:color .25s var(--ease),border-color .25s var(--ease)}
+.hs-pt:hover,.hs-pt:focus-visible{color:var(--ink);border-color:var(--ink)}
+.hs-pt b{font-weight:700;color:var(--ink)}
+.hs-pt em{font-style:normal}
+.hs-card{display:flex;align-items:baseline;gap:8px}
+.hs .hs-dot{display:none}
+
+/* Live: the list becomes the layer over the board. */
+.hs.is-live{position:absolute;inset:0;pointer-events:none;z-index:2}
+.hs.is-live .hs-lede{display:none}
+.hs.is-live .hs-list{display:block}
+.hs.is-live .hs-item{position:static}
+.hs.is-live .hs-pt{
+  position:absolute;left:0;top:0;padding:0;border:0;border-radius:0;
+  background:none;pointer-events:auto;will-change:transform;
+}
+/* The dot is the thing on the board; the card is parked off it. */
+.hs.is-live .hs-dot{
+  display:block;position:absolute;left:0;top:0;width:11px;height:11px;
+  margin:-5.5px 0 0 -5.5px;border-radius:50%;
+  background:var(--brand);box-shadow:0 0 0 3px rgba(243,154,0,.22);
+  transition:transform .3s var(--ease),box-shadow .3s var(--ease);
+}
+/* The dot is 11px; the thing you have to hit is 33px. Invisible, centred on
+   it, and not something a finger should have to be accurate about. */
+.hs.is-live .hs-dot::after{content:"";position:absolute;inset:-11px;border-radius:50%}
+.hs.is-live .hs-pt:hover .hs-dot,
+.hs.is-live .hs-pt:focus-visible .hs-dot,
+.hs.is-live .hs-pt.is-on .hs-dot{
+  transform:scale(1.45);box-shadow:0 0 0 7px rgba(243,154,0,.2);
+}
+/* The leader: one line from the dot out to the card, drawn by rotating a
+   1px rule. No SVG, and nothing to keep in sync but two custom properties. */
+.hs.is-live .hs-pt::before{
+  content:"";position:absolute;left:0;top:0;height:1px;width:var(--len,0);
+  transform-origin:0 50%;transform:rotate(var(--ang,0rad));
+  background:linear-gradient(90deg,var(--brand),rgba(243,154,0,.15));
+  opacity:0;transition:opacity .3s var(--ease);pointer-events:none;
+}
+.hs.is-live .hs-card{
+  position:absolute;left:0;top:0;display:block;width:max-content;max-width:210px;
+  /* Invisible cards must not take the pointer, or the board is covered in
+     dead rectangles you cannot drag through. */
+  pointer-events:none;
+  transform:translate(calc(-50% + var(--cx,0px)),calc(-50% + var(--cy,0px)));
+  padding:9px 13px;border-radius:12px;text-align:left;
+  background:rgba(20,18,16,.82);border:1px solid rgba(239,230,211,.14);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  opacity:0;transition:opacity .3s var(--ease);
+}
+.hs.is-live .hs-card b{display:block;font-size:14px;letter-spacing:-.01em}
+.hs.is-live .hs-card em{display:block;margin-top:3px;font-size:12.5px;
+  line-height:1.35;color:var(--muted)}
+.hs.is-live .hs-pt:hover::before,
+.hs.is-live .hs-pt:focus-visible::before,
+.hs.is-live .hs-pt.is-on::before,
+.hs.is-live .hs-pt:hover .hs-card,
+.hs.is-live .hs-pt:focus-visible .hs-card,
+.hs.is-live .hs-pt.is-on .hs-card{opacity:1;pointer-events:auto}
+/* One at a time: the rest step back so the open card is the only thing read. */
+.hs.is-live.has-open .hs-pt:not(:hover):not(:focus-visible):not(.is-on) .hs-dot{
+  opacity:.35;transform:scale(.8);
+}
+/* The spec row that belongs to the open callout. */
+.specs div[data-spec].is-on{background:rgba(243,154,0,.10);border-radius:8px}
+.specs div[data-spec].is-on dt{color:var(--brand-ink)}
+@media (prefers-reduced-motion:reduce){
+  .hs.is-live .hs-dot,.hs.is-live .hs-card,.hs.is-live .hs-pt::before{transition:none}
+}
 /* 3D · Top · Bottom — a segmented control under the stage */
 .pdp-views{
   display:flex;gap:2px;margin:18px auto 0;width:max-content;
@@ -968,7 +1050,15 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
   .board-row .hl{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px}
 
   .pdp-hero{padding-top:120px;min-height:auto}
-  .pdp-stage fb-board{width:88vw;height:44vh}
+  .pdp-board{width:88vw}
+  .pdp-stage fb-board{width:100%;height:44vh}
+  /* A phone has no room for a card hanging off the board, so it parks at
+     the foot of the stage and only the dot moves. The offset that gets it
+     there is worked out in fb-board: `position:fixed` would not do it,
+     because .hs-pt carries a transform and that makes it the containing
+     block for anything fixed inside it. */
+  .hs.is-live .hs-card{max-width:min(420px,calc(100vw - 40px))}
+  .hs.is-live .hs-pt::before{display:none}
   .crumb{top:72px}
   .pdp-title{grid-template-columns:1fr;padding:24px var(--pad) 32px}
   .hl-grid{grid-template-columns:1fr}
