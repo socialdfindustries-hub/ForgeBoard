@@ -49,6 +49,18 @@
 
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
+  // How much the boards reflect, as a fraction of the lighting the models
+  // were authored for. 1.0 is that original rig; this is a fifth of it.
+  //
+  // It scales the two things that make a specular highlight and nothing
+  // else: the three directional lights, which are what put a hard point of
+  // light on a metal shell or a clearcoated package, and the clearcoat layer
+  // itself. The hemisphere light is deliberately outside it — that one is
+  // diffuse only, it puts a highlight nowhere, and it is what keeps the
+  // board visible as the rest comes down.
+  const GLOSS = 0.20;
+
+
   /** Take the shine down without flattening the board.
    *
    *  Every material in these exports carries a metallic-roughness texture
@@ -69,7 +81,7 @@
         seen.add(m);
         if (typeof m.clearcoat === 'number' && m.clearcoat > 0) {
           m.clearcoat *= k;
-          m.clearcoatRoughness = Math.min(1, (m.clearcoatRoughness || 0) + 0.18);
+          m.clearcoatRoughness = Math.min(1, (m.clearcoatRoughness || 0) + 0.25);
           m.needsUpdate = true;
         }
       });
@@ -655,12 +667,12 @@
       // package, and at 3.0 it was blowing them out. So the ambient goes up
       // and the three directionals come down by roughly half; the board ends
       // up as bright as it was and nothing like as shiny.
-      scene.add(new THREE.HemisphereLight(0xfff3dc, 0x4a3c26, 2.9));
-      const key = new THREE.DirectionalLight(0xffffff, 1.5);
+      scene.add(new THREE.HemisphereLight(0xfff3dc, 0x4a3c26, 3.2));
+      const key = new THREE.DirectionalLight(0xffffff, 3.0 * GLOSS);
       key.position.set(2, 4, 5); scene.add(key);
-      const fill = new THREE.DirectionalLight(0xffe9c4, 0.85);
+      const fill = new THREE.DirectionalLight(0xffe9c4, 1.6 * GLOSS);
       fill.position.set(-3, 1, 4); scene.add(fill);
-      const rim = new THREE.DirectionalLight(0xf39a00, 0.7);
+      const rim = new THREE.DirectionalLight(0xf39a00, 1.4 * GLOSS);
       rim.position.set(-4, 2, -3); scene.add(rim);
 
       const group = new THREE.Group();
@@ -676,7 +688,7 @@
       // tip it. Everything downstream (the centring, the fit, the callout
       // anchors, which are parented to this) follows from it, so the pose
       // the page presents is a property of the board, not of the camera.
-      soften(obj, 0.45);
+      soften(obj, GLOSS);
 
       const roll = parseFloat(this.getAttribute('roll'));
       if (!Number.isNaN(roll)) obj.rotation.y = (roll * Math.PI) / 180;
