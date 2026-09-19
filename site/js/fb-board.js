@@ -49,11 +49,14 @@
 
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
-  // The idle drift: how far the board leans, and how long one pass takes.
-  // Small on purpose — 3.4 degrees of yaw. Past about five the callouts
-  // start to travel visibly and the page stops feeling still.
-  const SWAY = 0.06;
-  const SWAY_MS = 11000;
+  // The idle turn: how far the board swings, and how long one pass takes.
+  // Seventeen degrees each way, so a third of a turn end to end — enough
+  // that you watch it move and enough for the board to show its own depth,
+  // the headers standing off the mask, the shield catching the light down
+  // one edge. It never comes near going round: the face you are reading
+  // stays the face you are reading, and every callout keeps its part.
+  const SWAY = 0.30;
+  const SWAY_MS = 13000;
 
   // How much the boards reflect, as a fraction of the lighting the models
   // were authored for. 1.0 is that original rig; this is a fifth of it.
@@ -268,11 +271,10 @@
           if (Math.abs(this.yawV) < 1e-4) this.yawV = 0;
           if (Math.abs(this.pitchV) < 1e-4) this.pitchV = 0;
 
-          // Left alone the board does not turn, it breathes: a few degrees
-          // either side of the pose it is labelled in, never far enough to
-          // take a part out from under its own leader. Enough for the light
-          // to travel across the board and for it to read as an object in a
-          // room rather than a picture of one.
+          // Left alone the board swings slowly either side of the pose it
+          // is labelled in, rather than turning. The callouts hold their
+          // places through it — only the far end of each leader follows its
+          // part — so the board can move without the page moving.
           //
           // The two axes run on periods that do not divide into each other,
           // so the motion never repeats the same arc twice and never reads
@@ -283,7 +285,7 @@
             const k = reduced() ? 0 : 1;
             const wantYaw = Math.sin((now2 / SWAY_MS) * Math.PI * 2) * SWAY * k;
             const wantPitch =
-              Math.sin((now2 / (SWAY_MS * 1.618)) * Math.PI * 2) * SWAY * 0.38 * k;
+              Math.sin((now2 / (SWAY_MS * 1.618)) * Math.PI * 2) * SWAY * 0.26 * k;
             if (!this.yawV) this.yaw += (wantYaw - this.yaw) * 0.035;
             if (!this.pitchV) this.pitch += (wantPitch - this.pitch) * 0.035;
           }
