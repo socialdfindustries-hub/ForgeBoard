@@ -254,6 +254,23 @@ def pick(parts: list[Part], material: str, where: str | None = None) -> Part:
         # The body, not the pins or the lens sitting on it.
         return max(found, key=_volume)
 
+    if where.startswith("end:"):
+        # One end of a part rather than its middle. The antenna is why: it
+        # shares a material with the module it is etched on, so the cluster
+        # spans both and its centre lands on the module, a millimetre from
+        # where the processor callout already points. Taking the far end
+        # puts it on the antenna itself and keeps the position derived from
+        # the model rather than typed in, so a re-export moves it.
+        spec = where[4:]
+        sign = -1 if spec[0] == "-" else 1
+        key = {"x": 0, "y": 1, "z": 2}[spec[1]]
+        big = max(found, key=_volume)
+        c = list(big.centre)
+        # Not the very edge: far enough out to clear whatever it overlaps,
+        # far enough in that the callout still lands on solid geometry.
+        c[key] += sign * (big.size[key] / 2) * 0.62
+        return Part(big.material, tuple(c), big.size, big.axis)
+
     if where.startswith("near:"):
         # The one nearest a point on the board, in millimetres. For parts a
         # side test cannot separate: Sprint carries four black ICs, three of

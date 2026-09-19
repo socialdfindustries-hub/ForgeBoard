@@ -60,12 +60,20 @@ def recompress(raw: bytes, mime: str) -> tuple[bytes, str]:
         return raw, ""
     return (buf.getvalue(), "image/jpeg") if buf.tell() < len(raw) else (raw, "")
 
-SOURCES = {
-    "spark": "Spark_PCB_final.glb",
-    "sprint": "Sprint_PCB_final.glb",
-    "indus": "Indus_PCB_final.glb",
-    "flint": "Flint_PCB_final.glb",
-}
+# The boards, in the order they are presented. Source files are found by
+# name rather than listed exactly: the exporter has called them
+# Spark_PCB_final.glb and ForgeBoard_Spark.glb at different times, and the
+# only thing that has stayed constant is that the board's name is in there
+# somewhere. Anything with the board's name and a .glb on the end will do.
+BOARDS = ("spark", "sprint", "indus", "flint")
+
+
+def find(src_dir: pathlib.Path, board: str) -> pathlib.Path | None:
+    hits = sorted(p for p in src_dir.glob("*.glb")
+                  if board in p.stem.lower())
+    if len(hits) > 1:
+        print(f"  {board:7s} ambiguous: {', '.join(p.name for p in hits)}")
+    return hits[0] if hits else None
 
 JSON_CHUNK = 0x4E4F534A
 BIN_CHUNK = 0x004E4942
@@ -412,10 +420,10 @@ def main(argv: list[str]) -> int:
         return 2
     src_dir = pathlib.Path(argv[1]).expanduser()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    for board, fn in SOURCES.items():
-        src = src_dir / fn
-        if not src.exists():
-            print(f"  {board:7s} MISSING {src}")
+    for board in BOARDS:
+        src = find(src_dir, board)
+        if src is None:
+            print(f"  {board:7s} MISSING — no *{board}*.glb in {src_dir}")
             continue
         dst = OUT_DIR / f"{board}.glb"
         before = src.stat().st_size

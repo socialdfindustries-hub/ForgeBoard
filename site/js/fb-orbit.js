@@ -46,7 +46,7 @@
   // itself. The hemisphere light is deliberately outside it — that one is
   // diffuse only, it puts a highlight nowhere, and it is what keeps the
   // board visible as the rest comes down.
-  const GLOSS = 0.20;
+  const GLOSS = 0.10;
 
   const net = navigator.connection;
   const metered = !!(net && (net.saveData || /(^|-)[23]g$/.test(net.effectiveType || '')));
@@ -481,8 +481,14 @@
           if (typeof m.clearcoat === 'number' && m.clearcoat > 0) {
             m.clearcoat *= GLOSS;
             m.clearcoatRoughness = Math.min(1, (m.clearcoatRoughness || 0) + 0.25);
-            m.needsUpdate = true;
           }
+          // KHR_materials_specular, new in the re-exported models: the
+          // copper is authored brighter than full at 1.2. Same dial.
+          if (typeof m.specularIntensity === 'number') m.specularIntensity *= GLOSS;
+          if (m.specularColor && m.specularColor.multiplyScalar) {
+            m.specularColor.multiplyScalar(GLOSS);
+          }
+          m.needsUpdate = true;
           mats.push(m);
         });
       });

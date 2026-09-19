@@ -58,7 +58,7 @@
   // itself. The hemisphere light is deliberately outside it — that one is
   // diffuse only, it puts a highlight nowhere, and it is what keeps the
   // board visible as the rest comes down.
-  const GLOSS = 0.20;
+  const GLOSS = 0.10;
 
 
   /** Take the shine down without flattening the board.
@@ -79,11 +79,25 @@
       (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
         if (!m || seen.has(m)) return;
         seen.add(m);
+        let touched = false;
         if (typeof m.clearcoat === 'number' && m.clearcoat > 0) {
           m.clearcoat *= k;
           m.clearcoatRoughness = Math.min(1, (m.clearcoatRoughness || 0) + 0.25);
-          m.needsUpdate = true;
+          touched = true;
         }
+        // The re-exported models add KHR_materials_specular, which is a
+        // second way to say the same thing: the copper is authored at 1.2,
+        // brighter than full, and the solder mask at 0.5. Scaled by the same
+        // dial, or the traces alone would keep the shine the rest has lost.
+        if (typeof m.specularIntensity === 'number') {
+          m.specularIntensity *= k;
+          touched = true;
+        }
+        if (m.specularColor && m.specularColor.multiplyScalar) {
+          m.specularColor.multiplyScalar(k);
+          touched = true;
+        }
+        if (touched) m.needsUpdate = true;
       });
     });
   };

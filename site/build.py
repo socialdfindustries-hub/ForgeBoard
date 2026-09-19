@@ -354,7 +354,9 @@ FEATURES = {
 
         ("usb", "USB_Shell_Steel", "z>0", "USB-C for programming",
          "", "USB", "r"),
-        ("antenna", "Module_Antenna_Black", None, "WiFi + BLE 5.0",
+        # Shares its material with the module it is etched on, so the
+        # cluster covers both; the far end of it is the antenna.
+        ("antenna", "Module_Antenna_Black", "end:-x", "WiFi + BLE 5.0",
          "", "Wi-Fi", None),
         ("mcu", "Module_Shield_Steel", None, "ESP32 S3",
          "Dual Core 240 MHz", "Processor", None),
