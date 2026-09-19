@@ -318,48 +318,103 @@
       if (!nodes.length) return;
       const THREE = this.THREE;
 
+      const svg = layer.querySelector('.hs-wires');
+      const NS = 'http://www.w3.org/2000/svg';
+      // One gradient per side, so every wire runs bright where it meets the
+      // board and fades out as it reaches its label.
+      if (svg && !svg.firstChild) {
+        const defs = document.createElementNS(NS, 'defs');
+        ['l', 'r'].forEach((side) => {
+          const g = document.createElementNS(NS, 'linearGradient');
+          g.setAttribute('id', 'hsw-' + side);
+          g.setAttribute('x1', side === 'l' ? '1' : '0');
+          g.setAttribute('x2', side === 'l' ? '0' : '1');
+          [['0%', '.9'], ['45%', '.5'], ['100%', '.16']].forEach(([off, op]) => {
+            const st = document.createElementNS(NS, 'stop');
+            st.setAttribute('offset', off);
+            st.setAttribute('stop-color', '#efe6d3');
+            st.setAttribute('stop-opacity', op);
+            g.appendChild(st);
+          });
+          defs.appendChild(g);
+        });
+        svg.appendChild(defs);
+      }
+
       const items = nodes.map((el) => {
         // An empty object parented to the model: three.js then carries it
         // through the same centring, uprighting and spin as the geometry,
-        // and we never have to repeat that arithmetic here.
+        // and we never repeat that arithmetic here.
         const at = new THREE.Object3D();
         at.position.fromArray(el.dataset.p.split(',').map(Number));
         this.modelRoot.add(at);
+        const wire = document.createElementNS(NS, 'path');
+        wire.setAttribute('class', 'hs-wire');
+        wire.setAttribute('stroke', `url(#hsw-${el.dataset.side})`);
+        if (svg) svg.appendChild(wire);
         return {
-          el,
-          card: el.querySelector('.hs-card'),
-          at,
+          el, wire, at,
+          side: el.dataset.side,
           local: new THREE.Vector3().fromArray(el.dataset.n.split(',').map(Number)),
           normal: new THREE.Vector3(),
-          shown: -1,
+          y: 0, ready: false,
         };
       });
 
       this.hs = {
-        layer, items,
+        layer, svg, items,
+        left: items.filter((i) => i.side === 'l'),
+        right: items.filter((i) => i.side !== 'l'),
         pos: new THREE.Vector3(),
-        mid: new THREE.Vector3(),
         toCam: new THREE.Vector3(),
       };
       layer.classList.add('is-live');
       this.placeHotspots();
     }
 
+    /** Spread a column's labels apart so none sits on top of another.
+     *  Each wants to be level with its own part; where two collide they give
+     *  way from the middle outwards, which keeps the order down the column
+     *  the same as the order up the board. */
+    static spread(col, top, bottom, gap) {
+      col.sort((a, b) => a.want - b.want);
+      const need = (a, b) => (a.h + b.h) / 2 + gap;
+      for (let i = 1; i < col.length; i++) {
+        const min = col[i - 1].y + need(col[i - 1], col[i]);
+        if (col[i].y < min) col[i].y = min;
+      }
+      // If that pushed the last one off the bottom, walk the whole column
+      // back up until it fits.
+      const over = col.length ? col[col.length - 1].y - bottom : 0;
+      if (over > 0) {
+        for (let i = col.length - 1; i >= 0; i--) {
+          col[i].y = Math.min(col[i].y - over, i ? col[i].y : Infinity);
+          if (i && col[i].y - col[i - 1].y < need(col[i - 1], col[i])) {
+            col[i - 1].y = col[i].y - need(col[i - 1], col[i]);
+          }
+        }
+      }
+      if (col.length && col[0].y < top) {
+        const under = top - col[0].y;
+        for (let i = 0; i < col.length; i++) col[i].y += under;
+      }
+    }
+
     placeHotspots() {
       const hs = this.hs;
-      const w = this.clientWidth, h = this.clientHeight;
-      if (!w || !h) return;
+      const host = hs.layer;
+      const w = host.clientWidth, h = host.clientHeight;
+      const bw = this.clientWidth, bh = this.clientHeight;
+      if (!w || !h || !bw || !bh) return;
       const cam = this.camera;
       this.group.updateWorldMatrix(true, true);
 
-      // The board's own centre on screen. Cards are pushed away from it, so
-      // they fan outwards and sit off the board instead of over it.
-      hs.mid.set(0, 0, 0);
-      this.group.localToWorld(hs.mid);
-      hs.mid.project(cam);
-      const mx = (hs.mid.x * 0.5 + 0.5) * w;
-      const my = (-hs.mid.y * 0.5 + 0.5) * h;
-      const reach = Math.min(w, h) * 0.34;
+      // The canvas is centred in the layer, which is wider than it: the
+      // labels live in the margins either side. Projection is in canvas
+      // pixels, so everything is shifted into the layer's frame once here.
+      const ox = (w - bw) / 2, oy = (h - bh) / 2;
+      const gap = 14;      // clear space between labels, on top of their height
+      const edge = 16;
 
       for (const it of hs.items) {
         it.at.getWorldPosition(hs.pos);
@@ -367,46 +422,75 @@
         // Facing: +1 straight at the camera, 0 edge-on, negative turned away.
         it.normal.copy(it.local).transformDirection(this.modelRoot.matrixWorld);
         hs.toCam.copy(cam.position).sub(hs.pos).normalize();
-        const facing = it.normal.dot(hs.toCam);
+        it.facing = it.normal.dot(hs.toCam);
+        // How near the camera this part is, across the board's own depth.
+        // Nearer parts carry a brighter label, which is most of what makes a
+        // flat overlay read as sitting in the scene rather than on the glass.
+        it.depth = hs.pos.distanceTo(cam.position);
 
         hs.pos.project(cam);
-        const x = (hs.pos.x * 0.5 + 0.5) * w;
-        const y = (-hs.pos.y * 0.5 + 0.5) * h;
+        it.px = ox + (hs.pos.x * 0.5 + 0.5) * bw;
+        it.py = oy + (-hs.pos.y * 0.5 + 0.5) * bh;
+        it.want = it.py;
+        it.y = it.py;
+        it.h = it.el.offsetHeight || 20;
+      }
 
-        // Fade across the last 30 degrees rather than snapping at edge-on,
-        // so a slow turn hands the labels over instead of blinking them.
-        const vis = Math.max(0, Math.min(1, (facing - 0.06) / 0.34));
+      const near = Math.min(...hs.items.map((i) => i.depth));
+      const far = Math.max(...hs.items.map((i) => i.depth));
+      const span = Math.max(far - near, 1e-4);
+
+      FBBoard.spread(hs.left, edge + 20, h - edge - 20, gap);
+      FBBoard.spread(hs.right, edge + 20, h - edge - 20, gap);
+
+      for (const it of hs.items) {
         const el = it.el;
+        const left = it.side === 'l';
+        // The right column is anchored by its right edge, so it grows inwards
+        // from the margin instead of running off the side. translateX(-100%)
+        // is element-relative; a negative margin would resolve against the
+        // layer's width and move every label by the same wrong amount.
+        el.style.transform =
+          'translate3d(' + (left ? edge : w - edge).toFixed(1) + 'px,' +
+          it.y.toFixed(1) + 'px,0)' + (left ? '' : ' translateX(-100%)');
+
+        // Two things dim a label: its part turning away from us, and its
+        // part being the far side of the board from us. The first is a hard
+        // fade because a label for something you cannot see is noise; the
+        // second is gentle, and is the depth cue.
+        const facing = Math.max(0, Math.min(1, (it.facing - 0.04) / 0.30));
+        const depth = 1 - ((it.depth - near) / span) * 0.45;
+        const vis = facing * depth;
         if (vis !== it.shown) {
           it.shown = vis;
           el.style.opacity = vis.toFixed(3);
-          // Off the back of the board it must not be clickable either, or a
-          // label you cannot see still takes the pointer.
-          el.style.pointerEvents = vis > 0.25 ? 'auto' : 'none';
+          el.style.pointerEvents = vis > 0.3 ? 'auto' : 'none';
         }
-        el.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
 
-        // Where its card hangs. On anything with room, straight out from the
-        // middle of the board, so the cards fan outwards and sit off it
-        // rather than over it. On a phone there is no such room: every card
-        // goes to the same place at the foot of the stage, and only the dot
-        // moves, which is also why the leader line is off down there.
-        let dx = x - mx, dy = y - my;
-        const len = Math.hypot(dx, dy) || 1;
-        dx /= len; dy /= len;
-        const narrow = w < 700;
-        const cx = narrow ? w / 2 - x : dx * reach;
-        const cy = narrow ? h - 52 - y : dy * reach;
-        if (it.card) {
-          it.card.style.setProperty('--cx', cx.toFixed(1) + 'px');
-          it.card.style.setProperty('--cy', cy.toFixed(1) + 'px');
-          // The leader is one CSS line: how long, and which way round.
-          el.style.setProperty('--len', (reach - 10).toFixed(1) + 'px');
-          el.style.setProperty('--ang', Math.atan2(cy, cx).toFixed(3) + 'rad');
-          // Cards on the left of the board read right-to-left.
-          el.classList.toggle('is-left', dx < 0);
+        // The wire: out of the label along its column, then straight to the
+        // part. The elbow is what stops a near-horizontal run from reading as
+        // an underline on the text.
+        if (!it.wire) continue;
+        const x0 = left ? edge + el.offsetWidth + 10 : w - edge - el.offsetWidth - 10;
+        const reach = Math.min(48, Math.abs(it.px - x0) * 0.45);
+        const x1 = left ? x0 + reach : x0 - reach;
+        it.wire.setAttribute('d',
+          'M' + x0.toFixed(1) + ' ' + it.y.toFixed(1) +
+          'H' + x1.toFixed(1) +
+          'L' + it.px.toFixed(1) + ' ' + it.py.toFixed(1));
+        it.wire.style.opacity = vis.toFixed(3);
+        // The wire belongs to its label, so it lights with it. Checked here
+        // rather than pushed from the click handler, which has no way to
+        // reach into the SVG.
+        const lit = el.classList.contains('is-on') || el === document.activeElement
+          || (el.matches && el.matches(':hover'));
+        if (lit !== it.lit) {
+          it.lit = lit;
+          it.wire.classList.toggle('is-on', lit);
         }
       }
+
+      if (hs.svg) hs.svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
     }
 
     /* ---------------- WebGL upgrade ---------------- */

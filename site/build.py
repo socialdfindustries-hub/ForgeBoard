@@ -305,72 +305,54 @@ CONTACT = {
 # either one lights the other. It must match a key in that board's `specs`.
 # --------------------------------------------------------------------------
 
+# Only Sprint ships callouts for now — the other three are drafted but not
+# wired, so the pattern gets proved on one board before it is repeated.
+CALLOUT_BOARDS = {"sprint"}
+
+# (key, material, which one, title, second line, spec row, side)
+#
+# `which one`: None when the material is one part; "big" for the body rather
+# than its pins or lens; "x<0" / "z>0" for a side of the board; "near:x,z"
+# for millimetre coordinates when nothing else separates them. "@x,z" hangs
+# the callout on a bare point instead of a part, for the pin headers, whose
+# pads share one material with every other pad on the board.
+#
+# `side` is which column the label sits in. Normally None: the side is taken
+# from which half of the board the part is actually on, worked out once at
+# build time from the board at rest, so no wire has to cross the board to
+# reach its label and no label moves as the board turns. The design sheet
+# puts them the other way round because it shows the board turned about half
+# a revolution from how the page presents it — the module reads right there
+# and left here — so its column assignment does not carry over. Set "l" or
+# "r" to override.
 FEATURES = {
-    "spark": [
-        ("mcu", "Module_Shield_Steel", None, "ESP32-S3",
-         "Dual-core, 240 MHz, shielded.", "Processor"),
-        ("antenna", "Module_Antenna_Black", None, "Antenna",
-         "Wi-Fi and Bluetooth, etched into the board.", "Wi-Fi"),
-        ("usb", "USB_Shell_Steel", None, "USB-C",
-         "Power and programming, either way up.", "USB"),
-        ("rgb", "LED_Lens_Orange", None, "RGB LED",
-         "Addressable, on IO14 — your first “hello”.", "LEDs"),
-        ("rst", "Button_Cap_Black", "x<0", "RST",
-         "Restarts the board.", "Buttons"),
-        ("boot", "Button_Cap_Black", "x>0", "BOOT",
-         "Hold while resetting for flash mode.", "Buttons"),
-        ("reg", "IC_Body_Black", "x<0", "Regulator",
-         "Dual rail, 5–12 V in.", "Input"),
-    ],
     "sprint": [
-        ("mcu", "Module_Shield_Steel", None, "ESP32-S3",
-         "Dual-core, 240 MHz, shielded.", "Processor"),
-        ("antenna", "Module_Antenna_Black", None, "Antenna",
-         "Wi-Fi and Bluetooth, etched into the board.", "Wi-Fi"),
-        ("usb", "USB_Shell_Steel", "z>0", "USB_PROG",
-         "Power and programming.", "USB"),
-        ("charge", "USB_Shell_Steel", "z<0", "USB_CHARGE",
-         "Charges the battery.", "Battery"),
+        ("dht", "DHT11_Blue", "big", "(DHT11)",
+         "Temperature + Humidity", "Sensors", None),
+        ("led", "LED_0603_Yellow", None, "LED",
+         "", "LEDs", None),
+        ("buzzer", "Buzzer_Black", None, "Piezo Buzzer",
+         "", "Sensors", None),
+        ("ldr", "LDR_Face", None, "LDR Sensor",
+         "", "Sensors", None),
+        ("ir", "IR_Receiver_Black", "big", "Infrared Sensor",
+         "", "Sensors", None),
+        # The 8-pin charger between the charge port and the battery pads.
+        ("bms", "IC_Body_Black", "near:11.0,4.6", "Battery Charging (BMS)",
+         "", "Battery", None),
+
+        ("usb", "USB_Shell_Steel", "z>0", "USB-C for programming",
+         "", "USB", None),
+        ("antenna", "Module_Antenna_Black", None, "WiFi + BLE 5.0",
+         "", "Wi-Fi", None),
+        ("mcu", "Module_Shield_Steel", None, "ESP32 S3",
+         "Dual Core 240 MHz", "Processor", None),
         ("rgb", "LED_Lens_Orange", None, "RGB LED",
-         "Addressable, on IO48.", "LEDs"),
-        ("buzzer", "Buzzer_Black", None, "Buzzer",
-         "Piezo, on IO47.", "Sensors"),
-        ("dht", "DHT11_Blue", "big", "DHT11",
-         "Temperature and humidity, on IO42.", "Sensors"),
-        ("ldr", "LDR_Face", None, "Light sensor",
-         "LDR — analogue on IO8, digital on IO21.", "Sensors"),
-        ("ir", "IR_Receiver_Black", "big", "IR receiver",
-         "Demodulated remote input, on IO9.", "Sensors"),
-        ("boot", "Button_Cap_Black", "z<0", "BOOT",
-         "Hold while resetting for flash mode.", "Buttons"),
-        ("rst", "Button_Cap_Black", "z>0", "RST",
-         "Restarts the board.", "Buttons"),
-    ],
-    "indus": [
-        ("mcu", "IC_Body_Black", "big", "STM32G484",
-         "Cortex-M4F, 170 MHz, industrial grade.", "Processor"),
-        ("xtal", "Crystal_Lid_Metal", None, "Crystal",
-         "External oscillator for timing that holds.", "Timers & PWM"),
-        ("usb", "USB_Shell_Steel", None, "USB-C",
-         "Power and programming, either way up.", "USB"),
-        ("rgb", "LED_Lens_Red", None, "RGB LED",
-         "Addressable, on PA12.", "LEDs"),
-        ("boot", "Button_Cap_Blue", "z<0", "BOOT",
-         "Hold while resetting for the bootloader.", "Buttons"),
-        ("rst", "Button_Cap_Blue", "z>0", "RST",
-         "Restarts the board.", "Buttons"),
-    ],
-    "flint": [
-        ("mcu", "Module_Shield_Steel", None, "ESP8266EX",
-         "80 MHz, up to 160, shielded.", "Processor"),
-        ("antenna", "Module_Antenna_Trace", "big", "Antenna",
-         "Wi-Fi, etched into the board.", "Wi-Fi"),
-        ("usb", "USB_Shell_Steel", None, "USB-C",
-         "Power and programming, either way up.", "USB"),
-        ("boot", "Button_Cap_Black", "x>0", "SW2 · BOOT",
-         "Hold while resetting for flash mode.", "Buttons"),
-        ("rst", "Button_Cap_Black", "x<0", "SW1",
-         "Restarts the board.", "Buttons"),
+         "16M Colours", "LEDs", None),
+        ("gpio", "@-5.4,-19.0", None, "19 GPIO Pins",
+         "SPI · I2C · UART · I2S · CAN · USB OTG", "GPIO", None),
+        ("charge", "USB_Shell_Steel", "z<0", "USB-C for charging",
+         "", "Battery", None),
     ],
 }
 
@@ -462,52 +444,61 @@ def webp_size(rel: str) -> tuple[int, int]:
 
 
 def callouts(b: dict) -> str:
-    """The callout layer for a board, and the spec keys it links to.
+    """The callout layer for a board.
 
     Resolves every row of FEATURES against the board's own model, so the
-    positions are the parts' real positions. A feature whose material is
-    missing, or whose selector does not land on exactly one part, stops the
-    build rather than shipping a label pointing at nothing.
+    lines point at the parts' real positions. A material that is missing, or
+    a selector that does not land on exactly one part, stops the build rather
+    than shipping a label pointing at bare board.
 
-    The markup is a plain list, readable and complete with no CSS and no
-    JavaScript. `fb-board` takes it over once the model is up and holds each
-    item over its part; until then, and on anything without WebGL, it reads
-    as what it is - a list of what is on the board.
+    The markup is a plain list, readable with no CSS and no JavaScript.
+    `fb-board` takes it over once the model is up and holds each label in its
+    column with a line drawn to its part; until then, and on anything without
+    WebGL, it reads as what it is: a list of what is on the board.
     """
-    rows = FEATURES.get(b["id"], [])
+    rows = FEATURES.get(b["id"], []) if b["id"] in CALLOUT_BOARDS else []
     if not rows:
         return ""
 
-    parts = hotspots.read(ROOT / "assets" / "models" / f"{b['id']}.glb",
-                          {r[1] for r in rows})
+    mats = {r[1] for r in rows if not r[1].startswith("@")}
+    parts = hotspots.read(ROOT / "assets" / "models" / f"{b['id']}.glb", mats)
     spec_keys = {k for k, _ in b["specs"]}
 
     items = []
-    for key, material, where, label, blurb, spec in rows:
-        try:
-            part = hotspots.pick(parts, material, where)
-        except LookupError as exc:
-            raise SystemExit(
-                f"{b['id']}: callout {key!r} — {exc}") from None
+    for key, material, where, title, sub, spec, side in rows:
+        if material.startswith("@"):
+            x_mm, z_mm = (float(v) for v in material[1:].split(","))
+            part = hotspots.at(parts, x_mm, z_mm)
+        else:
+            try:
+                part = hotspots.pick(parts, material, where)
+            except LookupError as exc:
+                raise SystemExit(f"{b['id']}: callout {key!r} — {exc}") from None
         if spec not in spec_keys:
             raise SystemExit(
                 f"{b['id']}: callout {key!r} links to spec {spec!r}, "
                 f"which that board does not have")
+
+        # Which column: the half of the board the part is on, unless the
+        # table insists. At rest the board faces the camera square on, so the
+        # sign of its own x is the side of the screen it appears on.
+        side = side or ("l" if part.centre[0] < 0 else "r")
         ax = ",".join(f"{v:.5f}" for v in part.anchor())
         nm = ",".join(f"{v:.0f}" for v in part.normal())
+        sub_html = f'<i>{nb(e(sub))}</i>' if sub else ""
         items.append(
-            f'<li class="hs-item"><button type="button" class="hs-pt" '
+            f'<li class="hs-item"><button type="button" class="hs-pt hs-{side}" '
             f'data-hs="{e(key)}" data-p="{ax}" data-n="{nm}" '
-            f'data-spec="{e(spec)}" aria-describedby="hs-{e(key)}-d">'
-            f'<span class="hs-dot" aria-hidden="true"></span>'
-            f'<span class="hs-card"><b>{nb(e(label))}</b>'
-            f'<em id="hs-{e(key)}-d">{nb(e(blurb))}</em></span></button></li>'
+            f'data-side="{side}" data-spec="{e(spec)}">'
+            f'<span class="hs-txt"><b>{nb(e(title))}</b>{sub_html}</span>'
+            f'</button></li>'
         )
 
     return (
         '<div class="hs" data-hs-layer>'
         '<p class="hs-lede eyebrow mono-muted">On the board</p>'
         f'<ol class="hs-list">{"".join(items)}</ol>'
+        '<svg class="hs-wires" aria-hidden="true"></svg>'
         '</div>'
     )
 

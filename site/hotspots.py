@@ -215,6 +215,23 @@ def _volume(p: Part) -> float:
     return a * b + p.size[p.axis] * 1e-3
 
 
+def at(parts: list[Part], x_mm: float, z_mm: float, size_mm: float = 6.0) -> Part:
+    """A callout point that is not any one component.
+
+    The pin headers are the case this exists for: every pad on the board
+    shares one material, so there is no cluster that means "the header". The
+    board's own thickness still comes from the model, so the point sits on
+    the surface rather than at a guessed height.
+    """
+    board = [p for p in parts if p.material == "PCB_Edge_FR4"]
+    axis = board[0].axis if board else 1
+    top = max((p.centre[axis] + p.size[axis] / 2 for p in board), default=0.00075)
+    c = [0.0, 0.0, 0.0]
+    c[0], c[2] = x_mm / 1000, z_mm / 1000
+    c[axis] = top
+    return Part("(point)", tuple(c), (size_mm / 1000,) * 3, axis)
+
+
 def pick(parts: list[Part], material: str, where: str | None = None) -> Part:
     """The one part of `material`, or the one `where` selects.
 
@@ -236,6 +253,15 @@ def pick(parts: list[Part], material: str, where: str | None = None) -> Part:
     if where == "big":
         # The body, not the pins or the lens sitting on it.
         return max(found, key=_volume)
+
+    if where.startswith("near:"):
+        # The one nearest a point on the board, in millimetres. For parts a
+        # side test cannot separate: Sprint carries four black ICs, three of
+        # them on the same side of the board, and only position says which is
+        # the charger sitting between the charge port and the battery pads.
+        wx, wz = (float(v) / 1000 for v in where[5:].split(","))
+        return min(found, key=lambda q: (q.centre[0] - wx) ** 2
+                                        + (q.centre[2] - wz) ** 2)
 
     key = {"x": 0, "y": 1, "z": 2}[where[0]]
     op = where[1]
