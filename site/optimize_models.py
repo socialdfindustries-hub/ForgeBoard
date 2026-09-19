@@ -14,11 +14,16 @@ three things the exporter does not:
    vertex data with no visible difference at any zoom the site offers.
 3. Keeps indices 16-bit by splitting any merged group over 65,535 vertices.
 
-The models have no textures, so nothing else needs carrying across.
+Textured exports are carried across whole: UVs travel with the vertices and
+the images, textures and samplers are copied into the output with their
+buffer views remapped. UVs stay 32-bit float rather than quantized, because
+these exports use KHR_texture_transform and tiled coordinates run outside
+0..1, which normalized shorts would clamp.
 """
 
 from __future__ import annotations
 
+import io
 import json
 import math
 import pathlib
@@ -27,6 +32,33 @@ import sys
 from array import array
 
 OUT_DIR = pathlib.Path(__file__).resolve().parent / "assets" / "models"
+
+# Texture recompression is the one place a dependency helps: these exports ship
+# 512x512 PNGs that carry no alpha, and the same image as JPEG is about a fifth
+# the size at a quality no one can see the difference at on a board this size.
+# Pillow is optional — without it the images are copied through untouched and
+# the model is correct, just larger.
+try:
+    from PIL import Image as _PILImage
+except ImportError:                                   # pragma: no cover
+    _PILImage = None
+
+JPEG_QUALITY = 90
+
+
+def recompress(raw: bytes, mime: str) -> tuple[bytes, str]:
+    """PNG without alpha becomes JPEG. Anything else is left alone."""
+    if _PILImage is None or mime != "image/png":
+        return raw, ""
+    try:
+        im = _PILImage.open(io.BytesIO(raw))
+        if im.mode in ("RGBA", "LA", "P"):
+            return raw, ""                            # alpha must keep its PNG
+        buf = io.BytesIO()
+        im.convert("RGB").save(buf, "JPEG", quality=JPEG_QUALITY, optimize=True)
+    except Exception:
+        return raw, ""
+    return (buf.getvalue(), "image/jpeg") if buf.tell() < len(raw) else (raw, "")
 
 SOURCES = {
     "spark": "Spark_PCB_final.glb",
@@ -174,6 +206,7 @@ def optimize(src: pathlib.Path, dst: pathlib.Path) -> tuple[int, int, int, int]:
             attrs = prim["attributes"]
             pos = read_accessor(js, bin_, attrs["POSITION"])
             nrm = read_accessor(js, bin_, attrs["NORMAL"]) if "NORMAL" in attrs else None
+            uvs = read_accessor(js, bin_, attrs["TEXCOORD_0"]) if "TEXCOORD_0" in attrs else None
             cnt = len(pos) // 3
             if "indices" in prim:
                 ind = read_accessor(js, bin_, prim["indices"])
@@ -197,14 +230,15 @@ def optimize(src: pathlib.Path, dst: pathlib.Path) -> tuple[int, int, int, int]:
                     wn[i * 3], wn[i * 3 + 1], wn[i * 3 + 2] = tx / ln, ty / ln, tz / ln
                 else:
                     wn[i * 3 + 1] = 1.0
-            groups.setdefault(prim.get("material", -1), []).append((wp, wn, ind))
+            wt = list(uvs) if uvs else [0.0] * (cnt * 2)
+            groups.setdefault(prim.get("material", -1), []).append((wp, wn, wt, ind))
             in_meshes += 1
 
     # global bounds for one quantization frame
     lo = [math.inf] * 3
     hi = [-math.inf] * 3
     for parts in groups.values():
-        for wp, _, _ in parts:
+        for wp, _, _, _ in parts:
             for i in range(0, len(wp), 3):
                 for k in range(3):
                     v = wp[i + k]
@@ -224,50 +258,64 @@ def optimize(src: pathlib.Path, dst: pathlib.Path) -> tuple[int, int, int, int]:
     def add_view(data: bytes, stride: int | None, target: int) -> int:
         while len(out_bin) % 4:
             out_bin.append(0)
-        bv = {"buffer": 0, "byteOffset": len(out_bin), "byteLength": len(data), "target": target}
+        bv = {"buffer": 0, "byteOffset": len(out_bin), "byteLength": len(data)}
+        if target:
+            bv["target"] = target
         if stride:
             bv["byteStride"] = stride
         out_bin.extend(data)
         buffer_views.append(bv)
         return len(buffer_views) - 1
 
-    def emit(material: int, pos_q: array, nrm_q: array, ind: array, qmin: list, qmax: list) -> None:
+    def emit(material: int, pos_q: array, nrm_q: array, uv_f: array, ind: array,
+             qmin: list, qmax: list) -> None:
         nonlocal out_verts
         n = len(pos_q) // 4
         out_verts += n
         pv = add_view(pos_q.tobytes(), 8, 34962)
         nv = add_view(nrm_q.tobytes(), 4, 34962)
-        iv = add_view(ind.tobytes(), None, 34963)
         ict = CT_UINT if ind.typecode == "I" else CT_USHORT
         accessors.append({"bufferView": pv, "componentType": CT_SHORT, "count": n, "type": "VEC3",
                           "min": qmin, "max": qmax})
+        a_pos = len(accessors) - 1
         accessors.append({"bufferView": nv, "componentType": CT_BYTE, "normalized": True, "count": n, "type": "VEC3"})
+        a_nrm = len(accessors) - 1
+        attrs_out = {"POSITION": a_pos, "NORMAL": a_nrm}
+        if has_uv:
+            tv = add_view(uv_f.tobytes(), 8, 34962)
+            accessors.append({"bufferView": tv, "componentType": CT_FLOAT, "count": n, "type": "VEC2"})
+            attrs_out["TEXCOORD_0"] = len(accessors) - 1
+        iv = add_view(ind.tobytes(), None, 34963)
         accessors.append({"bufferView": iv, "componentType": ict, "count": len(ind), "type": "SCALAR"})
-        prim = {"attributes": {"POSITION": len(accessors) - 3, "NORMAL": len(accessors) - 2},
-                "indices": len(accessors) - 1, "mode": 4}
+        prim = {"attributes": attrs_out, "indices": len(accessors) - 1, "mode": 4}
         if material >= 0:
             prim["material"] = material
         primitives.append(prim)
 
+    has_uv = any(wt and any(wt) for parts in groups.values() for _, _, wt, _ in parts)
+
     for material, parts in groups.items():
         pos_q = array("h")
         nrm_q = array("b")
+        uv_f = array("f")
         ind_q = array("H")
         qmin = [32767] * 3
         qmax = [-32768] * 3
         base = 0
 
         def flush() -> None:
-            nonlocal pos_q, nrm_q, ind_q, qmin, qmax, base
+            nonlocal pos_q, nrm_q, uv_f, ind_q, qmin, qmax, base
             if len(ind_q):
-                emit(material, pos_q, nrm_q, ind_q, list(qmin), list(qmax))
-            pos_q, nrm_q, ind_q = array("h"), array("b"), array("H")
+                emit(material, pos_q, nrm_q, uv_f, ind_q, list(qmin), list(qmax))
+            pos_q, nrm_q, uv_f, ind_q = array("h"), array("b"), array("f"), array("H")
             qmin, qmax, base = [32767] * 3, [-32768] * 3, 0
 
-        def pack(wp: list, wn: list, ind: list, pos_q: array, nrm_q: array, ind_q: array,
-                 qmin: list, qmax: list, base: int) -> None:
+        def pack(wp: list, wn: list, wt: list, ind: list, pos_q: array, nrm_q: array,
+                 uv_f: array, ind_q: array, qmin: list, qmax: list, base: int) -> None:
             cnt = len(wp) // 3
             for i in range(cnt):
+                uv_f.append(wt[i * 2] if i * 2 < len(wt) else 0.0)
+                uv_f.append(wt[i * 2 + 1] if i * 2 + 1 < len(wt) else 0.0)
                 for k in range(3):
                     q = int(round((wp[i * 3 + k] - center[k]) / scale))
                     q = max(-32767, min(32767, q))
@@ -281,19 +329,21 @@ def optimize(src: pathlib.Path, dst: pathlib.Path) -> tuple[int, int, int, int]:
             for t in ind:
                 ind_q.append(base + t)
 
-        for wp, wn, ind in parts:
+        for wp, wn, wt, ind in parts:
             cnt = len(wp) // 3
             if cnt > MAX_U16:
                 # too many vertices for 16-bit indices: this part goes out on its own, 32-bit
                 flush()
-                p32, n32, i32 = array("h"), array("b"), array("I")
+                p32, n32, t32, i32 = array("h"), array("b"), array("f"), array("I")
                 mn, mx = [32767] * 3, [-32768] * 3
-                pack(wp, wn, ind, p32, n32, i32, mn, mx, 0)
-                emit(material, p32, n32, i32, mn, mx)
+                pack(wp, wn, wt, ind, p32, n32, t32, i32, mn, mx, 0)
+                emit(material, p32, n32, t32, i32, mn, mx)
                 continue
             if base + cnt > MAX_U16:
                 flush()
             for i in range(cnt):
+                uv_f.append(wt[i * 2] if i * 2 < len(wt) else 0.0)
+                uv_f.append(wt[i * 2 + 1] if i * 2 + 1 < len(wt) else 0.0)
                 for k in range(3):
                     q = int(round((wp[i * 3 + k] - center[k]) / scale))
                     q = max(-32767, min(32767, q))
@@ -309,10 +359,26 @@ def optimize(src: pathlib.Path, dst: pathlib.Path) -> tuple[int, int, int, int]:
             base += cnt
         flush()
 
+    # Images live in buffer views of the source bin. Copy those bytes across and
+    # point each image at its new view; textures and samplers come over as they
+    # are, since their indices into images/samplers do not change.
+    images = []
+    for img in js.get("images", []):
+        out = {k: v for k, v in img.items() if k != "bufferView"}
+        if "bufferView" in img:
+            bv = js["bufferViews"][img["bufferView"]]
+            off = bv.get("byteOffset", 0)
+            raw = bytes(bin_[off:off + bv["byteLength"]])
+            raw, mime = recompress(raw, img.get("mimeType", ""))
+            if mime:
+                out["mimeType"] = mime
+            out["bufferView"] = add_view(raw, None, None)
+        images.append(out)
+
     out_js = {
         "asset": {"version": "2.0", "generator": "ForgeBoard optimize_models.py"},
         "extensionsUsed": sorted(set(js.get("extensionsUsed", [])) | {"KHR_mesh_quantization"}),
-        "extensionsRequired": ["KHR_mesh_quantization"],
+        "extensionsRequired": sorted(set(js.get("extensionsRequired", [])) | {"KHR_mesh_quantization"}),
         "scene": 0,
         "scenes": [{"nodes": [0]}],
         "nodes": [{"name": src.stem, "mesh": 0, "translation": center, "scale": [scale] * 3}],
@@ -322,6 +388,9 @@ def optimize(src: pathlib.Path, dst: pathlib.Path) -> tuple[int, int, int, int]:
         "bufferViews": buffer_views,
         "buffers": [{"byteLength": len(out_bin)}],
     }
+    for key, val in (("images", images), ("textures", js.get("textures")), ("samplers", js.get("samplers"))):
+        if val:
+            out_js[key] = val
     while len(out_bin) % 4:
         out_bin.append(0)
 

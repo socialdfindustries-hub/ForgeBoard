@@ -369,29 +369,41 @@ def webp_size(rel: str) -> tuple[int, int]:
     return w, h
 
 
+def spec_line(b: dict) -> str:
+    """The one-line spec shown under the hero board. Boards with no radio
+    (Indus carries an em dash) simply drop that term."""
+    bits = [b["mcu"], b["clock"]]
+    if b["wireless"] and b["wireless"] not in ("—", "-", ""):
+        bits.append(b["wireless"])
+    bits.append(f"{b['gpio']} GPIO")
+    return " · ".join(bits)
+
+
 def srcset(full: str, small: str) -> str:
     """srcset pairing the phone-sized render with the full one."""
     return f"{small} {webp_size(small)[0]}w, {full} {webp_size(full)[0]}w"
 
 
 def shell(*, out_path: str, title: str, description: str, body: str,
-          nav_key: str = "", over_dark: bool = False) -> str:
+          nav_key: str = "", model_preload: str = "") -> str:
     """Wrap page body in the document, header and footer.
 
-    over_dark: the page opens on a dark panel, so the header starts light.
-    Without JS that initial value is the only one it ever gets.
+    The header has one appearance on every page. It used to take an
+    `over_dark` flag for pages that opened on a dark panel, back when the page
+    was cream with dark panels cut into it; the site is charcoal throughout
+    now, so there is nothing to swap between.
     """
     r = depth_prefix(out_path)
     root = r or "./"          # "" would mean "this document", not the root
     page_url = SITE_URL + "/" + out_path[: -len("index.html")]
-    head_class = " over-dark" if over_dark else ""
 
     def cur(key: str) -> str:
         return ' aria-current="page"' if key == nav_key else ""
 
     # "home" is the site root, so it has no path segment of its own.
     nav_items = [("home", "Home"), ("boards", "Boards"), ("compare", "Compare"),
-                 ("software", "Software"), ("docs", "Docs")]
+                 ("store", "Store"), ("software", "Software"), ("docs", "Docs"),
+                 ("about", "About")]
     nav_html = "".join(
         f'<a href="{root if slug == "home" else r + slug + "/"}"{cur(slug)}>{label}</a>'
         for slug, label in nav_items
@@ -403,19 +415,28 @@ def shell(*, out_path: str, title: str, description: str, body: str,
     nav_id = "primary-nav"
 
     needs_board = "<fb-board" in body
+    needs_orbit = 'class="hero-scene"' in body
     has_model = "assets/models/" in body
     script_tags = (
         f'<script src="{asset(r, "js/fb-board.js")}" defer></script>' if needs_board else ""
     )
+    if needs_orbit:
+        script_tags += f'<script src="{asset(r, "js/fb-orbit.js")}" defer></script>'
     if has_model:
         # The import map names the vendored three.js so the loader's bare
         # `import 'three'` resolves to the same copy the component loads.
         # Preloading starts the 650 KB library fetch before any script runs.
         script_tags = (
-            '<script type="importmap">{"imports":{"three":"' + r + 'js/vendor/three.module.min.js"}}</script>'
+            # `root`, not `r`: an import map address must start with / ./ or ..
+            # A bare "js/…" is not a valid address, so the whole mapping would
+            # be dropped — on the home page, the one page where r is empty.
+            '<script type="importmap">{"imports":{"three":"' + root + 'js/vendor/three.module.min.js"}}</script>'
             + f'<link rel="modulepreload" href="{r}js/vendor/three.module.min.js">'
             + f'<link rel="modulepreload" href="{r}js/vendor/loaders/GLTFLoader.js">'
-            + '<link rel="preload" href="MODEL_URL_PLACEHOLDER" as="fetch" crossorigin>'
+            # No `crossorigin`: the loader fetches these same-origin, and a
+            # CORS-mode preload is a different cache entry — the model would
+            # come down twice.
+            + (f'<link rel="preload" href="{model_preload}" as="fetch">' if model_preload else '')
             + script_tags
         )
 
@@ -445,10 +466,10 @@ def shell(*, out_path: str, title: str, description: str, body: str,
 </head>
 <body>
 <a href="#main" class="skip eyebrow">Skip to content</a>
-<header class="site-head eyebrow{head_class}">
+<div class="scroll-rail" aria-hidden="true"><i></i></div>
+<header class="site-head eyebrow">
   <a class="brand" href="{root}" aria-label="ForgeBoard home">
-    <img class="mark mark-on-light" src="{r}assets/logo-on-light.webp" alt="" width="128" height="111" decoding="async">
-    <img class="mark mark-on-dark" src="{r}assets/logo-on-dark.webp" alt="" width="128" height="112" decoding="async">
+    <img class="mark" src="{r}assets/logo-on-dark.webp" alt="" width="128" height="112" decoding="async">
     <span>ForgeBoard</span>
   </a>
   <nav class="site-nav" id="{nav_id}" aria-label="Primary">{nav_html}</nav>
@@ -487,106 +508,107 @@ def shell(*, out_path: str, title: str, description: str, body: str,
 def page_home() -> str:
     r = ""
 
-    hero_items = []
-    for bid, off, tilt, height in HERO:
-        b = BY_ID[bid]
-        hero_items.append(f"""
-        <li style="height:{height};margin-top:{off}">
-          <a href="boards/{bid}/" aria-label="ForgeBoard {b['name']} — specs">
-            <fb-board fallback="assets/boards/hero-{bid}.webp" srcset="{srcset(f'assets/boards/hero-{bid}.webp', f'assets/boards/hero-{bid}-sm.webp')}" sizes="(max-width:860px) 44vw, 22vw" alt="ForgeBoard {b['name']}" tilt="{tilt}" style="width:100%;height:100%">
-              <noscript><img src="assets/boards/hero-{bid}-sm.webp" alt="ForgeBoard {b['name']}" style="width:100%;height:100%;object-fit:contain"></noscript>
-            </fb-board>
-          </a>
-        </li>""")
+    # The hero shows ONE board, large and turning, with the other three a
+    # hover away. Every hardware site that lands in three seconds — and every
+    # 3D site worth copying — sells a single object properly instead of
+    # showing four small ones competing for the same frame.
+    lead = BOARDS[0]
 
-    words = "".join(
-        f'<span class="wd" aria-hidden="true" style="transition-delay:{i*35}ms">{e(w)}</span>'
-        for i, w in enumerate(STATEMENT.split(" "))
-    )
+    def hero_render(bid: str) -> str:
+        return f"assets/boards/hero-{bid}.webp"
 
-    lineup = []
+    def hero_srcset(bid: str) -> str:
+        return srcset(hero_render(bid), f"assets/boards/hero-{bid}-sm.webp")
+
+    orbit_items = []
     for i, b in enumerate(BOARDS):
-        offset = " offset" if i % 2 == 1 else ""
-        lineup.append(f"""
-        <li class="rv{offset}">
-          <a class="card" href="boards/{b['id']}/">
-            <div class="card-art">
-              <span class="eyebrow tl">0{i+1}</span>
-              <span class="eyebrow tr">{e(b['mcu'])}</span>
-              <img src="{render(b['id'], '3d')}" srcset="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d'))}" sizes="(max-width:860px) 74vw, 36vw" alt="ForgeBoard {b['name']} board" loading="lazy" decoding="async">
-            </div>
-            <div class="card-foot">
-              <span class="stack" style="gap:2px">
-                <span class="card-name">{e(b['name'])}</span>
-                <span class="card-tag">{e(b['tag'])}</span>
-              </span>
-              <span class="eyebrow" style="white-space:nowrap">Specs →</span>
-            </div>
+        bid = b["id"]
+        orbit_items.append(f"""
+        <li class="orbit-item"
+            data-board="{bid}"
+            data-model="{asset(r, f'assets/models/{bid}.glb')}"
+            data-name="{e(b['name'])}"
+            data-spec="{e(spec_line(b))}"
+            data-mcu="{e(b['mcu'])}"
+            data-clock="{e(b['clock'])}"
+            data-gpio="{e(b['gpio'])}"
+            data-radio="{e(b['wireless'] if b['wireless'] not in ('—', '-', '') else 'Wired')}">
+          <a href="boards/{bid}/" aria-label="ForgeBoard {b['name']} — bring forward">
+            <img src="{hero_render(bid)}" srcset="{hero_srcset(bid)}"
+              sizes="(max-width:860px) 46vw, 26vw" alt="ForgeBoard {b['name']}" decoding="async">
           </a>
         </li>""")
-
-    by_id = {b["id"]: b for b in BOARDS}
-    pick = "".join(
-        f'<li class="rv" style="transition-delay:{(i%2)*90}ms">'
-        f'<a href="boards/{bid}/"><span class="eyebrow mono-muted">{e(need)}</span>'
-        f'<b>{e(by_id[bid]["name"])}<i aria-hidden="true">→</i></b><p>{e(why)}</p></a></li>'
-        for i, (bid, need, why) in enumerate(CHOOSER)
-    )
-
-    ticks = "".join(
-        f'<span>{e(t)}<i aria-hidden="true"></i></span>' for t in TICKER * 2
-    )
 
     body = f"""
-<section class="hero print" aria-labelledby="hero-title">
+<section class="hero print" aria-labelledby="hero-h1">
+  <h1 class="sr-only" id="hero-h1">ForgeBoard — four microcontroller boards, one toolchain, designed and built in India</h1>
   <div class="hero-meta eyebrow">
     <span>Four boards · One toolchain</span>
     <span>Designed &amp; built in India</span>
-    <span class="scroll-cue">Scroll to explore<i aria-hidden="true"></i></span>
   </div>
-  <ul class="hero-boards">{"".join(hero_items)}
-  </ul>
-  <h1 class="hero-title" id="hero-title">
-    <span>Start here.</span>
-    <span class="outline">Ship anywhere.</span>
-  </h1>
-</section>
 
-<section class="statement print" aria-label="Why ForgeBoard">
-  <div class="wrap rail">
-    <span class="eyebrow" style="color:var(--print-muted)">01 — Why</span>
-    <p><span class="sr-only">{e(STATEMENT)}</span>{words}</p>
-  </div>
-</section>
-
-<section class="sect" aria-labelledby="lineup-h">
-  <div class="wrap stack" style="gap:56px">
-    <div class="lineup-head rv">
-      <span class="eyebrow mono-muted">02 — The boards</span>
-      <h2 class="h-xl" id="lineup-h">Four boards.<br>One family.</h2>
-      <a href="compare/" class="eyebrow link-ul">Compare all →</a>
+  <div class="hero-scene">
+    <div class="hero-load" data-hero="load" aria-hidden="true">
+      <span class="load-bar"><i data-hero="bar"></i></span>
+      <b data-hero="num">000</b>
     </div>
-    <ul class="lineup">{"".join(lineup)}
+    <div class="hero-cursor" data-hero="cursor" aria-hidden="true"><span data-hero="cursor-name">Spark</span><i>→</i></div>
+    <ul class="orbit">{"".join(orbit_items)}
     </ul>
   </div>
+
+  <div class="hero-plate">
+    <div class="hero-id" aria-live="polite">
+      <p class="hero-plate-name"><span class="sup">ForgeBoard</span><b data-hero="name">{e(lead['name'])}</b></p>
+      <dl class="hero-specs">
+        <div><dd data-hero="mcu">{e(lead['mcu'])}</dd><dt class="eyebrow">Processor</dt></div>
+        <div><dd data-hero="clock">{e(lead['clock'])}</dd><dt class="eyebrow">Clock</dt></div>
+        <div><dd data-hero="gpio">{e(lead['gpio'])}</dd><dt class="eyebrow">GPIO</dt></div>
+        <div><dd data-hero="radio">{e(lead['wireless'])}</dd><dt class="eyebrow">Wireless</dt></div>
+      </dl>
+    </div>
+    <div class="hero-cta">
+      <a class="btn btn-brand" href="contact/" data-hero="order">Order {e(lead['name'])}</a>
+      <a class="btn btn-quiet" href="boards/{lead['id']}/" data-hero="specs">Full specs <span aria-hidden="true">→</span></a>
+    </div>
+    <p class="hero-trust eyebrow">DPIIT‑recognised startup · CE · FCC · RoHS pre‑certified</p>
+  </div>
+
+  <span class="scroll-cue" aria-hidden="true"><i></i></span>
 </section>
 
-<section class="sect" aria-labelledby="pick-h">
+<section class="print band" aria-labelledby="mii-h">
   <div class="wrap rail">
-    <span class="eyebrow mono-muted rv" id="pick-h">03 — Which one?</span>
-    <ul class="pick">{pick}</ul>
+    <span class="eyebrow rv" style="color:var(--print-muted)">01 — Made in India</span>
+    <div class="stack" style="gap:56px">
+      <h2 class="h-xl rv" id="mii-h" style="max-width:14ch">Designed and manufactured in India.</h2>
+      <div class="mii-grid">
+        <div class="mii-col rv">
+        <div class="mii-main">
+          <video class="line-video" poster="{asset('', 'assets/video/line-poster.webp')}" data-src-sm="{asset('', 'assets/video/line-sm.mp4')}" width="1280" height="720" muted playsinline loop preload="none" controls aria-label="The pick-and-place line placing components on a ForgeBoard">
+            <source src="{asset('', 'assets/video/line.mp4')}" type="video/mp4">
+          </video>
+        </div>
+        <p class="mii-cap eyebrow"><span>Pick‑and‑place · Defence Forge Laboratory, Pune</span><span>16 s</span></p>
+        </div>
+        <div class="mii-side rv">
+          <a class="shot shot-go" href="boards/">
+            <img class="photo" src="assets/photos/board-detail.webp" srcset="{srcset("assets/photos/board-detail.webp", "assets/photos/board-detail-sm.webp")}" sizes="(max-width:860px) 92vw, 30vw" alt="Close-up of the board between gloved fingertips" loading="lazy" decoding="async">
+            <span class="shot-label eyebrow">See the four boards <i aria-hidden="true">→</i></span>
+          </a>
+          <p style="font-size:18px;line-height:1.45;color:var(--print-muted);max-width:36ch">Defence Forge Industries designs, builds and supports every ForgeBoard in India. Priced in rupees, shipped across the country, and backed by the engineers who made it.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<div class="ticker" aria-hidden="true">
-  <div class="ticker-track">{ticks}</div>
-</div>
-
-<section class="print" style="margin-top:var(--sect);padding:var(--sect) var(--pad)" aria-labelledby="sw-h">
+<section class="print band" aria-labelledby="sw-h">
   <div class="wrap stack" style="gap:64px">
     <div class="rail rail-end rv">
-      <span class="eyebrow" style="color:var(--print-muted)">04 — Software</span>
+      <span class="eyebrow" style="color:var(--print-muted)">02 — Software</span>
       <h2 class="h-xl" id="sw-h">One install.<br>Every board.</h2>
+      <a href="software/" class="eyebrow link-go">The ForgeBoard IDE <i aria-hidden="true">→</i></a>
     </div>
     <div class="sw-grid">
       <div class="sw-shot soon rv" style="aspect-ratio:16/9">
@@ -614,34 +636,6 @@ void loop() {{
     </div>
   </div>
 </section>
-
-<section class="sect" aria-labelledby="mii-h">
-  <div class="wrap rail">
-    <span class="eyebrow mono-muted rv">05 — Made in India</span>
-    <div class="stack" style="gap:56px">
-      <h2 class="h-xl rv" id="mii-h" style="max-width:14ch">Designed and manufactured in India.</h2>
-      <div class="mii-grid">
-        <div class="mii-main rv">
-          <video class="line-video" poster="{asset('', 'assets/video/line-poster.webp')}" data-src-sm="{asset('', 'assets/video/line-sm.mp4')}" width="1280" height="720" muted playsinline loop preload="none" controls aria-label="The pick-and-place line placing components on a ForgeBoard">
-            <source src="{asset('', 'assets/video/line.mp4')}" type="video/mp4">
-          </video>
-        </div>
-        <div class="mii-side rv">
-          <div class="shot"><img class="photo" src="assets/photos/board-detail.webp" srcset="{srcset("assets/photos/board-detail.webp", "assets/photos/board-detail-sm.webp")}" sizes="(max-width:860px) 92vw, 30vw" alt="Close-up of the board between gloved fingertips" loading="lazy" decoding="async"></div>
-          <p style="font-size:18px;line-height:1.45;color:var(--muted);max-width:36ch">Defence Forge Industries designs, builds and supports every ForgeBoard in India. Priced in rupees, shipped across the country, and backed by the engineers who made it.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="cta">
-  <a href="contact/" class="rv">
-    <span class="eyebrow mono-muted">06 — Order</span>
-    <span class="h-pg">Let’s build<br>something<span>.</span></span>
-    <span class="eyebrow go">Single boards · classroom packs · bulk <span aria-hidden="true">→</span></span>
-  </a>
-</section>
 """
     return shell(
         out_path="index.html",
@@ -652,7 +646,6 @@ void loop() {{
         ),
         body=body,
         nav_key="home",
-        over_dark=True,
     )
 
 
@@ -699,11 +692,6 @@ def page_product(b: dict) -> str:
     idx = BOARDS.index(b)
 
     model_url = asset("../../", f"assets/models/{b['id']}.glb")
-    hls = "".join(
-        f'<li class="rv"><span class="eyebrow">{str(i+1).zfill(2)}</span>{e(h)}</li>'
-        for i, h in enumerate(b["highlights"])
-    )
-
     specs = "".join(
         f"<div><dt>{e(k)}</dt><dd>{e(v)}</dd></div>" for k, v in b["specs"]
     )
@@ -714,12 +702,6 @@ def page_product(b: dict) -> str:
         for d in DOWNLOADS
     )
 
-    others = "".join(f"""
-        <li><a href="../{o['id']}/">
-          <div class="art"><img src="../../{render(o['id'], '3d')}" srcset="{srcset(render(o['id'], '3d'), render_sm(o['id'], '3d')).replace('assets/', '../../assets/')}" sizes="(max-width:860px) 80vw, 22vw" alt="ForgeBoard {o['name']} board" loading="lazy" decoding="async"></div>
-          <div class="row"><span class="nm">{e(o['name'])}</span><span class="tg">{e(o['tag'])}</span></div>
-        </a></li>""" for o in BOARDS if o["id"] != b["id"])
-
     size_note = f"Board size {b['size']}. " if b["size"] else ""
 
     body = f"""
@@ -727,9 +709,19 @@ def page_product(b: dict) -> str:
   <section class="pdp-hero">
     <nav class="crumb eyebrow" aria-label="Breadcrumb"><a href="../">Boards</a> <span aria-hidden="true">/</span> {e(b['name'])}</nav>
     <div class="pdp-stage">
-      <fb-board src="{model_url}" fallback="../../{render(b['id'], '3d')}" srcset="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}" sizes="(max-width:860px) 88vw, 55vw" alt="ForgeBoard {b['name']} 3D view" tilt="14">
+      <fb-board src="{model_url}"
+        data-model="{model_url}"
+        data-v-3d="../../{render(b['id'], '3d')}" data-s-3d="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}"
+        data-v-top="../../{render(b['id'], 'top')}" data-s-top="{srcset(render(b['id'], 'top'), render_sm(b['id'], 'top')).replace('assets/', '../../assets/')}"
+        data-v-bottom="../../{render(b['id'], 'bottom')}" data-s-bottom="{srcset(render(b['id'], 'bottom'), render_sm(b['id'], 'bottom')).replace('assets/', '../../assets/')}"
+        fallback="../../{render(b['id'], '3d')}" srcset="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}" sizes="(max-width:860px) 88vw, 55vw" alt="ForgeBoard {b['name']} 3D view" tilt="14">
         <noscript><img src="../../{render_sm(b['id'], '3d')}" alt="ForgeBoard {b['name']} 3D view" style="width:100%;height:100%;object-fit:contain"></noscript>
       </fb-board>
+      <div class="pdp-views eyebrow" role="group" aria-label="Board view">
+        <button type="button" data-view="3d" aria-pressed="true">3D</button>
+        <button type="button" data-view="top" aria-pressed="false">Top</button>
+        <button type="button" data-view="bottom" aria-pressed="false">Bottom</button>
+      </div>
     </div>
     <div class="pdp-title">
       <h1><span class="sup">ForgeBoard</span>{e(b['name'])}</h1>
@@ -744,10 +736,6 @@ def page_product(b: dict) -> str:
     </div>
   </section>
 
-  <section class="print" style="padding:clamp(80px,9vw,140px) var(--pad)" aria-label="Highlights">
-    <ul class="hl-grid">{hls}</ul>
-  </section>
-
   <section id="specs" class="wrap" style="padding:var(--sect) var(--pad) 0;scroll-margin-top:24px">
     <div class="rail">
       <div class="specs-aside">
@@ -759,7 +747,7 @@ def page_product(b: dict) -> str:
     </div>
   </section>
 
-  <section class="wrap" style="padding:clamp(80px,9vw,140px) var(--pad) 0">
+  <section class="wrap" style="padding:clamp(80px,9vw,140px) var(--pad)">
     <div class="works">
       <span class="eyebrow mono-muted">Works with</span>
       <ul class="chips">{chips}</ul>
@@ -767,13 +755,6 @@ def page_product(b: dict) -> str:
     </div>
   </section>
 
-  <section class="wrap" style="margin-top:var(--sect);padding:0 var(--pad) 140px">
-    <div class="rail">
-      <span class="eyebrow mono-muted">Other boards</span>
-      <ul class="others">{others}
-      </ul>
-    </div>
-  </section>
 </article>
 """
     return shell(
@@ -782,7 +763,8 @@ def page_product(b: dict) -> str:
         description=b["tagline"],
         body=body,
         nav_key="boards",
-    ).replace("MODEL_URL_PLACEHOLDER", asset("../../", f"assets/models/{b['id']}.glb"))
+        model_preload=model_url,
+    )
 
 
 def page_compare() -> str:
@@ -896,6 +878,136 @@ def page_docs() -> str:
     )
 
 
+
+def page_store() -> str:
+    """Where to buy. No prices are printed anywhere in this project, so none are
+    invented here — the page routes to the enquiry, which is how the boards are
+    actually sold."""
+    rows = []
+    for i, b in enumerate(BOARDS):
+        rows.append(f"""
+      <li class="rv">
+        <a class="board-row" href="../boards/{b['id']}/">
+          <span class="eyebrow mono-muted">{str(i+1).zfill(2)}</span>
+          <div class="stack" style="gap:10px">
+            <h2><span class="nm">{e(b['name'])}</span><span class="tg">{e(b['tag'])}</span></h2>
+            <p class="eyebrow mono-muted">{e(spec_line(b))}</p>
+          </div>
+          <div class="art"><img src="../{render(b['id'], '3d')}" srcset="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../assets/')}" sizes="(max-width:860px) 70vw, 24vw" alt="ForgeBoard {b['name']} board" loading="lazy" decoding="async"></div>
+          <ul class="hl"><li>Ships from Pune</li><li>Priced in ₹, GST invoice</li><li>Specs &amp; order →</li></ul>
+        </a>
+      </li>""")
+
+    ways = [
+        ("Single boards", "One board, or a handful. Dispatched from Pune, usually the next working day."),
+        ("Classroom packs", "Ten boards and up for labs and workshops, with a single GST invoice and one point of contact."),
+        ("Bulk &amp; OEM", "Volume pricing for products going to market. Tell us the quantity and the schedule."),
+    ]
+    way_html = "".join(
+        f'<li class="rv"><h2>{w}</h2><p>{d}</p></li>' for w, d in ways
+    )
+
+    body = f"""
+<section class="page">
+  <div class="rail" style="margin-bottom:80px">
+    <span class="eyebrow mono-muted">Store</span>
+    <div class="stack" style="gap:28px">
+      <h1 class="h-pg">Buy direct.</h1>
+      <p class="lede">We sell the boards ourselves — no distributor in the middle. Tell us which board and how
+        many, and you get pricing in ₹ and a dispatch date within one working day.</p>
+      <div class="pdp-cta">
+        <a class="btn btn-ink" href="../contact/">Request pricing</a>
+        <a class="btn btn-ghost" href="../compare/">Compare the four ↓</a>
+      </div>
+    </div>
+  </div>
+  <ul class="board-rows">{"".join(rows)}
+  </ul>
+  <div class="rail" style="margin-top:var(--sect)">
+    <span class="eyebrow mono-muted">How you buy</span>
+    <ul class="sw-cols">{way_html}</ul>
+  </div>
+</section>
+"""
+    return shell(
+        out_path="store/index.html",
+        title="Store — buy ForgeBoard direct",
+        description=(
+            "Buy ForgeBoard boards direct from Defence Forge Industries. Single boards, "
+            "classroom packs and bulk, priced in rupees and shipped across India."
+        ),
+        body=body,
+        nav_key="store",
+    )
+
+
+def page_about() -> str:
+    facts = [
+        ("Company", "Defence Forge Industries Pvt. Ltd."),
+        ("CIN", CONTACT["cin"]),
+        ("GST", CONTACT["gst"]),
+        ("Startup India", CONTACT["dipp"]),
+        ("Address", CONTACT["address"]),
+    ]
+    fact_html = "".join(
+        f'<div><dt class="eyebrow mono-muted">{k}</dt><dd>{e(v)}</dd></div>' for k, v in facts
+    )
+
+    body = f"""
+<section class="page stack" style="gap:80px">
+  <div class="rail">
+    <span class="eyebrow mono-muted">About</span>
+    <div class="stack" style="gap:28px">
+      <h1 class="h-pg">We build the boards we wanted.</h1>
+      <p class="lede">Defence Forge Industries designs, manufactures and supports every ForgeBoard in India —
+        from the schematic to the pick-and-place line to the engineer who answers when something goes wrong.</p>
+    </div>
+  </div>
+
+  <div class="mii-grid">
+    <div class="mii-col rv">
+      <div class="mii-main">
+        <img class="photo" src="../assets/photos/lab-wide.webp" srcset="{srcset("assets/photos/lab-wide.webp", "assets/photos/lab-wide-sm.webp").replace('assets/', '../assets/')}" sizes="(max-width:860px) 92vw, 58vw" alt="The Defence Forge laboratory" loading="lazy" decoding="async">
+      </div>
+      <p class="mii-cap eyebrow"><span>Defence Forge Laboratory · Loni Kalbhor, Pune</span></p>
+    </div>
+    <div class="mii-side rv">
+      <a class="shot shot-go" href="../boards/">
+        <img class="photo" src="../assets/photos/board-detail.webp" srcset="{srcset("assets/photos/board-detail.webp", "assets/photos/board-detail-sm.webp").replace('assets/', '../assets/')}" sizes="(max-width:860px) 92vw, 30vw" alt="Close-up of the board between gloved fingertips" loading="lazy" decoding="async">
+        <span class="shot-label eyebrow">See the four boards <i aria-hidden="true">→</i></span>
+      </a>
+      <p style="font-size:18px;line-height:1.45;color:var(--muted);max-width:36ch">Priced in rupees, shipped
+        across the country, and backed by the people who made it.</p>
+    </div>
+  </div>
+
+  <ul class="sw-cols">
+    <li class="rv"><h2>Designed here</h2><p>Schematic, layout and firmware are done in-house in Pune. Every pin
+      on every board is a decision we can explain.</p></li>
+    <li class="rv"><h2>Built here</h2><p>Assembled on our own line. RoHS, CE and FCC pre-certified components,
+      and the same protection stack on all four boards.</p></li>
+    <li class="rv"><h2>Supported here</h2><p>Questions reach the engineers who designed the board, not a queue
+      in another time zone.</p><a href="../contact/" class="eyebrow link-ul">Talk to us →</a></li>
+  </ul>
+
+  <div class="rail">
+    <span class="eyebrow mono-muted">Registered</span>
+    <dl class="contact-dl">{fact_html}</dl>
+  </div>
+</section>
+"""
+    return shell(
+        out_path="about/index.html",
+        title="About — Defence Forge Industries",
+        description=(
+            "Defence Forge Industries designs, manufactures and supports every ForgeBoard "
+            "in India, from the schematic to the assembly line."
+        ),
+        body=body,
+        nav_key="about",
+    )
+
+
 def page_contact() -> str:
     opts = "".join(f"<option>{e(b['name'])}</option>" for b in BOARDS)
     body = f"""
@@ -947,6 +1059,8 @@ def main() -> int:
         "software/index.html": page_software(),
         "docs/index.html": page_docs(),
         "contact/index.html": page_contact(),
+        "store/index.html": page_store(),
+        "about/index.html": page_about(),
     }
     for b in BOARDS:
         pages[f"boards/{b['id']}/index.html"] = page_product(b)

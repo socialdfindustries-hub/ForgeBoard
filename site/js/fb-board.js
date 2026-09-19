@@ -81,7 +81,7 @@
       // A page that will show the real model shows only the loading pill
       // until it arrives. The flat render is the fallback for devices that
       // can't do 3D at all, and for the Top / Bottom views, which are renders.
-      if (this.getAttribute('src') && autoCapable()) this.mountEmpty();
+      if (this.getAttribute('src') && autoCapable() && !this.hasAttribute('hold-fallback')) this.mountEmpty();
       else this.mount2d();
 
       // Flat-render tilt, driven by the cursor. Only used before the upgrade.
@@ -126,8 +126,13 @@
       if (name === 'src') {
         this.gen = (this.gen || 0) + 1;
         this.teardown3d();
-        if (newVal && autoCapable()) { this.mountEmpty(); this.upgrade(); }
+        // Show the incoming board at once — its own flat render if it has
+        // one — then bring the model up over it. The stage never goes blank
+        // between two boards, and a failed model just leaves the render.
+        if (this.getAttribute('fallback')) this.mount2d();
+        else if (newVal) this.mountEmpty();
         else this.mount2d();
+        if (newVal && autoCapable()) this.upgrade();
       }
     }
 
@@ -178,6 +183,7 @@
       this.raf = requestAnimationFrame(this.tick);
 
       if (this.group) {
+        if (this.paused && !this.dragging) return;
         if (!this.dragging) {
           // carry the throw, then settle back into the idle turn
           this.yaw += this.yawV;
@@ -193,6 +199,12 @@
         }
         this.group.rotation.y = this.yaw;
         this.group.rotation.x = this.pitch + this.baseTilt;
+        // Coming forward is a camera move, not a scaled-up canvas: the board
+        // gains real perspective instead of losing pixels.
+        const want = this.frameDist(this.camera.aspect) * (this.zoom || 1);
+        if (Math.abs(this.camera.position.z - want) > 1e-4) {
+          this.camera.position.z += (want - this.camera.position.z) * 0.09;
+        }
         if (this.visible !== false) this.renderer.render(this.scene, this.camera);
         return;
       }
@@ -272,7 +284,7 @@
       if (!src || this.busy || this.group) return;
       if (!force && !autoCapable()) return;
       if (force && !hasWebGL()) return;
-      if (force) this.mountEmpty();
+      if (force && !this.img) this.mountEmpty();
 
       this.busy = true;
       const gen = (this.gen = (this.gen || 0) + 1);
@@ -381,7 +393,7 @@
         this.renderer.setSize(w2, h2);
         this.camera.aspect = w2 / h2;
         this.camera.updateProjectionMatrix();
-        this.camera.position.z = this.frameDist(this.camera.aspect);
+        this.camera.position.z = this.frameDist(this.camera.aspect) * (this.zoom || 1);
       });
       this.ro.observe(this);
 

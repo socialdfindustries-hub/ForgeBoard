@@ -47,10 +47,11 @@ def main() -> int:
     expected = {
         "index.html", "boards/index.html", "compare/index.html",
         "software/index.html", "docs/index.html", "contact/index.html",
+        "store/index.html", "about/index.html",
         "boards/spark/index.html", "boards/sprint/index.html",
         "boards/indus/index.html", "boards/flint/index.html",
     }
-    found = {str(p.relative_to(ROOT)) for p in pages}
+    found = {p.relative_to(ROOT).as_posix() for p in pages}
     for miss in sorted(expected - found):
         fail(f"missing page: {miss}")
 
@@ -76,7 +77,13 @@ def main() -> int:
             checked_refs += 1
             target = resolve(page, ref)
             if not target.exists():
-                fail(f"{rel}: broken reference {ref!r} -> {target.relative_to(ROOT.parent)}")
+                # A bad ref can resolve outside the site (a stray "/..."), and
+                # relative_to would then raise while reporting the failure.
+                try:
+                    where = target.relative_to(ROOT.parent)
+                except ValueError:
+                    where = target
+                fail(f"{rel}: broken reference {ref!r} -> {where}")
 
     # models
     for bid in ("spark", "sprint", "indus", "flint"):

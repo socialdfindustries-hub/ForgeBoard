@@ -2,13 +2,26 @@
    Ported from the ForgeBoard v2 design. Tokens and type scale are the design's. */
 
 :root{
-  --bg:#efe6d3;
-  --surface:#e3d7bd;
-  --ink:#141210;
-  --muted:#635745;
-  --line:#cdbd9a;
+  /* One ground for the whole site. The page was cream with dark panels cut
+     into it; it is now charcoal throughout, so `.print` sections and ordinary
+     ones are the same surface and nothing bands across a page break. */
+  --bg:#141210;
+  --surface:#221e1a;
+  --ink:#efe6d3;
+  --muted:#bfae8d;
+  --line:#3a332c;
   --brand:#f39a00;
-  --brand-ink:#804f00;
+  --brand-ink:#f7b545;
+  /* Amber is bright: text sitting on it stays dark whatever the page does. */
+  --on-brand:#141210;
+  /* The page ground, as one value, so anything that has to paint its own
+     opaque patch of it carries the fabric too. A flat colour cannot pass for
+     this: the weave runs #1f..#4f, and a flat patch at its mean still reads
+     as a panel sitting on top. The tile is noise, so a patch whose tiling
+     does not line up with the body's is still indistinguishable. */
+  --page-bg:
+    linear-gradient(rgba(0,0,0,.22),rgba(0,0,0,.22)),
+    var(--print-bg) url(../assets/fabric-black-tile.webp) center/520px repeat;
   --print-bg:#1a1714;
   --print-ink:#efe6d3;
   --print-muted:#bfae8d;
@@ -23,7 +36,10 @@
 html{-webkit-text-size-adjust:100%}
 body{
   margin:0;
-  background:var(--bg);
+  /* The same ground as a .print panel — colour, fabric and all — so an inner
+     page and the home page are the same surface, and a .print section sits on
+     the page without a seam. */
+  background:var(--page-bg);
   color:var(--ink);
   font-family:Archivo,"Helvetica Neue",Helvetica,Arial,sans-serif;
   -webkit-font-smoothing:antialiased;
@@ -44,7 +60,7 @@ button{background:none;border:0;padding:0;cursor:pointer}
 /* amber only reaches 1.79:1 on the cream ground; keep it for the dark panels,
    where it is 8:1, and use ink on light where it is 15:1 */
 .print :focus-visible,.site-head :focus-visible{outline-color:var(--brand)}
-::selection{background:var(--brand);color:var(--ink)}
+::selection{background:var(--brand);color:var(--on-brand)}
 table td,table th{font-variant-numeric:tabular-nums}
 ::placeholder{color:var(--muted);opacity:1}
 
@@ -64,8 +80,76 @@ table td,table th{font-variant-numeric:tabular-nums}
 .print .link-ul:hover,.print a:not(.btn):hover{color:#fff}
 
 /* ---------- motion primitives ---------- */
-.js .rv{opacity:0;transform:translateY(36px);transition:opacity 1s var(--ease),transform 1s var(--ease)}
-.rv[data-in]{opacity:1;transform:none}
+/* Sections arrive rather than appear: up, and out of a slight blur, so the
+   whole page down the scroll carries the hero's low-to-high language. */
+.js .rv{
+  opacity:0;transform:translateY(38px) scale(.99);filter:blur(5px);
+  transition:opacity .9s var(--ease),transform 1s var(--ease),filter .9s var(--ease);
+}
+.rv[data-in]{opacity:1;transform:none;filter:blur(0)}
+
+/* ---------- scroll-driven motion ----------
+   Where the browser supports it, the reveals stop being a one-shot trigger
+   and become genuinely scroll-linked: their progress is the scroll's, so
+   they move exactly as fast as you do and run on the compositor rather than
+   competing with it.
+
+   Only transform and opacity are animated here. Anything that triggers
+   layout or paint — width, filter, blur — stays out of a scroll timeline,
+   which is why the blur belongs to the IntersectionObserver path below and
+   not to this one.
+
+   Firefox still has this behind a flag, so the observer version stays as the
+   baseline for everyone else; this block simply takes over when it can. */
+@supports (animation-timeline: view()) {
+  .js .rv{
+    /* the animation owns these now — the observer's data-in is harmless */
+    opacity:1;transform:none;filter:none;
+    animation:rv-rise linear both;
+    animation-timeline:view();
+    animation-range:entry 5% entry 60%;
+  }
+  @keyframes rv-rise{
+    from{opacity:0;transform:translateY(40px) scale(.985)}
+    to{opacity:1;transform:none}
+  }
+
+  /* The hero hands the page over as it leaves rather than just scrolling off. */
+  .hero-scene{
+    animation:hero-leave linear both;
+    animation-timeline:view();
+    animation-range:exit 0% exit 90%;
+  }
+  @keyframes hero-leave{
+    from{opacity:1;transform:none}
+    to{opacity:.12;transform:translateY(-7%)}
+  }
+
+  /* The line drifts through its frame as the section passes — the frame clips
+     it, and the scale keeps an edge from ever showing. */
+  .mii-main video{
+    animation:media-pan linear both;
+    animation-timeline:view();
+    animation-range:cover;
+  }
+  @keyframes media-pan{
+    from{transform:scale(1.1) translateY(-2.5%)}
+    to{transform:scale(1.1) translateY(2.5%)}
+  }
+
+  /* Nothing scroll-linked for anyone who asked for no motion. */
+  @media (prefers-reduced-motion:reduce){
+    .js .rv,.hero-scene,.mii-main video{animation:none}
+    .js .rv{opacity:1;transform:none}
+  }
+}
+
+/* ---------- scroll rail ---------- */
+.scroll-rail{position:fixed;inset:0 0 auto 0;height:2px;z-index:60;pointer-events:none}
+.scroll-rail i{
+  display:block;height:100%;width:100%;transform:scaleX(0);transform-origin:0 50%;
+  background:linear-gradient(90deg,var(--brand),#ffce6a);
+}
 .wd{display:inline-block}
 .js .wd{opacity:.18;transition:opacity .6s ease}
 .wd[data-in]{opacity:1}
@@ -75,7 +159,7 @@ table td,table th{font-variant-numeric:tabular-nums}
 
 @media (prefers-reduced-motion:reduce){
   /* Reveals must land in their finished state, not just stop moving. */
-  .js .rv,.js .wd,.rv,.wd{transition:none!important;opacity:1!important;transform:none!important}
+  .js .rv,.js .wd,.rv,.wd{transition:none!important;opacity:1!important;transform:none!important;filter:none!important}
   /* Everything else: no animation, no transition, no smooth scrolling.
      Covers the pulsing dots, the marquee, and every hover transform. */
   *,*::before,*::after{
@@ -125,31 +209,39 @@ table td,table th{font-variant-numeric:tabular-nums}
 .mono-muted{color:var(--muted)}
 
 /* ---------- header ----------
-   The bar is fixed over both cream and dark panels, so it swaps its own
-   colours and logo instead of blending. `over-dark` is set on the page that
-   opens on a dark panel, and kept in sync while scrolling. */
+   The page is one charcoal ground from the hero to the footer, so the bar has
+   one appearance and keeps it. It used to swap between a cream treatment and a
+   dark one depending on whether a `.print` panel was under it; on a site that
+   is dark throughout that only ever fired as a flash of the wrong colour —
+   cream text on a cream slab — so the swap is gone. What is left is depth: the
+   bar is part of the page at the top and lifts off it once the page moves. */
 .site-head{
   position:fixed;top:0;left:0;right:0;z-index:30;
-  color:var(--ink);
+  color:var(--print-ink);
   padding:16px var(--pad);
   display:flex;align-items:center;justify-content:space-between;gap:24px;
-  transition:color .35s var(--ease),background .35s var(--ease),border-color .35s var(--ease);
+  transition:background .45s var(--ease),border-color .45s var(--ease),
+             box-shadow .45s var(--ease),padding .45s var(--ease);
 }
-.site-head.over-dark{color:var(--print-ink)}
-/* Once the page moves, the bar needs a ground of its own — without the old
-   difference blend, text would otherwise run straight into the content. */
+/* Once the page moves the bar needs a ground of its own, or the nav runs into
+   whatever is scrolling under it. The same charcoal, a little denser and
+   blurred, with one hairline: it settles onto the page rather than changing
+   colour on it. It condenses slightly at the same time, which is the part you
+   actually read as "the page has moved". */
 .site-head.scrolled{
-  background:rgba(239,230,211,.88);
-  backdrop-filter:saturate(1.3) blur(12px);
-  -webkit-backdrop-filter:saturate(1.3) blur(12px);
-  border-bottom:1px solid rgba(20,18,16,.09);
+  background:rgba(20,18,16,.72);
+  backdrop-filter:saturate(1.25) blur(14px);
+  -webkit-backdrop-filter:saturate(1.25) blur(14px);
+  border-bottom:1px solid rgba(239,230,211,.10);
+  box-shadow:0 10px 30px -18px rgba(0,0,0,.9);
+  padding-top:11px;padding-bottom:11px;
 }
-.site-head.scrolled.over-dark{
-  background:rgba(26,23,20,.86);
-  border-bottom-color:rgba(239,230,211,.14);
+/* No backdrop-filter (Firefox with it off, older Safari): lean on opacity
+   instead, so the bar is still a ground and not a see-through strip. */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .site-head.scrolled{background:rgba(20,18,16,.94)}
 }
-.site-head a:hover{color:var(--brand)}
-.site-head.over-dark a:hover{color:#fff}
+.site-head a:hover{color:var(--brand-ink)}
 
 .brand{
   font-family:Archivo,sans-serif;font-stretch:118%;font-weight:800;
@@ -157,9 +249,6 @@ table td,table th{font-variant-numeric:tabular-nums}
   display:inline-flex;align-items:center;gap:10px;
 }
 .brand .mark{width:30px;height:auto;display:block;flex:none}
-.site-head .mark-on-dark{display:none}
-.site-head.over-dark .mark-on-light{display:none}
-.site-head.over-dark .mark-on-dark{display:block}
 
 .site-nav{display:flex;gap:28px}
 .site-nav a{opacity:.7}
@@ -172,27 +261,228 @@ table td,table th{font-variant-numeric:tabular-nums}
 
 /* ---------- home hero ---------- */
 .hero{
-  position:relative;height:100vh;height:100svh;min-height:720px;overflow:hidden;
-  display:grid;grid-template-rows:1fr auto;
+  position:relative;min-height:100vh;min-height:100svh;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  gap:clamp(12px,2.2vh,26px);padding:112px var(--pad) 56px;
 }
 .hero-meta{
   position:absolute;top:96px;left:var(--pad);right:var(--pad);
-  display:flex;justify-content:space-between;gap:24px;color:var(--print-muted);z-index:2;
+  display:flex;justify-content:space-between;gap:24px;color:var(--print-muted);z-index:3;
 }
-.hero-meta .scroll-cue{display:inline-flex;align-items:center;gap:12px}
-.hero-meta .scroll-cue i{width:32px;height:1px;background:var(--print-ink);animation:pulse 2s ease-in-out infinite;display:block}
-.hero-boards{
-  position:absolute;inset:0;display:grid;grid-template-columns:1fr 1.7fr 1fr 1fr;
-  align-items:center;padding:12vh 4vw 22vh;gap:1vw;
+
+/* ---------- the stage: the whole page ----------
+   One canvas across the hero, with the four links held over the boards at
+   their projected positions. No frame, no ring, nothing drawn behind them —
+   the boards and the dark are the composition. */
+.hero-scene{position:absolute;inset:0;z-index:1}
+/* The ground the boards stand on: a warm pool of light where they are, the
+   corners falling away. It gives the dark a centre and a horizon instead of
+   being a flat black field. */
+.hero-scene::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  /* Neutral. A soft cool light where the boards are and the corners falling
+     away — no colour cast, so the boards' own copper and solder mask are the
+     only warm things on the page. */
+  background:
+    radial-gradient(54% 44% at 50% 40%, rgba(233,238,245,.075), rgba(233,238,245,.022) 58%, transparent 78%),
+    radial-gradient(120% 92% at 50% 46%, transparent 38%, rgba(0,0,0,.48) 76%, rgba(0,0,0,.7) 100%);
 }
-.hero-boards a{display:block;width:100%;height:100%;transition:transform .5s var(--ease)}
-.hero-boards a:hover{transform:scale(1.07)}
+.hero-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+/* The foot of the stage falls into shadow, so the name always has ground to
+   sit on and no board is ever read through. */
+.hero-scene::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:32%;z-index:3;pointer-events:none;
+  background:linear-gradient(to top,var(--print-bg) 6%,rgba(26,23,20,.72) 44%,transparent 100%);
+  opacity:0;transition:opacity .45s var(--ease);
+}
+.hero.is-showing .hero-scene::after{opacity:1}
+@media (hover:none){.hero-scene::after{opacity:1}}
+
+.orbit{position:absolute;inset:0;z-index:2;margin:0;padding:0;list-style:none}
+.orbit-item{
+  position:absolute;left:0;top:0;transform-origin:0 0;
+  will-change:transform;
+}
+.orbit-item a{display:block;width:100%;height:100%;cursor:pointer}
+.orbit-item img{
+  display:block;width:100%;height:100%;object-fit:contain;
+  filter:drop-shadow(0 40px 60px rgba(0,0,0,.55));
+  transition:filter .6s var(--ease);
+}
+/* Once a board's model is up, its flat render steps aside and the link
+   becomes a plain hit area over the real thing. */
+.orbit-item.has-model img{visibility:hidden}
+/* Only the CSS fallback dims with a filter; in 3D the materials do it. */
+.orbit:not(.is-3d).has-focus .orbit-item:not(.is-focus) img{filter:blur(2.5px) brightness(.65)}
+
+/* ---------- board name plate ---------- */
+/* Below the boards, in the order the research says a first-time visitor
+   reads them: what it is, what it does, what to do about it, why to trust
+   it. Everything here has to clear the fold with the boards. */
+.hero-plate{
+  position:relative;z-index:4;
+  display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;
+  /* Nothing but the boards until you point at one. The plate then comes up
+     the way a panel powers on — out of focus and nearly dark, resolving to
+     sharp and fully lit. Low intensity to high, not a fade. */
+  opacity:0;pointer-events:none;
+  transform:translateY(18px) scale(.972);
+  filter:blur(7px) brightness(.28) saturate(.5);
+  transition:opacity .35s var(--ease),transform .55s var(--ease),filter .62s var(--ease);
+}
+.hero.is-showing .hero-plate{
+  opacity:1;pointer-events:auto;
+  transform:none;
+  filter:blur(0) brightness(1) saturate(1);
+}
+.hero-id{display:flex;flex-direction:column;align-items:center;gap:8px}
+.hero-cta{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.hero-cta .btn{height:46px;font-size:14px;justify-content:center}
+.btn-quiet{border:1px solid rgba(239,230,211,.34);color:var(--print-ink)}
+.print .btn-quiet:hover{border-color:var(--print-ink);color:var(--print-ink)}
+.hero-trust{margin-top:0;color:var(--print-muted);opacity:.78}
+.hero-plate-name{
+  display:flex;align-items:baseline;gap:.4em;
+  font-size:clamp(24px,2.3vw,36px);font-weight:800;font-stretch:112%;letter-spacing:-.035em;line-height:1;
+}
+.hero-plate-name .sup{font-size:.42em;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--print-muted)}
+.hero-plate-spec{color:var(--print-muted)}
+
+/* Specs as an instrument readout: the figure first, big, with its label
+   underneath. A visitor who only ever looks at the hero still leaves knowing
+   the clock, the pin count and the radio. */
+.hero-specs{
+  position:relative;
+  display:flex;flex-wrap:wrap;justify-content:center;gap:0;margin:0;
+  /* A light runs across the strip as it powers up, then leaves. */
+  background:linear-gradient(100deg,
+    transparent 42%, rgba(239,230,211,.2) 50%, transparent 58%) no-repeat;
+  background-size:260% 100%;
+  background-position:135% 0;
+}
+.hero.is-showing .hero-specs{
+  background-position:-35% 0;
+  transition:background-position 1.15s var(--ease) .1s;
+}
+/* The two rules draw themselves out from the centre as the readout comes up. */
+.hero-specs::before,.hero-specs::after{
+  content:"";position:absolute;left:0;right:0;height:1px;
+  background:rgba(239,230,211,.16);
+  transform:scaleX(0);transition:transform .55s var(--ease);
+}
+.hero-specs::before{top:0}
+.hero-specs::after{bottom:0}
+.hero.is-showing .hero-specs::before,
+.hero.is-showing .hero-specs::after{transform:scaleX(1)}
+.hero-specs>div{
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+  padding:8px clamp(14px,1.8vw,26px);
+}
+.hero-specs>div+div{border-left:1px solid rgba(239,230,211,.14)}
+/* Each figure rises in its own turn, left to right, so the readout reads as
+   four separate measurements landing rather than one block appearing. */
+.hero-specs>div{opacity:0;transform:translateY(12px)}
+.hero.is-showing .hero-specs>div{
+  opacity:1;transform:none;
+  transition:opacity .5s var(--ease),transform .5s var(--ease);
+}
+.hero.is-showing .hero-specs>div:nth-child(1){transition-delay:.06s}
+.hero.is-showing .hero-specs>div:nth-child(2){transition-delay:.13s}
+.hero.is-showing .hero-specs>div:nth-child(3){transition-delay:.2s}
+.hero.is-showing .hero-specs>div:nth-child(4){transition-delay:.27s}
+.hero-specs dd{font-variant-numeric:tabular-nums}
+
+/* The buttons follow the figures in. */
+.hero-cta,.hero-trust{opacity:0;transform:translateY(10px)}
+.hero.is-showing .hero-cta,
+.hero.is-showing .hero-trust{
+  opacity:1;transform:none;
+  transition:opacity .5s var(--ease),transform .5s var(--ease);
+}
+.hero.is-showing .hero-cta{transition-delay:.36s}
+.hero.is-showing .hero-trust{transition-delay:.42s}
+
+/* No pointer to hover with, so nothing can be revealed by hovering: a touch
+   device gets the whole plate from the start. This has to sit after the rules
+   that hide it — same specificity, so the later one wins. */
+@media (hover:none){
+  .hero-plate,.hero-specs>div,.hero-cta,.hero-trust{
+    opacity:1;transform:none;pointer-events:auto;
+  }
+  /* the power-up is a hover effect; with no hover the panel is simply on */
+  .hero-plate{filter:none}
+  .hero-specs{background-position:-35% 0}
+  .hero-specs::before,.hero-specs::after{transform:scaleX(1)}
+  .hero-scene::after{opacity:1}
+}
+
+/* And the stage warms under the board being looked at. */
+.hero-scene::before{transition:opacity .6s var(--ease),filter .6s var(--ease)}
+.hero.is-showing .hero-scene::before{filter:brightness(1.45)}
+.hero-specs dd{
+  margin:0;font-size:clamp(15px,1.35vw,20px);font-weight:700;letter-spacing:-.02em;
+  color:var(--print-ink);white-space:nowrap;
+}
+.hero-specs dt{color:var(--print-muted);opacity:.8}
+
+/* Loader. A hairline on the centre line and the count large in the corner —
+   the wait is part of the piece rather than a blank screen. */
+.hero-load{position:absolute;inset:0;z-index:5;pointer-events:none;transition:opacity .7s var(--ease)}
+.hero-load .load-bar{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(210px,32vw);height:2px;background:rgba(239,230,211,.16);overflow:hidden;display:block;
+}
+.hero-load .load-bar i{
+  display:block;width:100%;height:100%;background:var(--print-ink);
+  transform:scaleX(0);transform-origin:0 50%;transition:transform .25s linear;
+}
+.hero-load b{
+  position:absolute;left:var(--pad);bottom:34px;
+  font-size:clamp(46px,7vw,104px);font-weight:800;font-stretch:112%;letter-spacing:-.05em;
+  line-height:.8;color:var(--print-ink);opacity:.9;font-variant-numeric:tabular-nums;
+}
+.hero-load.is-done{opacity:0}
+/* It exists only while the models are coming down. With no WebGL the renders
+   are already on screen and there is nothing to count. */
+.hero-load{display:none}
+.hero-scene.is-loading .hero-load{display:block}
+.hero-scene.is-loading .orbit{opacity:0}
+.hero-canvas{opacity:0;transition:opacity .9s var(--ease)}
+.hero-scene.is-3d .hero-canvas{opacity:1}
+
+/* The pointer names what it is over. This replaces a line of instructions in
+   the fold, and tells you the board is a link as well as a thing to look at. */
+.hero-cursor{
+  position:absolute;left:0;top:0;z-index:6;pointer-events:none;
+  display:flex;align-items:center;gap:7px;
+  margin:18px 0 0 18px;padding:7px 13px;border-radius:999px;
+  background:var(--print-ink);color:var(--print-bg);
+  font-size:13px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;
+  opacity:0;transform-origin:0 0;
+  transition:opacity .28s var(--ease),scale .28s var(--ease);
+  scale:.8;
+}
+.hero-cursor.is-on{opacity:1;scale:1}
+.hero-cursor i{font-style:normal;opacity:.55}
+@media (hover:none){.hero-cursor{display:none}}
+
+/* ---------- scroll cue ---------- */
+/* Just a mark: the trust line already fills this space, and the research is
+   blunt that every extra thing above the fold costs the CTA attention. */
+.hero .scroll-cue{position:absolute;left:50%;bottom:18px;transform:translateX(-50%)}
+.hero .scroll-cue i{width:1px;height:26px;background:linear-gradient(var(--print-ink),transparent);display:block;animation:pulse 2s ease-in-out infinite}
+
+/* ---------- the name, revealed on the way down ---------- */
+.hero-name{
+  display:flex;flex-direction:column;gap:clamp(20px,3vw,34px);
+  padding:clamp(84px,12vw,170px) var(--pad) clamp(84px,12vw,170px);
+}
 .hero-title{
-  position:relative;z-index:2;align-self:end;padding:0 32px 32px;
-  font-size:clamp(56px,8.5vw,150px);line-height:.88;font-weight:800;font-stretch:112%;
-  letter-spacing:-.045em;display:flex;flex-direction:column;pointer-events:none;color:var(--print-ink);
+  font-size:clamp(44px,9vw,164px);line-height:.88;font-weight:800;font-stretch:112%;
+  letter-spacing:-.045em;display:flex;flex-direction:column;color:var(--print-ink);
 }
 .hero-title .outline{color:transparent;-webkit-text-stroke:2px var(--print-ink)}
+.hero-lede{max-width:44ch;font-size:clamp(16px,1.4vw,21px);line-height:1.5;color:var(--print-muted)}
 
 /* ---------- statement ---------- */
 .statement{padding:clamp(96px,14vw,200px) var(--pad)}
@@ -206,10 +496,20 @@ table td,table th{font-variant-numeric:tabular-nums}
 .lineup{display:grid;grid-template-columns:repeat(2,1fr);gap:24px}
 .lineup .offset{margin-top:80px}
 .card{
+  position:relative;
   display:flex;flex-direction:column;background:var(--surface);
   border-radius:4px;overflow:hidden;color:inherit;height:100%;
+  transition:transform .55s var(--ease),box-shadow .55s var(--ease);
 }
-.card:hover{color:inherit}
+.card:hover{color:inherit;transform:translateY(-6px);box-shadow:0 26px 50px -22px rgba(20,18,16,.55)}
+/* A light passes over the card as the pointer arrives — the same gesture the
+   spec readout uses in the hero, so the page hovers in one language. */
+.card::after{
+  content:"";position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(100deg,transparent 40%,rgba(255,255,255,.3) 50%,transparent 60%);
+  background-size:250% 100%;background-position:130% 0;opacity:0;
+}
+.card:hover::after{opacity:1;background-position:-30% 0;transition:background-position .95s var(--ease),opacity .3s}
 .card-art{position:relative;aspect-ratio:4/3;display:grid;place-items:center;padding:12%;overflow:hidden}
 .card-art .tl{position:absolute;top:20px;left:22px;color:var(--muted)}
 .card-art .tr{position:absolute;top:20px;right:22px;color:var(--muted)}
@@ -260,7 +560,7 @@ table td,table th{font-variant-numeric:tabular-nums}
 .sw-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:start}
 .sw-shot{border-radius:4px;overflow:hidden;border:1px solid rgba(239,230,211,.18);background:#0f0d0b}
 /* the IDE frame until there is an IDE to show: logo + "Coming soon" */
-.soon{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:var(--bg)}
+.soon{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:var(--ink)}
 .soon img{width:clamp(72px,9vw,128px);height:auto;margin-bottom:10px}
 .soon .eyebrow{color:var(--print-muted)}
 .soon b{font-size:clamp(28px,3.4vw,52px);line-height:1;font-weight:800;font-stretch:112%;letter-spacing:-.04em}
@@ -282,10 +582,10 @@ table td,table th{font-variant-numeric:tabular-nums}
   padding:0 22px;border-radius:999px;font-weight:700;font-size:15px;
   transition:transform .3s var(--ease),background .3s var(--ease),filter .3s var(--ease);
 }
-.btn-brand{background:var(--brand);color:var(--ink)}
-.btn-brand:hover{color:var(--ink);filter:brightness(1.06)}
+.btn-brand{background:var(--brand);color:var(--on-brand)}
+.btn-brand:hover{color:var(--on-brand);filter:brightness(1.06)}
 .btn-ink{height:52px;background:var(--ink);color:var(--bg)}
-.btn-ink:hover{color:var(--ink);background:var(--brand)}
+.btn-ink:hover{color:var(--on-brand);background:var(--brand)}
 .btn-ghost{height:52px;border:1px solid var(--ink)}
 .btn-ghost:hover{border-color:var(--brand)}
 
@@ -305,13 +605,79 @@ table td,table th{font-variant-numeric:tabular-nums}
   background-image:repeating-linear-gradient(45deg,rgba(239,230,211,.06) 0 10px,transparent 10px 20px)}
 
 /* ---------- made in india ---------- */
-.mii-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:end}
-.mii-main{aspect-ratio:16/10;border-radius:4px;overflow:hidden}
-.mii-side{display:flex;flex-direction:column;gap:24px}
-.mii-side .shot{aspect-ratio:4/3;border-radius:4px;overflow:hidden}
-/* the line video fills the wide frame like the photo it replaced */
-.mii-main{background:#0f0d0b}
-.mii-main video{width:100%;height:100%;display:block;object-fit:cover;transform:scale(1.2);transform-origin:50% 55%}
+.mii-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:clamp(20px,2.4vw,36px);align-items:start}
+.mii-side{display:flex;flex-direction:column;gap:clamp(18px,2vw,28px)}
+.mii-side .shot{aspect-ratio:4/3;border-radius:4px;overflow:hidden;border:1px solid rgba(239,230,211,.14)}
+
+/* The clip is 1280x720. The frame takes the same ratio and the video fills it
+   edge to edge, so the whole line is on screen — it used to sit in a 16:10
+   frame at 1.2x under object-fit:cover, which cropped it twice over. */
+.mii-main{
+  aspect-ratio:16/9;border-radius:4px;overflow:hidden;background:#0f0d0b;
+  border:1px solid rgba(239,230,211,.14);
+}
+.mii-main video{width:100%;height:100%;display:block;object-fit:contain;background:#0f0d0b}
+.mii-col{display:flex;flex-direction:column;min-width:0}
+.mii-cap{
+  display:flex;justify-content:space-between;gap:16px;
+  margin-top:12px;color:var(--print-muted);opacity:.75;
+}
+/* the duration must not break in half when the location wraps */
+.mii-cap span+span{white-space:nowrap}
+
+/* ---------- hover: quiet, and always about where it goes ----------
+   The rule the research is blunt about is restraint: a hover earns its place
+   by saying "this is a way through", not by performing. So the two frames
+   behave differently on purpose — the photo is a door and announces itself,
+   the video is not and only warms slightly. */
+
+.shot-go{position:relative;display:block;overflow:hidden;color:inherit}
+.shot-go .photo{transition:transform .9s var(--ease),filter .6s var(--ease)}
+.shot-go::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(to top,rgba(10,9,8,.82),rgba(10,9,8,.15) 46%,transparent 72%);
+  opacity:0;transition:opacity .45s var(--ease);
+}
+.shot-label{
+  position:absolute;left:16px;right:16px;bottom:14px;z-index:2;
+  display:flex;align-items:center;gap:8px;color:var(--print-ink);
+  opacity:0;transform:translateY(10px);
+  transition:opacity .4s var(--ease),transform .45s var(--ease);
+}
+.shot-label i{font-style:normal;transition:transform .45s var(--ease)}
+.shot-go:hover .photo,.shot-go:focus-visible .photo{transform:scale(1.06)}
+.shot-go:hover::after,.shot-go:focus-visible::after{opacity:1}
+.shot-go:hover .shot-label,.shot-go:focus-visible .shot-label{opacity:1;transform:none}
+.shot-go:hover .shot-label i{transform:translateX(5px)}
+
+/* The video is not a link, so it does no more than come up out of the dark. */
+.mii-main{transition:border-color .5s var(--ease)}
+.mii-col:hover .mii-main{border-color:rgba(239,230,211,.34)}
+.mii-col:hover .mii-cap{opacity:1}
+
+/* A text link that moves the way the arrow suggests. */
+.link-go{display:inline-flex;align-items:center;gap:8px;width:max-content;color:var(--print-muted)}
+.link-go i{font-style:normal;transition:transform .4s var(--ease)}
+.print .link-go:hover{color:var(--print-ink)}
+.link-go:hover i{transform:translateX(5px)}
+
+/* The code panel lifts a touch — it is the thing the section is about. */
+.code{transition:border-color .5s var(--ease),transform .5s var(--ease)}
+.sw-side:hover .code{transform:translateY(-3px)}
+.sw-shot{transition:border-color .5s var(--ease)}
+.sw-grid:hover .sw-shot{border-color:rgba(239,230,211,.32)}
+
+@media (hover:none){
+  /* nothing to reveal without a pointer: the label is simply there */
+  .shot-label{opacity:1;transform:none}
+  .shot-go::after{opacity:1}
+}
+
+/* Now that the sections share a ground, a hairline does the work the colour
+   change used to: it marks where one ends and the next begins, without
+   breaking the page into bands. */
+.band+.band{border-top:1px solid rgba(239,230,211,.1)}
+.band{padding:clamp(76px,9vw,132px) var(--pad)}
 
 /* ---------- home CTA ---------- */
 .cta{padding:clamp(120px,16vw,240px) var(--pad) var(--sect)}
@@ -349,6 +715,17 @@ table td,table th{font-variant-numeric:tabular-nums}
 }
 .pdp-stage{display:grid;place-items:center;min-height:0}
 .pdp-stage fb-board{width:min(64vw,820px);height:min(46vh,520px)}
+/* 3D · Top · Bottom — a segmented control under the stage */
+.pdp-views{
+  display:flex;gap:2px;margin:18px auto 0;width:max-content;
+  border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--surface);
+}
+.pdp-views button{
+  padding:8px 18px;border-radius:999px;color:var(--muted);
+  transition:background .3s var(--ease),color .3s var(--ease);
+}
+.pdp-views button:hover{color:var(--ink)}
+.pdp-views button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .crumb{position:absolute;top:96px;left:var(--pad);color:var(--muted)}
 .pdp-title{
   position:relative;z-index:2;align-self:end;padding:24px 32px 32px;
@@ -449,9 +826,9 @@ table td,table th{font-variant-numeric:tabular-nums}
   padding:19px 20px 16px 0;font-weight:400;color:var(--muted);text-align:left;
   border-bottom:1px solid var(--line);vertical-align:top;
   /* stays put while the board columns scroll sideways */
-  position:sticky;left:0;z-index:1;background:var(--bg);
+  position:sticky;left:0;z-index:1;background:var(--page-bg);
 }
-.cmp th.spacer{position:sticky;left:0;z-index:2;background:var(--bg)}
+.cmp th.spacer{position:sticky;left:0;z-index:2;background:var(--page-bg)}
 .cmp td{padding:16px 20px 16px 0;vertical-align:top;border-bottom:1px solid var(--line);line-height:1.45}
 
 /* ---------- contact ---------- */
@@ -470,7 +847,7 @@ table td,table th{font-variant-numeric:tabular-nums}
 .form textarea{height:auto;padding:12px 0;resize:vertical}
 .form .two{display:grid;grid-template-columns:1fr 140px;gap:24px}
 .form button{height:56px;background:var(--ink);color:var(--bg);border-radius:999px;font-size:15px;font-weight:700;margin-top:8px;transition:background .3s var(--ease)}
-.form button:hover{background:var(--brand);color:var(--ink)}
+.form button:hover{background:var(--brand);color:var(--on-brand)}
 .form-note{color:var(--muted);min-height:20px}
 
 /* ---------- footer ---------- */
@@ -515,7 +892,7 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
 
 @media (max-width:1100px){
   :root{--rail:140px}
-  .hero-boards{grid-template-columns:1fr 1.5fr 1fr 1fr;padding:12vh 3vw 22vh}
+
   .sw-grid{grid-template-columns:1fr}
   .others{grid-template-columns:repeat(2,1fr)}
 }
@@ -538,8 +915,6 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
     position:fixed;inset:52px 0 auto 0;padding:20px var(--pad) 24px;
     background:var(--print-bg);color:var(--print-ink);font-size:14px;
   }
-  .site-head.menu-open .mark-on-light{display:none}
-  .site-head.menu-open .mark-on-dark{display:block}
   .js .nav-toggle{display:inline-flex}
 
   .rail,.lineup-head,.works{grid-template-columns:1fr;gap:20px}
@@ -554,21 +929,22 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
   .lineup-head{align-items:start}
   .page{padding:120px var(--pad) 100px}
 
-  .hero{min-height:620px}
-  .hero-meta{top:64px;flex-direction:column;gap:6px}
-  .hero-meta .scroll-cue{display:none}
-  .hero-boards{
-    grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
-    /* top clears the two stacked label lines (they end ~106px down); a vh
-       value put the Spark antenna through "Designed & built in India" */
-    padding:128px 7vw 26vh;gap:4vw;
-  }
-  /* The rows are definite (1fr of a fixed-height grid), so the boards can
-     fill them. height:auto here let each render overflow into the row below. */
-  .hero-boards li{height:100%!important;margin-top:0!important;min-height:0}
-  .hero-boards a{min-height:0}
-  .hero-boards li:nth-child(4){display:block}
-  .hero-title{padding:0 var(--pad) 28px;font-size:clamp(40px,11vw,64px)}
+  .hero{min-height:660px;padding:112px var(--pad) 62px;gap:14px}
+  .hero-meta{top:62px;flex-direction:column;gap:6px;align-items:flex-start}
+  /* The dial takes the width it can get; the chips sit in a tidy 2x2 under
+     the plate rather than three-then-one. */
+  .hero .scroll-cue{bottom:28px}
+  .hero-name{padding:clamp(72px,16vw,110px) var(--pad)}
+  .hero-specs{display:grid;grid-template-columns:1fr 1fr;width:100%;max-width:330px}
+  .hero-specs>div{padding:8px 10px}
+  .hero-specs>div+div{border-left:0}
+  .hero-specs>div:nth-child(2n){border-left:1px solid rgba(239,230,211,.14)}
+  .hero-specs>div:nth-child(n+3){border-top:1px solid rgba(239,230,211,.14)}
+  /* The four figures say more than the sell line does, and on a phone the
+     boards need every pixel it would take. */
+  .hero-trust{font-size:10px;margin-top:10px}
+  .hero-cta{margin-top:12px}
+  .hero-cta .btn{height:44px}
 
   .statement p{max-width:100%;font-size:clamp(24px,6.4vw,40px)}
   .pick b{font-size:34px}
@@ -610,7 +986,6 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
 
 /* ---------- touch: no sticky hover states ---------- */
 @media (hover:none){
-  .hero-boards a:hover,
   .card:hover .card-art img,
   .board-row:hover .art img,
   .others a:hover .art img{transform:none}

@@ -18,19 +18,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../css/site.css?v=f157e4d4">
-<script type="importmap">{"imports":{"three":"../../js/vendor/three.module.min.js"}}</script><link rel="modulepreload" href="../../js/vendor/three.module.min.js"><link rel="modulepreload" href="../../js/vendor/loaders/GLTFLoader.js"><link rel="preload" href="../../assets/models/sprint.glb?v=30ed6bb9" as="fetch" crossorigin><script src="../../js/fb-board.js?v=5781504d" defer></script>
-<script src="../../js/motion.js?v=d4b78e10" defer></script>
+<link rel="stylesheet" href="../../css/site.css?v=4a957be3">
+<script type="importmap">{"imports":{"three":"../../js/vendor/three.module.min.js"}}</script><link rel="modulepreload" href="../../js/vendor/three.module.min.js"><link rel="modulepreload" href="../../js/vendor/loaders/GLTFLoader.js"><link rel="preload" href="../../assets/models/sprint.glb?v=45fd4a3e" as="fetch"><script src="../../js/fb-board.js?v=a3b71d6d" defer></script>
+<script src="../../js/motion.js?v=2697ced6" defer></script>
 </head>
 <body>
 <a href="#main" class="skip eyebrow">Skip to content</a>
+<div class="scroll-rail" aria-hidden="true"><i></i></div>
 <header class="site-head eyebrow">
   <a class="brand" href="../../" aria-label="ForgeBoard home">
-    <img class="mark mark-on-light" src="../../assets/logo-on-light.webp" alt="" width="128" height="111" decoding="async">
-    <img class="mark mark-on-dark" src="../../assets/logo-on-dark.webp" alt="" width="128" height="112" decoding="async">
+    <img class="mark" src="../../assets/logo-on-dark.webp" alt="" width="128" height="112" decoding="async">
     <span>ForgeBoard</span>
   </a>
-  <nav class="site-nav" id="primary-nav" aria-label="Primary"><a href="../../">Home</a><a href="../../boards/" aria-current="page">Boards</a><a href="../../compare/">Compare</a><a href="../../software/">Software</a><a href="../../docs/">Docs</a></nav>
+  <nav class="site-nav" id="primary-nav" aria-label="Primary"><a href="../../">Home</a><a href="../../boards/" aria-current="page">Boards</a><a href="../../compare/">Compare</a><a href="../../store/">Store</a><a href="../../software/">Software</a><a href="../../docs/">Docs</a><a href="../../about/">About</a></nav>
   <button class="nav-toggle eyebrow" aria-expanded="false" aria-controls="primary-nav">Menu</button>
   <a class="order-link" href="../../contact/"><span class="order-dot" aria-hidden="true"></span>Order</a>
 </header>
@@ -40,9 +40,19 @@
   <section class="pdp-hero">
     <nav class="crumb eyebrow" aria-label="Breadcrumb"><a href="../">Boards</a> <span aria-hidden="true">/</span> Sprint</nav>
     <div class="pdp-stage">
-      <fb-board src="../../assets/models/sprint.glb?v=30ed6bb9" fallback="../../assets/boards/sprint-3d.webp" srcset="../../assets/boards/sprint-3d-sm.webp 700w, ../../assets/boards/sprint-3d.webp 1143w" sizes="(max-width:860px) 88vw, 55vw" alt="ForgeBoard Sprint 3D view" tilt="14">
+      <fb-board src="../../assets/models/sprint.glb?v=45fd4a3e"
+        data-model="../../assets/models/sprint.glb?v=45fd4a3e"
+        data-v-3d="../../assets/boards/sprint-3d.webp" data-s-3d="../../assets/boards/sprint-3d-sm.webp 700w, ../../assets/boards/sprint-3d.webp 1143w"
+        data-v-top="../../assets/boards/sprint-top.webp" data-s-top="../../assets/boards/sprint-top-sm.webp 700w, ../../assets/boards/sprint-top.webp 1086w"
+        data-v-bottom="../../assets/boards/sprint-bottom.webp" data-s-bottom="../../assets/boards/sprint-bottom-sm.webp 677w, ../../assets/boards/sprint-bottom.webp 1234w"
+        fallback="../../assets/boards/sprint-3d.webp" srcset="../../assets/boards/sprint-3d-sm.webp 700w, ../../assets/boards/sprint-3d.webp 1143w" sizes="(max-width:860px) 88vw, 55vw" alt="ForgeBoard Sprint 3D view" tilt="14">
         <noscript><img src="../../assets/boards/sprint-3d-sm.webp" alt="ForgeBoard Sprint 3D view" style="width:100%;height:100%;object-fit:contain"></noscript>
       </fb-board>
+      <div class="pdp-views eyebrow" role="group" aria-label="Board view">
+        <button type="button" data-view="3d" aria-pressed="true">3D</button>
+        <button type="button" data-view="top" aria-pressed="false">Top</button>
+        <button type="button" data-view="bottom" aria-pressed="false">Bottom</button>
+      </div>
     </div>
     <div class="pdp-title">
       <h1><span class="sup">ForgeBoard</span>Sprint</h1>
@@ -57,10 +67,6 @@
     </div>
   </section>
 
-  <section class="print" style="padding:clamp(80px,9vw,140px) var(--pad)" aria-label="Highlights">
-    <ul class="hl-grid"><li class="rv"><span class="eyebrow">01</span>4 sensors &amp; a buzzer on board</li><li class="rv"><span class="eyebrow">02</span>Charges a Li‑ion cell — runs unplugged</li><li class="rv"><span class="eyebrow">03</span>Wi‑Fi &amp; Bluetooth 5.0 built in</li><li class="rv"><span class="eyebrow">04</span>19 GPIO still free for your parts</li><li class="rv"><span class="eyebrow">05</span>USB‑C, ESD &amp; thermal protection</li><li class="rv"><span class="eyebrow">06</span>Updates over the air — Wi‑Fi or BLE</li></ul>
-  </section>
-
   <section id="specs" class="wrap" style="padding:var(--sect) var(--pad) 0;scroll-margin-top:24px">
     <div class="rail">
       <div class="specs-aside">
@@ -72,7 +78,7 @@
     </div>
   </section>
 
-  <section class="wrap" style="padding:clamp(80px,9vw,140px) var(--pad) 0">
+  <section class="wrap" style="padding:clamp(80px,9vw,140px) var(--pad)">
     <div class="works">
       <span class="eyebrow mono-muted">Works with</span>
       <ul class="chips"><li>ForgeBoard IDE</li><li>USB‑C flashing</li><li>OTA over Wi‑Fi &amp; BLE</li></ul>
@@ -80,25 +86,6 @@
     </div>
   </section>
 
-  <section class="wrap" style="margin-top:var(--sect);padding:0 var(--pad) 140px">
-    <div class="rail">
-      <span class="eyebrow mono-muted">Other boards</span>
-      <ul class="others">
-        <li><a href="../spark/">
-          <div class="art"><img src="../../assets/boards/spark-3d.webp" srcset="../../assets/boards/spark-3d-sm.webp 700w, ../../assets/boards/spark-3d.webp 1500w" sizes="(max-width:860px) 80vw, 22vw" alt="ForgeBoard Spark board" loading="lazy" decoding="async"></div>
-          <div class="row"><span class="nm">Spark</span><span class="tg">Start here.</span></div>
-        </a></li>
-        <li><a href="../indus/">
-          <div class="art"><img src="../../assets/boards/indus-3d.webp" srcset="../../assets/boards/indus-3d-sm.webp 700w, ../../assets/boards/indus-3d.webp 1480w" sizes="(max-width:860px) 80vw, 22vw" alt="ForgeBoard Indus board" loading="lazy" decoding="async"></div>
-          <div class="row"><span class="nm">Indus</span><span class="tg">For your toughest challenges.</span></div>
-        </a></li>
-        <li><a href="../flint/">
-          <div class="art"><img src="../../assets/boards/flint-3d.webp" srcset="../../assets/boards/flint-3d-sm.webp 700w, ../../assets/boards/flint-3d.webp 1500w" sizes="(max-width:860px) 80vw, 22vw" alt="ForgeBoard Flint board" loading="lazy" decoding="async"></div>
-          <div class="row"><span class="nm">Flint</span><span class="tg">Small board. Long reach.</span></div>
-        </a></li>
-      </ul>
-    </div>
-  </section>
 </article>
 
 </main>
