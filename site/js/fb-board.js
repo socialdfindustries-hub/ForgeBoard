@@ -49,6 +49,12 @@
 
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
+  // The shelf every leader lands on before it reaches its text. Fixed, so
+  // the landings match across the sheet; short, so no leader has a long
+  // horizontal run that could be mistaken for part of the drawing or cut
+  // across another label's line.
+  const LANDING = 22;
+
   const IDLE_AFTER = 1400;    // ms of stillness before it resumes turning
   const MAX_PITCH = 1.0;      // ~57°, so it never tumbles over
 
@@ -377,32 +383,37 @@
       this.placeHotspots();
     }
 
-    /** Spread a column's labels apart so none sits on top of another.
-     *  Each wants to be level with its own part; where two collide they give
-     *  way from the middle outwards, which keeps the order down the column
-     *  the same as the order up the board. */
-    static spread(col, top, bottom, gap) {
-      col.sort((a, b) => a.want - b.want);
-      const need = (a, b) => (a.h + b.h) / 2 + gap;
-      for (let i = 1; i < col.length; i++) {
-        const min = col[i - 1].y + need(col[i - 1], col[i]);
-        if (col[i].y < min) col[i].y = min;
-      }
-      // If that pushed the last one off the bottom, walk the whole column
-      // back up until it fits.
-      const over = col.length ? col[col.length - 1].y - bottom : 0;
-      if (over > 0) {
-        for (let i = col.length - 1; i >= 0; i--) {
-          col[i].y = Math.min(col[i].y - over, i ? col[i].y : Infinity);
-          if (i && col[i].y - col[i - 1].y < need(col[i - 1], col[i])) {
-            col[i - 1].y = col[i].y - need(col[i - 1], col[i]);
-          }
-        }
-      }
-      if (col.length && col[0].y < top) {
-        const under = top - col[0].y;
-        for (let i = 0; i < col.length; i++) col[i].y += under;
-      }
+    /** Lay a column out: in the order the parts appear up the board, evenly
+     *  down the space available.
+     *
+     *  Not each label level with its own part, which was the obvious thing
+     *  and the wrong one. A label level with its part leaves the leader no
+     *  rise to work with, so it comes out horizontal — and a horizontal
+     *  leader reads as a rule under the text rather than as a line pointing
+     *  at something, which is exactly what drawing practice says to avoid.
+     *  Spacing them evenly guarantees every leader an angle to be drawn at,
+     *  and keeping them in the parts' own order keeps leaders from crossing.
+     */
+    static column(col, top, bottom, gap, colX) {
+      if (!col.length) return;
+      // Ordered by the angle each part subtends from the column, not by how
+      // far down the screen it is. Height alone is not enough: two leaders
+      // starting level on the column still cross if the nearer part belongs
+      // to the lower label, which is exactly what happened to the sensor on
+      // the near edge and the one out in the middle of the board. Fanning
+      // them by angle is the ordering that cannot cross.
+      const mid = (top + bottom) / 2;
+      col.sort((a, b) =>
+        Math.atan2(a.py - mid, Math.abs(a.px - colX) + 1) -
+        Math.atan2(b.py - mid, Math.abs(b.px - colX) + 1));
+      const tallest = Math.max(...col.map((it) => it.h));
+      const step = Math.max((bottom - top) / col.length, tallest + gap);
+      const run = step * (col.length - 1);
+      // Centred on the space, so a short column sits against the board
+      // rather than stranded at the top.
+      let start = (top + bottom) / 2 - run / 2;
+      start = Math.max(top + tallest / 2, Math.min(start, bottom - run));
+      col.forEach((it, i) => { it.y = start + step * i; });
     }
 
     placeHotspots() {
@@ -418,8 +429,8 @@
       // labels live in the margins either side. Projection is in canvas
       // pixels, so everything is shifted into the layer's frame once here.
       const ox = (w - bw) / 2, oy = (h - bh) / 2;
-      const gap = 14;      // clear space between labels, on top of their height
-      const edge = 16;
+      const colL = Math.max(ox - 18, 96);
+      const colR = Math.min(ox + bw + 18, w - 96);
 
       for (const it of hs.items) {
         it.at.getWorldPosition(hs.pos);
@@ -429,8 +440,6 @@
         hs.toCam.copy(cam.position).sub(hs.pos).normalize();
         it.facing = it.normal.dot(hs.toCam);
         // How near the camera this part is, across the board's own depth.
-        // Nearer parts carry a brighter label, which is most of what makes a
-        // flat overlay read as sitting in the scene rather than on the glass.
         it.depth = hs.pos.distanceTo(cam.position);
 
         hs.pos.project(cam);
@@ -439,17 +448,8 @@
         it.want = it.py;
         it.y = it.py;
         it.h = it.el.offsetHeight || 20;
+        it.w = it.el.offsetWidth || 80;
       }
-
-      // First sight: the labels do not simply appear. Each comes up from
-      // nothing to its full strength, one after the next, and its wire draws
-      // itself out to the part it names — so you watch the board being
-      // annotated rather than finding it already covered in text. Once a
-      // label is up it stays exactly where it is, on its component.
-      const t = performance.now() - hs.t0;
-      const ease = (k) => 1 - Math.pow(1 - k, 3);
-      const reveal = (i) =>
-        ease(Math.max(0, Math.min(1, (t - 140 - i * 85) / 560)));
 
       // Run the reveal down each column from the top, not in markup order,
       // so it reads as a sweep. Ordered on the first frame, once the parts
@@ -462,53 +462,76 @@
         });
       }
 
+      // First sight: each label comes up from nothing to its full strength,
+      // one after the next, and its leader draws itself out to the part.
+      const t = performance.now() - hs.t0;
+      const ease = (k) => 1 - Math.pow(1 - k, 3);
+      const reveal = (i) =>
+        ease(Math.max(0, Math.min(1, (t - 140 - i * 85) / 560)));
+
       const near = Math.min(...hs.items.map((i) => i.depth));
       const far = Math.max(...hs.items.map((i) => i.depth));
       const span = Math.max(far - near, 1e-4);
 
-      FBBoard.spread(hs.left, edge + 20, h - edge - 20, gap);
-      FBBoard.spread(hs.right, edge + 20, h - edge - 20, gap);
+      FBBoard.column(hs.left, oy + 24, oy + bh - 24, 18, colL);
+      FBBoard.column(hs.right, oy + 24, oy + bh - 24, 18, colR);
 
       for (const it of hs.items) {
         const el = it.el;
         const left = it.side === 'l';
-        // The right column is anchored by its right edge, so it grows inwards
-        // from the margin instead of running off the side. translateX(-100%)
-        // is element-relative; a negative margin would resolve against the
-        // layer's width and move every label by the same wrong amount.
-        el.style.transform =
-          'translate3d(' + (left ? edge : w - edge).toFixed(1) + 'px,' +
-          it.y.toFixed(1) + 'px,0)' + (left ? '' : ' translateX(-100%)');
+        const colX = left ? colL : colR;
 
-        // Two things dim a label: its part turning away from us, and its
-        // part being the far side of the board from us. The first is a hard
-        // fade because a label for something you cannot see is noise; the
-        // second is gentle, and is the depth cue.
+        // The label hangs above its reference line, and the line is what the
+        // leader actually arrives at — so `it.y` is the rule, not the middle
+        // of the text. Left-hand text is right-aligned to the column so both
+        // columns read inwards towards the board.
+        el.style.transform =
+          'translate3d(' + colX.toFixed(1) + 'px,' + it.y.toFixed(1) + 'px,0)' +
+          (left ? ' translateX(-100%)' : '');
+
+        // Two things dim a label: its part turning away from us, and its part
+        // being the far side of the board. The first is a hard fade, because
+        // a label for something you cannot see is noise; the second is gentle,
+        // and is the depth cue.
         const facing = Math.max(0, Math.min(1, (it.facing - 0.04) / 0.30));
-        const depth = 1 - ((it.depth - near) / span) * 0.45;
-        const vis = facing * depth * reveal(it.i);
+        const depth = 1 - ((it.depth - near) / span) * 0.42;
+        const k = reveal(it.i);
+        const vis = facing * depth * k;
         if (vis !== it.shown) {
           it.shown = vis;
           el.style.opacity = vis.toFixed(3);
           el.style.pointerEvents = vis > 0.3 ? 'auto' : 'none';
         }
-
-        // The wire: out of the label along its column, then straight to the
-        // part. The elbow is what stops a near-horizontal run from reading as
-        // an underline on the text.
         if (!it.wire) continue;
-        const x0 = left ? edge + el.offsetWidth + 10 : w - edge - el.offsetWidth - 10;
-        const reach = Math.min(48, Math.abs(it.px - x0) * 0.45);
-        const x1 = left ? x0 + reach : x0 - reach;
+
+        // ---- the leader ----
+        // Drawing convention, and the reason this reads as a callout rather
+        // than a stray rule: the angled run is snapped to 15 degrees, and it
+        // arrives at a level landing that carries on under the text as the
+        // reference line the label sits on. A leader left horizontal reads as
+        // part of the drawing; a leader at a stated angle reads as pointing.
+        const dir = left ? -1 : 1;              // which way the text lies
+
+        // The landing is a fixed short shelf into the text and the angled run
+        // is everything else — standardised length, as drawing practice asks,
+        // and the reason this reads as a callout sheet.
+        //
+        // The alternative was to snap the angle to 15 degrees and let the
+        // landing fall where it may. That looks right on paper and wrong
+        // here: a label near level with its part then needs a very long
+        // shallow run, which leaves a landing most of the way across the
+        // stage, and that near-horizontal rule cuts straight through the
+        // leaders of the labels above it. A short shelf cannot.
+        const elbowX = colX - dir * LANDING;
+
         it.wire.setAttribute('d',
-          'M' + x0.toFixed(1) + ' ' + it.y.toFixed(1) +
-          'H' + x1.toFixed(1) +
-          'L' + it.px.toFixed(1) + ' ' + it.py.toFixed(1));
+          'M' + it.px.toFixed(1) + ' ' + it.py.toFixed(1) +
+          'L' + elbowX.toFixed(1) + ' ' + it.y.toFixed(1) +
+          'H' + (colX + dir * it.w).toFixed(1));
         it.wire.style.opacity = vis.toFixed(3);
-        // Draw the wire on rather than fade it in: dash the whole length,
-        // then pull the gap back to nothing. Measured once it has a shape,
-        // and re-measured only while it is still arriving.
-        const k = reveal(it.i);
+
+        // Draw the leader on rather than fade it in: dash the whole length,
+        // then pull the gap back to nothing.
         if (k < 1) {
           const len = it.wire.getTotalLength() || 0;
           it.wire.style.strokeDasharray = len.toFixed(1);
@@ -518,9 +541,7 @@
           it.wire.style.strokeDasharray = 'none';
           it.wire.style.strokeDashoffset = '0';
         }
-        // The wire belongs to its label, so it lights with it. Checked here
-        // rather than pushed from the click handler, which has no way to
-        // reach into the SVG.
+
         const lit = el.classList.contains('is-on') || el === document.activeElement
           || (el.matches && el.matches(':hover'));
         if (lit !== it.lit) {

@@ -716,8 +716,8 @@ table td,table th{font-variant-numeric:tabular-nums}
 .pdp-stage{display:grid;place-items:center;min-height:0}
 /* The board no longer fills the stage: the callout columns live in the
    margins either side of it, the way the design lays them out. */
-.pdp-board{position:relative;width:min(94vw,1360px);display:grid;place-items:center}
-.pdp-stage fb-board{width:min(46vw,620px);height:min(46vh,520px)}
+.pdp-board{position:relative;width:min(92vw,1180px);display:grid;place-items:center}
+.pdp-stage fb-board{width:min(42vw,545px);height:min(48vh,540px)}
 
 /* ---------- board callouts ----------
    The labels are HTML held over the board, not geometry in it: text that
@@ -741,7 +741,11 @@ table td,table th{font-variant-numeric:tabular-nums}
 .hs-pt b{font-weight:700;color:var(--ink)}
 .hs-pt i{font-style:normal}
 
-/* ---- live ---- */
+/* ---- live ----
+   Drawing convention, not decoration: the leader arrives at a level landing
+   which carries on under the text as a reference line, and the text sits on
+   that rule rather than beside a bare line end. The gap between the two is
+   what stops it reading as an underline. */
 .hs.is-live{position:absolute;inset:0;pointer-events:none;z-index:2}
 .hs.is-live .hs-lede{display:none}
 .hs.is-live .hs-list{display:block}
@@ -750,29 +754,31 @@ table td,table th{font-variant-numeric:tabular-nums}
 }
 .hs-wire{
   fill:none;stroke-width:1;vector-effect:non-scaling-stroke;
-  transition:stroke-width .25s var(--ease);
+  transition:stroke-width .2s var(--ease);
 }
+.hs-wire.is-on{stroke-width:1.5}
 .hs.is-live .hs-pt{
   position:absolute;left:0;top:0;padding:0;border:0;border-radius:0;
-  background:none;pointer-events:auto;white-space:nowrap;
-  display:block;will-change:transform,opacity;
-  transition:color .25s var(--ease);
+  background:none;pointer-events:auto;white-space:nowrap;display:block;
+  will-change:transform,opacity;transition:color .2s var(--ease);
 }
-/* Each column hangs off its own edge, and the label is centred on the line
-   that leaves it. */
-.hs.is-live .hs-txt{display:block;transform:translateY(-50%)}
-.hs.is-live .hs-pt.hs-l .hs-txt{text-align:left}
-.hs.is-live .hs-pt.hs-r .hs-txt{text-align:right}
+/* The transform puts the origin on the reference line, so the text is lifted
+   clear of it by its own height plus the standoff. */
+.hs.is-live .hs-txt{display:block;transform:translateY(-100%) translateY(-6px)}
+.hs.is-live .hs-pt.hs-l .hs-txt{text-align:right}
+.hs.is-live .hs-pt.hs-r .hs-txt{text-align:left}
 .hs.is-live .hs-pt b{
-  display:block;font-weight:400;font-size:clamp(13px,1.15vw,17px);
-  letter-spacing:-.01em;color:var(--ink);line-height:1.25;
+  display:block;font-weight:500;font-size:clamp(13px,1.02vw,15.5px);
+  letter-spacing:-.005em;color:var(--ink);line-height:1.2;
 }
+/* The second line is the site's own small-print voice — mono, tracked out,
+   upper — so a callout reads as instrumentation rather than as a caption. */
 .hs.is-live .hs-pt i{
-  display:block;font-size:clamp(11px,.92vw,13.5px);line-height:1.3;
-  color:var(--muted);letter-spacing:.005em;
+  display:block;margin-top:3px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:clamp(9.5px,.66vw,10.5px);line-height:1.25;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
 }
-/* Pointing at one brings it fully up and takes the others down, so the board
-   is never read through twelve labels at once. */
 .hs.is-live .hs-pt:hover b,
 .hs.is-live .hs-pt:focus-visible b,
 .hs.is-live .hs-pt.is-on b{color:#fff}
@@ -780,10 +786,8 @@ table td,table th{font-variant-numeric:tabular-nums}
 .hs.is-live .hs-pt:focus-visible i,
 .hs.is-live .hs-pt.is-on i{color:var(--brand-ink)}
 .hs.is-live.has-open .hs-pt:not(:hover):not(:focus-visible):not(.is-on){
-  opacity:.28 !important;
+  opacity:.25 !important;
 }
-.hs.is-live .hs-pt.is-on ~ *{}
-.hs-wire.is-on{stroke-width:1.6}
 
 /* The spec row that belongs to the open callout. */
 .specs div[data-spec].is-on{background:rgba(243,154,0,.10);border-radius:8px}
