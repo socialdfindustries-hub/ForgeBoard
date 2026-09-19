@@ -306,9 +306,12 @@ CONTACT = {
 # either one lights the other. It must match a key in that board's `specs`.
 # --------------------------------------------------------------------------
 
-# Only Sprint ships callouts for now — the other three are drafted but not
-# wired, so the pattern gets proved on one board before it is repeated.
-CALLOUT_BOARDS = {"sprint"}
+# Every board carries callouts now. The set is kept small on purpose: a
+# board has twenty-odd distinct parts and labelling all of them is noise, so
+# each list is the handful someone choosing a board actually wants pointed
+# out. Sprint has more because Sprint has more — it is the one with sensors
+# on it.
+CALLOUT_BOARDS = {"spark", "sprint", "indus", "flint"}
 
 # How far each board is turned in its own plane on its product page, in
 # degrees. Not a camera angle: the board is rotated, then framed, so the pose
@@ -316,7 +319,11 @@ CALLOUT_BOARDS = {"sprint"}
 # design sheet draws — module upper right, antenna above it, buzzer and LDR
 # out to the left, the programming port at the top and the charge port at the
 # bottom. Solved against the model rather than eyeballed.
-BOARD_ROLL = {"sprint": 225}
+# Chosen against each board's own parts rather than by eye: the angle that
+# splits the callouts evenly between the two columns, keeps the parts apart
+# so the leaders fan rather than bunch, and leaves the board the way up it
+# is drawn — antenna at the top, USB at the bottom.
+BOARD_ROLL = {"spark": 45, "sprint": 225, "indus": 30, "flint": 30}
 
 # (key, material, which one, title, second line, spec row, side)
 #
@@ -366,6 +373,59 @@ FEATURES = {
          "SPI · I2C · UART · I2S · CAN · USB OTG", "GPIO", None),
         ("charge", "USB_Shell_Steel", "z<0", "USB-C for charging",
          "", "Battery", None),
+    ],
+    "spark": [
+        ("mcu", "Module_Shield_Steel", None, "ESP32 S3",
+         "Dual Core 240 MHz", "Processor", None),
+        # Shares its material with the module it is etched on; the far end
+        # of that region is the antenna itself.
+        ("antenna", "Module_Antenna_Black", "end:-z", "WiFi + BLE 5.0",
+         "", "Wi-Fi", None),
+        ("usb", "USB_Shell_Steel", None, "USB-C",
+         "Power + programming", "USB", None),
+        ("rgb", "LED_Lens_Orange", None, "RGB LED",
+         "16M Colours · IO14", "LEDs", None),
+        ("rst", "Button_Cap_Black", "x<0", "RST",
+         "", "Buttons", None),
+        ("boot", "Button_Cap_Black", "x>0", "BOOT",
+         "", "Buttons", None),
+        ("reg", "IC_Body_Black", "x<0", "Voltage Regulator",
+         "Dual rail · 5–12 V in", "Input", None),
+        ("gpio", "@14.0,2.0", None, "32 GPIO Pins",
+         "ADC · UART · SPI · I2C · I2S", "GPIO", None),
+    ],
+    "indus": [
+        ("mcu", "IC_Body_Black", "big", "STM32G484",
+         "Cortex-M4F · 170 MHz", "Processor", None),
+        ("xtal", "Crystal_Lid_Metal", None, "Crystal",
+         "External oscillator", "Timers & PWM", None),
+        ("usb", "USB_Shell_Steel", None, "USB-C",
+         "Power + programming", "USB", None),
+        ("rgb", "LED_Lens_Red", None, "RGB LED",
+         "16M Colours · PA12", "LEDs", None),
+        ("boot", "Button_Cap_Blue", "z<0", "BOOT",
+         "", "Buttons", None),
+        ("rst", "Button_Cap_Blue", "z>0", "RST",
+         "", "Buttons", None),
+        ("swd", "@0.0,-24.0", None, "SWD Debug",
+         "SWCLK · SWDIO · SWO", "Debug", None),
+        ("gpio", "@15.0,2.0", None, "50 GPIO Pins",
+         "CAN FD · I2C · SPI · UART", "GPIO", None),
+    ],
+    "flint": [
+        ("mcu", "Module_Shield_Steel", None, "ESP8266EX",
+         "80 – 160 MHz", "Processor", None),
+        ("antenna", "Module_Antenna_Trace", "big", "WiFi 802.11 b/g/n",
+         "", "Wi-Fi", None),
+        ("usb", "USB_Shell_Steel", None, "USB-C",
+         "Power + programming", "USB", None),
+        ("rst", "Button_Cap_Black", "x<0", "RST",
+         "", "Buttons", None),
+        # Silkscreened BOOT on the board; the spec sheet calls it FLASH.
+        ("boot", "Button_Cap_Black", "x>0", "BOOT",
+         "", "Buttons", None),
+        ("gpio", "@11.5,6.0", None, "12 GPIO Pins",
+         "SPI · UART · I2S · PWM", "GPIO", None),
     ],
 }
 
