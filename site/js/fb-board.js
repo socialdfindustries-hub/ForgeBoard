@@ -49,6 +49,12 @@
 
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
+  // The idle drift: how far the board leans, and how long one pass takes.
+  // Small on purpose — 3.4 degrees of yaw. Past about five the callouts
+  // start to travel visibly and the page stops feeling still.
+  const SWAY = 0.06;
+  const SWAY_MS = 11000;
+
   // How much the boards reflect, as a fraction of the lighting the models
   // were authored for. 1.0 is that original rig; this is a fifth of it.
   //
@@ -262,14 +268,25 @@
           if (Math.abs(this.yawV) < 1e-4) this.yawV = 0;
           if (Math.abs(this.pitchV) < 1e-4) this.pitchV = 0;
 
-          // Left alone, the board settles back to the pose it is labelled
-          // in rather than turning. A board that drifts while you are
-          // reading a callout moves the callout, and the labels are the
-          // point of this page. Dragging still turns it, and letting go
-          // still brings it home.
-          const idle = performance.now() - this.lastInput > IDLE_AFTER;
-          if (idle && !this.yawV) this.yaw += (0 - this.yaw) * 0.04;
-          if (idle && !this.pitchV) this.pitch += (0 - this.pitch) * 0.02;   // ease level
+          // Left alone the board does not turn, it breathes: a few degrees
+          // either side of the pose it is labelled in, never far enough to
+          // take a part out from under its own leader. Enough for the light
+          // to travel across the board and for it to read as an object in a
+          // room rather than a picture of one.
+          //
+          // The two axes run on periods that do not divide into each other,
+          // so the motion never repeats the same arc twice and never reads
+          // as a mechanism ticking back and forth.
+          const now2 = performance.now();
+          const idle = now2 - this.lastInput > IDLE_AFTER;
+          if (idle) {
+            const k = reduced() ? 0 : 1;
+            const wantYaw = Math.sin((now2 / SWAY_MS) * Math.PI * 2) * SWAY * k;
+            const wantPitch =
+              Math.sin((now2 / (SWAY_MS * 1.618)) * Math.PI * 2) * SWAY * 0.38 * k;
+            if (!this.yawV) this.yaw += (wantYaw - this.yaw) * 0.035;
+            if (!this.pitchV) this.pitch += (wantPitch - this.pitch) * 0.035;
+          }
         }
         this.group.rotation.y = this.yaw;
         this.group.rotation.x = this.pitch + this.baseTilt;
@@ -456,10 +473,21 @@
       // to the lower label, which is exactly what happened to the sensor on
       // the near edge and the one out in the middle of the board. Fanning
       // them by angle is the ordering that cannot cross.
-      const mid = (top + bottom) / 2;
-      col.sort((a, b) =>
-        Math.atan2(a.py - mid, Math.abs(a.px - colX) + 1) -
-        Math.atan2(b.py - mid, Math.abs(b.px - colX) + 1));
+      //
+      // Decided once and then kept. The board drifts while it sits there, so
+      // two labels close together in angle would otherwise trade places every
+      // time it passed through the crossover and the whole column would
+      // twitch. The order is a property of the board's rest pose; only the
+      // far end of each leader is allowed to move.
+      if (col[0].slot === undefined) {
+        const mid = (top + bottom) / 2;
+        col.sort((a, b) =>
+          Math.atan2(a.py - mid, Math.abs(a.px - colX) + 1) -
+          Math.atan2(b.py - mid, Math.abs(b.px - colX) + 1));
+        col.forEach((it, i) => { it.slot = i; });
+      } else {
+        col.sort((a, b) => a.slot - b.slot);
+      }
       const tallest = Math.max(...col.map((it) => it.h));
       const step = Math.max((bottom - top) / col.length, tallest + gap);
       const run = step * (col.length - 1);
