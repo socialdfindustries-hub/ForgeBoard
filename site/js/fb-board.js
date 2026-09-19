@@ -339,7 +339,7 @@
           g.setAttribute('id', 'hsw-' + side);
           g.setAttribute('x1', side === 'l' ? '1' : '0');
           g.setAttribute('x2', side === 'l' ? '0' : '1');
-          [['0%', '.9'], ['45%', '.5'], ['100%', '.16']].forEach(([off, op]) => {
+          [['0%', '1'], ['40%', '.82'], ['100%', '.5']].forEach(([off, op]) => {
             const st = document.createElementNS(NS, 'stop');
             st.setAttribute('offset', off);
             st.setAttribute('stop-color', '#efe6d3');
@@ -494,7 +494,7 @@
         // a label for something you cannot see is noise; the second is gentle,
         // and is the depth cue.
         const facing = Math.max(0, Math.min(1, (it.facing - 0.04) / 0.30));
-        const depth = 1 - ((it.depth - near) / span) * 0.42;
+        const depth = 1 - ((it.depth - near) / span) * 0.22;
         const k = reveal(it.i);
         const vis = facing * depth * k;
         if (vis !== it.shown) {
