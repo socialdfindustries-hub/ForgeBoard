@@ -295,21 +295,24 @@
     });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.0;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 200);
     const plateEl = document.querySelector('.hero-plate');
 
-    // A black solder mask swallows light, so this rig is deliberately generous
-    // — the same one the product pages use.
-    scene.add(new THREE.HemisphereLight(0xfff3dc, 0x4a3c26, 2.0));
-    const key = new THREE.DirectionalLight(0xffffff, 3.0);
+    // A black solder mask swallows light, so this rig is generous — the same
+    // one the product pages use, and softened the same way. The brightness
+    // sits in the hemisphere light, which is diffuse only and puts no
+    // highlight anywhere; the directionals, which are what make a metal
+    // shell or a clearcoated package glare, are held down.
+    scene.add(new THREE.HemisphereLight(0xfff3dc, 0x4a3c26, 2.9));
+    const key = new THREE.DirectionalLight(0xffffff, 1.5);
     key.position.set(2, 4, 5); scene.add(key);
-    const fill = new THREE.DirectionalLight(0xffe9c4, 1.6);
+    const fill = new THREE.DirectionalLight(0xffe9c4, 0.85);
     fill.position.set(-3, 1, 4); scene.add(fill);
-    const rim = new THREE.DirectionalLight(0xf39a00, 1.5);
+    const rim = new THREE.DirectionalLight(0xf39a00, 0.75);
     rim.position.set(-4, 2, -3); scene.add(rim);
 
     const ring = new THREE.Group();
@@ -459,6 +462,15 @@
         (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
           if (!m || !m.color || mats.indexOf(m) !== -1) return;
           m.__tint = m.color.clone();
+          // Same pass, no second traverse: clearcoat is the second specular
+          // layer that makes the solder mask and the lenses read as wet, and
+          // it is the one dial that takes the gloss off without touching the
+          // colour or the material under it.
+          if (typeof m.clearcoat === 'number' && m.clearcoat > 0) {
+            m.clearcoat *= 0.45;
+            m.clearcoatRoughness = Math.min(1, (m.clearcoatRoughness || 0) + 0.18);
+            m.needsUpdate = true;
+          }
           mats.push(m);
         });
       });

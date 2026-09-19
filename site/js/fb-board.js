@@ -49,6 +49,34 @@
 
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
+  /** Take the shine down without flattening the board.
+   *
+   *  Every material in these exports carries a metallic-roughness texture
+   *  and no factors, so metalness and roughness are the baked values and are
+   *  best left alone. The sheen on top of them is clearcoat — a second
+   *  specular layer, and the reason the solder mask, the LED lenses and the
+   *  sensor faces read as wet. Clearcoat is the one dial that takes the
+   *  gloss off without touching the colour or the material underneath, so
+   *  that is the one this turns, and it roughens what is left so the
+   *  highlight that remains is a sheen rather than a point.
+   */
+  const soften = (root, k) => {
+    const seen = new Set();
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
+        if (!m || seen.has(m)) return;
+        seen.add(m);
+        if (typeof m.clearcoat === 'number' && m.clearcoat > 0) {
+          m.clearcoat *= k;
+          m.clearcoatRoughness = Math.min(1, (m.clearcoatRoughness || 0) + 0.18);
+          m.needsUpdate = true;
+        }
+      });
+    });
+  };
+
+
   // The shelf every leader lands on before it reaches its text. Fixed, so
   // the landings match across the sheet; short, so no leader has a long
   // horizontal run that could be mistaken for part of the drawing or cut
@@ -613,19 +641,26 @@
       renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
       renderer.setSize(w, h);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.25;
+      renderer.toneMappingExposure = 1.05;
       renderer.outputColorSpace = THREE.SRGBColorSpace;
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(32, w / h, 0.01, 100);
 
-      // A black solder mask swallows light, so this is deliberately generous.
-      scene.add(new THREE.HemisphereLight(0xfff3dc, 0x4a3c26, 2.0));
-      const key = new THREE.DirectionalLight(0xffffff, 3.0);
+      // A black solder mask swallows light, so this has to be generous — but
+      // the generosity belongs in the hemisphere light, not the directionals.
+      // A hemisphere light contributes diffuse only: it lifts the board out
+      // of the dark without putting a highlight anywhere. A directional light
+      // is what puts a hard specular on every metal shell and clearcoated
+      // package, and at 3.0 it was blowing them out. So the ambient goes up
+      // and the three directionals come down by roughly half; the board ends
+      // up as bright as it was and nothing like as shiny.
+      scene.add(new THREE.HemisphereLight(0xfff3dc, 0x4a3c26, 2.9));
+      const key = new THREE.DirectionalLight(0xffffff, 1.5);
       key.position.set(2, 4, 5); scene.add(key);
-      const fill = new THREE.DirectionalLight(0xffe9c4, 1.6);
+      const fill = new THREE.DirectionalLight(0xffe9c4, 0.85);
       fill.position.set(-3, 1, 4); scene.add(fill);
-      const rim = new THREE.DirectionalLight(0xf39a00, 1.4);
+      const rim = new THREE.DirectionalLight(0xf39a00, 0.7);
       rim.position.set(-4, 2, -3); scene.add(rim);
 
       const group = new THREE.Group();
@@ -641,6 +676,8 @@
       // tip it. Everything downstream (the centring, the fit, the callout
       // anchors, which are parented to this) follows from it, so the pose
       // the page presents is a property of the board, not of the camera.
+      soften(obj, 0.45);
+
       const roll = parseFloat(this.getAttribute('roll'));
       if (!Number.isNaN(roll)) obj.rotation.y = (roll * Math.PI) / 180;
 
