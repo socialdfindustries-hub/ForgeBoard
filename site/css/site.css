@@ -701,17 +701,23 @@ table td,table th{font-variant-numeric:tabular-nums}
    cap has to stay a percentage of a slot with a fixed height: an <img> with
    srcset takes its intrinsic size from `sizes`, not from the file, so the
    only thing holding the picture to a predictable size is this box. */
-.board-row .art{height:300px;display:grid;place-items:center}
+/* Sat a little left of where the cell centres it, toward the name it
+   belongs to, which leaves the gap before the spec list doing the
+   separating. justify-items rather than a transform, so the picture is
+   still laid out in the cell and nothing overlaps at narrow widths. */
+.board-row .art{height:300px;display:grid;align-items:center;justify-items:center}
+.board-row .art img{transform:translateX(-26px)}
+.board-row:hover .art img{transform:translateX(-26px) scale(1.06)}
 .board-row .art img{
   /* height, not max-height. With `auto` the picture takes its intrinsic size
      from the `sizes` attribute — 24vw — rather than from this box, so the
      board's size on the page was being decided by a resource-selection hint
      and neither cap was reached. Driving the height off the slot makes it
      deterministic, and the width follows the 3:2 frame. */
-  display:block;height:82%;width:auto;max-width:88%;object-fit:contain;
+  display:block;height:90%;width:auto;max-width:92%;object-fit:contain;
   filter:drop-shadow(0 14px 24px rgba(40,25,5,.35));transition:transform .6s var(--ease);
 }
-.board-row:hover .art img{transform:scale(1.06)}
+
 .board-row .hl{
   display:flex;flex-direction:column;gap:8px;font-size:15px;color:var(--muted);
   border-left:1px solid var(--line);padding-left:24px;
