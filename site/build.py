@@ -14,6 +14,7 @@ from __future__ import annotations
 import html
 import math
 import pathlib
+import re
 import sys
 
 import hotspots
@@ -1176,6 +1177,55 @@ def page_about() -> str:
         f'<div><dt class="eyebrow mono-muted">{k}</dt><dd>{e(v)}</dd></div>' for k, v in facts
     )
 
+    # Every figure below is read off the board data, so the page cannot come
+    # to claim something the boards do not. Nothing here is typed twice.
+    gpio = sorted(int(b["gpio"]) for b in BOARDS)
+    cores = {"Xtensa LX7", "Arm Cortex-M4F", "Tensilica L106"}
+    rated = [b for b in BOARDS
+             if any("40 °C" in v for _, v in b["specs"])]
+    # A CIN reads: listing letter, 5-digit industry code, 2-letter state,
+    # 4-digit year of incorporation, 3-letter company type, 6-digit number.
+    # Matched rather than sliced — counting the offset by hand got "H202".
+    m = re.fullmatch(r"[A-Z]\d{5}([A-Z]{2})(\d{4})([A-Z]{3})\d{6}", CONTACT["cin"])
+    year = m.group(2) if m else ""
+
+    stats = [
+        (str(len(BOARDS)), "Boards in the family",
+         " · ".join(b["name"] for b in BOARDS)),
+        (str(len(cores)), "Processor architectures",
+         "Xtensa LX7 · Arm Cortex-M4F · L106"),
+        (f"{gpio[0]}–{gpio[-1]}", "GPIO per board",
+         "On 2.54 mm headers, every one broken out"),
+        # Counted, not quoted as a range: "−40…85" put an ellipsis where a
+        # reader expects "to", and read as the one odd value in a row of
+        # counts. The temperature belongs in the note under it.
+        (str(len(rated)), "Rated for industry",
+         "−40 °C to +85 °C · " + " and ".join(b["name"] for b in rated)),
+    ]
+    stat_html = "".join(
+        f'<li class="rv"><span class="stat-v">{nb(e(v))}</span>'
+        f'<span class="stat-l">{nb(e(l))}</span>'
+        f'<span class="stat-n eyebrow mono-muted">{nb(e(n))}</span></li>'
+        for v, l, n in stats
+    )
+
+    # The protection each board ships with, straight from its own spec table.
+    prot = "".join(
+        f'<div><dt>{e(b["name"])}</dt><dd>{nb(e(dict(b["specs"]).get("Protection", "—")))}</dd></div>'
+        for b in BOARDS
+    )
+
+    creds = [
+        ("Startup India", f'DPIIT-recognised startup · {CONTACT["dipp"]}'),
+        ("Incubated at", "AIC MIT-ADT Incubator Forum, an Atal Incubation Centre"),
+        ("Incorporated", f'{year} · Maharashtra · private limited'),
+        ("Components", "RoHS · CE · FCC pre-certified"),
+    ]
+    cred_html = "".join(
+        f'<li class="rv"><span class="eyebrow mono-muted">{e(k)}</span>'
+        f'<span>{nb(e(v))}</span></li>' for k, v in creds
+    )
+
     body = f"""
 <section class="page stack" style="gap:80px">
   <div class="rail">
@@ -1204,6 +1254,8 @@ def page_about() -> str:
     </div>
   </div>
 
+  <ul class="stat-row">{stat_html}</ul>
+
   <ul class="sw-cols">
     <li class="rv"><h2>Designed here</h2><p>Schematic, layout and firmware are done in-house in Pune. Every pin
       on every board is a decision we can explain.</p></li>
@@ -1213,9 +1265,33 @@ def page_about() -> str:
       in another time zone.</p><a href="../contact/" class="eyebrow link-ul">Talk to us →</a></li>
   </ul>
 
+  <div class="rail rv">
+    <span class="eyebrow mono-muted">Built to survive</span>
+    <div class="stack" style="gap:22px">
+      <p class="lede" style="max-width:46ch">A first board gets plugged in backwards, shorted to ground and
+        carried around in a bag. Every ForgeBoard is specified to come back from it.</p>
+      <dl class="prot-dl">{prot}</dl>
+    </div>
+  </div>
+
+  <div class="rail rv">
+    <span class="eyebrow mono-muted">Recognised</span>
+    <ul class="cred-list">{cred_html}</ul>
+  </div>
+
   <div class="rail">
     <span class="eyebrow mono-muted">Registered</span>
     <dl class="contact-dl">{fact_html}</dl>
+  </div>
+
+  <div class="about-cta rv">
+    <h2>Come and ask us something hard.</h2>
+    <p>Pinouts, tolerances, lead times, or whether the board will survive what you have in mind —
+      it reaches the people who drew it.</p>
+    <div class="pdp-cta">
+      <a class="btn btn-ink" href="../contact/">Talk to an engineer</a>
+      <a class="btn btn-ghost" href="../boards/">See the four boards</a>
+    </div>
   </div>
 </section>
 """

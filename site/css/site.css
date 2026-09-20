@@ -871,6 +871,56 @@ table td,table th{font-variant-numeric:tabular-nums}
 .others .tg{font-size:14px;color:var(--muted)}
 
 /* ---------- software page ---------- */
+/* ---------- about: the figures ----------
+   A row of numbers, not a chart: four headline values whose job is identity
+   and scale, which a bar chart would only make harder to read. Proportional
+   figures, not tabular — tabular-nums gives every digit the width of a zero,
+   which at this size leaves a number like 113 looking gappy. That belongs in
+   columns of figures, and these are not in a column. */
+.stat-row{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  border-top:1px solid var(--ink);list-style:none;padding:0;margin:0;
+}
+.stat-row li{
+  display:flex;flex-direction:column;gap:6px;
+  padding:30px 28px 32px;border-right:1px solid var(--line);
+}
+.stat-row li:last-child{border-right:0}
+.stat-v{
+  font-size:clamp(38px,4.4vw,62px);line-height:1;font-weight:800;
+  font-stretch:112%;letter-spacing:-.04em;color:var(--ink);
+}
+.stat-l{font-size:16px;font-weight:600;line-height:1.3;margin-top:4px}
+.stat-n{display:block;margin-top:2px;line-height:1.5}
+
+/* ---------- about: protection, per board ---------- */
+.prot-dl{display:grid;gap:0;border-top:1px solid var(--line)}
+.prot-dl>div{
+  display:grid;grid-template-columns:110px 1fr;gap:24px;
+  padding:16px 0;border-bottom:1px solid var(--line);align-items:baseline;
+}
+.prot-dl dt{font-weight:700;font-size:17px}
+.prot-dl dd{margin:0;color:var(--muted);font-size:16px;line-height:1.45}
+
+/* ---------- about: what we are recognised by ---------- */
+.cred-list{display:grid;gap:0;list-style:none;padding:0;margin:0;
+  border-top:1px solid var(--line)}
+.cred-list li{
+  display:grid;grid-template-columns:150px 1fr;gap:24px;
+  padding:16px 0;border-bottom:1px solid var(--line);align-items:baseline;
+}
+.cred-list li>span:last-child{font-size:17px;line-height:1.45}
+
+/* ---------- about: the closing ask ---------- */
+.about-cta{
+  display:flex;flex-direction:column;gap:18px;align-items:flex-start;
+  padding:clamp(36px,5vw,64px);border:1px solid var(--line);border-radius:22px;
+  background:var(--surface);
+}
+.about-cta h2{font-size:clamp(30px,3.6vw,52px);line-height:1.02;font-weight:800;
+  font-stretch:112%;letter-spacing:-.03em;text-wrap:balance}
+.about-cta p{color:var(--muted);font-size:18px;line-height:1.45;max-width:54ch}
+
 .sw-cols{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--ink)}
 .sw-cols li{display:flex;flex-direction:column;gap:12px;padding:32px 28px;border-right:1px solid var(--line)}
 .sw-cols li:first-child{padding-left:0}
@@ -1053,6 +1103,11 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
   .board-row .hl{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px}
 
   .pdp-hero{padding-top:120px;min-height:auto}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+  .stat-row li{padding:24px 20px 26px}
+  .stat-row li:nth-child(2n){border-right:0}
+  .stat-row li:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .prot-dl>div,.cred-list li{grid-template-columns:1fr;gap:6px}
   .pdp-board{width:94vw}
   .pdp-stage fb-board{width:88vw;height:44vh}
   /* A phone has no margins to put two columns of labels in, and a wire
