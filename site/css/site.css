@@ -697,9 +697,18 @@ table td,table th{font-variant-numeric:tabular-nums}
 .board-row h2{display:flex;flex-direction:column;gap:6px}
 .board-row .nm{font-size:clamp(40px,4.4vw,64px);font-weight:800;font-stretch:112%;letter-spacing:-.04em;line-height:.95}
 .board-row .tg{font-size:20px;color:var(--muted)}
-.board-row .art{height:220px;display:grid;place-items:center}
+/* The board is the reason anyone is on this row, so it gets the room. The
+   cap has to stay a percentage of a slot with a fixed height: an <img> with
+   srcset takes its intrinsic size from `sizes`, not from the file, so the
+   only thing holding the picture to a predictable size is this box. */
+.board-row .art{height:300px;display:grid;place-items:center}
 .board-row .art img{
-  display:block;max-width:82%;max-height:82%;width:auto;height:auto;object-fit:contain;
+  /* height, not max-height. With `auto` the picture takes its intrinsic size
+     from the `sizes` attribute — 24vw — rather than from this box, so the
+     board's size on the page was being decided by a resource-selection hint
+     and neither cap was reached. Driving the height off the slot makes it
+     deterministic, and the width follows the 3:2 frame. */
+  display:block;height:82%;width:auto;max-width:88%;object-fit:contain;
   filter:drop-shadow(0 14px 24px rgba(40,25,5,.35));transition:transform .6s var(--ease);
 }
 .board-row:hover .art img{transform:scale(1.06)}
@@ -1099,7 +1108,7 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
     position:sticky;left:0;
   }
   .board-row{grid-template-columns:1fr;gap:20px;padding:32px 0}
-  .board-row .art{height:180px}
+  .board-row .art{height:230px}
   .board-row .hl{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px}
 
   .pdp-hero{padding-top:120px;min-height:auto}
