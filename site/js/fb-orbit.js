@@ -46,7 +46,7 @@
   // itself. The hemisphere light is deliberately outside it — that one is
   // diffuse only, it puts a highlight nowhere, and it is what keeps the
   // board visible as the rest comes down.
-  const GLOSS = 0.80;
+  const GLOSS = 0.60;
 
   const net = navigator.connection;
   const metered = !!(net && (net.saveData || /(^|-)[23]g$/.test(net.effectiveType || '')));
