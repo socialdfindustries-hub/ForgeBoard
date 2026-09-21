@@ -913,15 +913,57 @@ table td,table th{font-variant-numeric:tabular-nums}
 .specs>div{
   display:grid;grid-template-columns:260px 1fr;gap:24px;padding:18px 0;
   border-bottom:1px solid var(--line);font-size:17px;line-height:1.45;
+  position:relative;
+  transition:background-color .3s var(--ease),color .3s var(--ease);
 }
-.specs dt{color:var(--muted)}
+.specs dt{color:var(--muted);transition:color .3s var(--ease)}
+
+/* ---------- spec rows under the pointer ----------
+   Thirteen rows of small type is a lot to hold your place in, so the row
+   being read takes a ground and the term beside it comes up out of grey.
+   The amber tick in the margin is the same mark a callout puts on a row it
+   is linked to, so the two mean the same thing wherever you meet them. */
+.specs>div:hover{background-color:rgba(239,230,211,.04)}
+.specs>div:hover dt{color:var(--ink)}
+.specs>div::before{
+  content:"";position:absolute;left:-14px;top:18px;bottom:18px;width:2px;
+  background:var(--brand);opacity:0;transform:scaleY(.3);transform-origin:50% 50%;
+  transition:opacity .3s var(--ease),transform .3s var(--ease);
+}
+.specs>div:hover::before,.specs>div.is-on::before{opacity:1;transform:none}
 
 .works{display:grid;grid-template-columns:var(--rail) 1fr 1fr;gap:40px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
-.chips li{font-size:15px;font-weight:600;padding:10px 16px;border:1px solid var(--ink);border-radius:999px}
+.chips li{font-size:15px;font-weight:600;padding:10px 16px;border:1px solid var(--ink);border-radius:999px;
+  transition:border-color .3s var(--ease),color .3s var(--ease)}
+/* These are labels, not links, so the response stays quiet: the border
+   warms and the word brightens. Anything more would promise a click that
+   is not there. */
+.chips li:hover{border-color:var(--brand);color:#fff}
+
 .dl-list{border-top:1px solid var(--ink)}
 .dl-list li{border-bottom:1px solid var(--line)}
-.dl-list a{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 0;font-size:16px;font-weight:600}
+.dl-list a{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:14px 0;font-size:16px;font-weight:600;position:relative;
+  transition:padding-left .35s var(--ease),color .3s var(--ease);
+}
+/* These are links, so they may say so. The row steps in from the left and
+   an arrow takes the place of the gap it leaves. */
+.dl-list a::before{
+  content:"→";position:absolute;left:0;color:var(--brand-ink);
+  opacity:0;transform:translateX(-6px);
+  transition:opacity .3s var(--ease),transform .35s var(--ease);
+}
+.dl-list a:hover{padding-left:26px;color:#fff}
+.dl-list a:hover::before{opacity:1;transform:none}
+.dl-list a:hover .mono-muted{color:var(--brand-ink)}
+
+@media (prefers-reduced-motion:reduce){
+  .dl-list a:hover{padding-left:0}
+  .dl-list a::before{display:none}
+  .specs>div::before{transition:opacity .01s linear}
+}
 
 .others{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
 .others a{display:flex;flex-direction:column;gap:14px;color:inherit}

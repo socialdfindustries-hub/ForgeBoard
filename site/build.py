@@ -910,14 +910,19 @@ def page_product(b: dict) -> str:
     idx = BOARDS.index(b)
 
     model_url = asset("../../", f"assets/models/{b['id']}.glb")
+    # `rv` on each row rather than on the table: the rows then arrive one
+    # after another as they come up the screen instead of the whole block
+    # appearing at once, which is the difference between a page that moves
+    # and a page that blinks.
     specs = "".join(
-        f'<div data-spec="{e(k)}"><dt>{e(k)}</dt><dd>{e(v)}</dd></div>'
+        f'<div class="rv" data-spec="{e(k)}"><dt>{e(k)}</dt><dd>{e(v)}</dd></div>'
         for k, v in b["specs"]
     )
 
     chips = "".join(f"<li>{e(i)}</li>" for i in b["works_with"])
     dls = "".join(
-        f'<li><a href="../../docs/"><span>{e(d)}</span><span class="eyebrow mono-muted">Soon</span></a></li>'
+        f'<li class="rv"><a href="../../docs/"><span>{e(d)}</span>'
+        f'<span class="eyebrow mono-muted">Soon</span></a></li>'
         for d in DOWNLOADS
     )
 
@@ -962,7 +967,7 @@ def page_product(b: dict) -> str:
 
   <section id="specs" class="wrap" style="padding:var(--sect) var(--pad) 0;scroll-margin-top:24px">
     <div class="rail">
-      <div class="specs-aside">
+      <div class="specs-aside rv">
         <span class="eyebrow mono-muted">Tech specs</span>
         <p>{e(size_note + b['temp_note'])}</p>
         <a href="../../docs/" class="eyebrow link-ul">Datasheet →</a>
@@ -973,8 +978,8 @@ def page_product(b: dict) -> str:
 
   <section class="wrap" style="padding:clamp(80px,9vw,140px) var(--pad)">
     <div class="works">
-      <span class="eyebrow mono-muted">Works with</span>
-      <ul class="chips">{chips}</ul>
+      <span class="eyebrow mono-muted rv">Works with</span>
+      <ul class="chips rv">{chips}</ul>
       <ul class="dl-list">{dls}</ul>
     </div>
   </section>

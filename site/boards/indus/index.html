@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../css/site.css?v=82b27bcf">
+<link rel="stylesheet" href="../../css/site.css?v=50ad0802">
 <script type="importmap">{"imports":{"three":"../../js/vendor/three.module.min.js"}}</script><link rel="modulepreload" href="../../js/vendor/three.module.min.js"><link rel="modulepreload" href="../../js/vendor/loaders/GLTFLoader.js"><link rel="preload" href="../../assets/models/indus.glb?v=6863ef5b" as="fetch" crossorigin><script src="../../js/fb-board.js?v=de79dfd5" defer></script>
 <script src="../../js/motion.js?v=68caffab" defer></script>
 </head>
@@ -72,20 +72,20 @@
 
   <section id="specs" class="wrap" style="padding:var(--sect) var(--pad) 0;scroll-margin-top:24px">
     <div class="rail">
-      <div class="specs-aside">
+      <div class="specs-aside rv">
         <span class="eyebrow mono-muted">Tech specs</span>
         <p>Board size 35 × 56 mm. Industrial temperature grade, –40 °C to +85 °C.</p>
         <a href="../../docs/" class="eyebrow link-ul">Datasheet →</a>
       </div>
-      <dl class="specs"><div data-spec="Processor"><dt>Processor</dt><dd>STM32G484RET6 Arm Cortex‑M4 with FPU &amp; DSP, 170 MHz, 213 DMIPS / 550 CoreMark</dd></div><div data-spec="Grade"><dt>Grade</dt><dd>Industrial temperature, –40 °C to +85 °C</dd></div><div data-spec="Memory"><dt>Memory</dt><dd>512 KB dual‑bank Flash with ECC, 128 KB SRAM, CCM‑SRAM</dd></div><div data-spec="Security"><dt>Security</dt><dd>Hardware AES‑256, securable memory area, SRAM parity, secure live upgrade</dd></div><div data-spec="Analogue"><dt>Analogue</dt><dd>Up to 5× 12‑bit ADC at 4 Msps (16‑bit oversampling), 7× DAC, 6× op‑amp with PGA, 7× comparator</dd></div><div data-spec="Maths"><dt>Maths</dt><dd>CORDIC trigonometric engine, FMAC filter accelerator</dd></div><div data-spec="Timers &amp; PWM"><dt>Timers &amp; PWM</dt><dd>12‑channel high‑resolution timer (184 ps), motor‑control PWM with dead‑time insertion</dd></div><div data-spec="Interfaces"><dt>Interfaces</dt><dd>3× CAN FD (8 Mbit/s), 4× I2C, 4× SPI / I2S, USART · UART · LPUART, SAI, Quad‑SPI</dd></div><div data-spec="GPIO"><dt>GPIO</dt><dd>50 programmable pins on 2.54 mm headers</dd></div><div data-spec="USB"><dt>USB</dt><dd>USB Type‑C 2.0, data + power, on‑board USB‑to‑serial</dd></div><div data-spec="Power"><dt>Power</dt><dd>2 A synchronous buck, up to 96 % efficient, 1 A 3.3 V rail</dd></div><div data-spec="Protection"><dt>Protection</dt><dd>USB ESD (IEC 61000‑4‑2 level 4, ±15 kV air / ±8 kV contact), reverse‑polarity, over‑current, thermal shutdown</dd></div><div data-spec="LEDs"><dt>LEDs</dt><dd>1× addressable RGB (16M colours), 1× GPIO LED</dd></div><div data-spec="Buttons"><dt>Buttons</dt><dd>RST + BOOT</dd></div><div data-spec="Debug"><dt>Debug</dt><dd>SWD (SWCLK, SWDIO, SWO) on headers</dd></div><div data-spec="Board size"><dt>Board size</dt><dd>35 × 56 mm</dd></div></dl>
+      <dl class="specs"><div class="rv" data-spec="Processor"><dt>Processor</dt><dd>STM32G484RET6 Arm Cortex‑M4 with FPU &amp; DSP, 170 MHz, 213 DMIPS / 550 CoreMark</dd></div><div class="rv" data-spec="Grade"><dt>Grade</dt><dd>Industrial temperature, –40 °C to +85 °C</dd></div><div class="rv" data-spec="Memory"><dt>Memory</dt><dd>512 KB dual‑bank Flash with ECC, 128 KB SRAM, CCM‑SRAM</dd></div><div class="rv" data-spec="Security"><dt>Security</dt><dd>Hardware AES‑256, securable memory area, SRAM parity, secure live upgrade</dd></div><div class="rv" data-spec="Analogue"><dt>Analogue</dt><dd>Up to 5× 12‑bit ADC at 4 Msps (16‑bit oversampling), 7× DAC, 6× op‑amp with PGA, 7× comparator</dd></div><div class="rv" data-spec="Maths"><dt>Maths</dt><dd>CORDIC trigonometric engine, FMAC filter accelerator</dd></div><div class="rv" data-spec="Timers &amp; PWM"><dt>Timers &amp; PWM</dt><dd>12‑channel high‑resolution timer (184 ps), motor‑control PWM with dead‑time insertion</dd></div><div class="rv" data-spec="Interfaces"><dt>Interfaces</dt><dd>3× CAN FD (8 Mbit/s), 4× I2C, 4× SPI / I2S, USART · UART · LPUART, SAI, Quad‑SPI</dd></div><div class="rv" data-spec="GPIO"><dt>GPIO</dt><dd>50 programmable pins on 2.54 mm headers</dd></div><div class="rv" data-spec="USB"><dt>USB</dt><dd>USB Type‑C 2.0, data + power, on‑board USB‑to‑serial</dd></div><div class="rv" data-spec="Power"><dt>Power</dt><dd>2 A synchronous buck, up to 96 % efficient, 1 A 3.3 V rail</dd></div><div class="rv" data-spec="Protection"><dt>Protection</dt><dd>USB ESD (IEC 61000‑4‑2 level 4, ±15 kV air / ±8 kV contact), reverse‑polarity, over‑current, thermal shutdown</dd></div><div class="rv" data-spec="LEDs"><dt>LEDs</dt><dd>1× addressable RGB (16M colours), 1× GPIO LED</dd></div><div class="rv" data-spec="Buttons"><dt>Buttons</dt><dd>RST + BOOT</dd></div><div class="rv" data-spec="Debug"><dt>Debug</dt><dd>SWD (SWCLK, SWDIO, SWO) on headers</dd></div><div class="rv" data-spec="Board size"><dt>Board size</dt><dd>35 × 56 mm</dd></div></dl>
     </div>
   </section>
 
   <section class="wrap" style="padding:clamp(80px,9vw,140px) var(--pad)">
     <div class="works">
-      <span class="eyebrow mono-muted">Works with</span>
-      <ul class="chips"><li>ForgeBoard IDE</li><li>USB‑C flashing</li><li>SWD debug</li></ul>
-      <ul class="dl-list"><li><a href="../../docs/"><span>Datasheet (PDF)</span><span class="eyebrow mono-muted">Soon</span></a></li><li><a href="../../docs/"><span>Pinout diagram</span><span class="eyebrow mono-muted">Soon</span></a></li><li><a href="../../docs/"><span>Schematic</span><span class="eyebrow mono-muted">Soon</span></a></li><li><a href="../../docs/"><span>Mechanical drawing</span><span class="eyebrow mono-muted">Soon</span></a></li><li><a href="../../docs/"><span>Getting started guide</span><span class="eyebrow mono-muted">Soon</span></a></li></ul>
+      <span class="eyebrow mono-muted rv">Works with</span>
+      <ul class="chips rv"><li>ForgeBoard IDE</li><li>USB‑C flashing</li><li>SWD debug</li></ul>
+      <ul class="dl-list"><li class="rv"><a href="../../docs/"><span>Datasheet (PDF)</span><span class="eyebrow mono-muted">Soon</span></a></li><li class="rv"><a href="../../docs/"><span>Pinout diagram</span><span class="eyebrow mono-muted">Soon</span></a></li><li class="rv"><a href="../../docs/"><span>Schematic</span><span class="eyebrow mono-muted">Soon</span></a></li><li class="rv"><a href="../../docs/"><span>Mechanical drawing</span><span class="eyebrow mono-muted">Soon</span></a></li><li class="rv"><a href="../../docs/"><span>Getting started guide</span><span class="eyebrow mono-muted">Soon</span></a></li></ul>
     </div>
   </section>
 
