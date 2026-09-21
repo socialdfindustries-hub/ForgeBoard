@@ -992,7 +992,13 @@ table td,table th{font-variant-numeric:tabular-nums}
 .stat-row li{
   display:flex;flex-direction:column;gap:6px;
   padding:30px 28px 32px;border-right:1px solid var(--line);
+  transition:background-color .35s var(--ease);
 }
+/* The figures respond, quietly. They are statements, not controls, so the
+   ground shifts and the number warms and that is all. */
+.stat-row li:hover{background-color:rgba(239,230,211,.03)}
+.stat-v{transition:color .35s var(--ease)}
+.stat-row li:hover .stat-v{color:#fff}
 .stat-row li:last-child{border-right:0}
 .stat-v{
   font-size:clamp(38px,4.4vw,62px);line-height:1;font-weight:800;
@@ -1004,9 +1010,19 @@ table td,table th{font-variant-numeric:tabular-nums}
 /* ---------- about: protection, per board ---------- */
 .prot-dl{display:grid;gap:0;border-top:1px solid var(--line)}
 .prot-dl>div{
-  display:grid;grid-template-columns:110px 1fr;gap:24px;
+  display:grid;grid-template-columns:110px 1fr;gap:24px;position:relative;
   padding:16px 0;border-bottom:1px solid var(--line);align-items:baseline;
+  transition:background-color .3s var(--ease);
 }
+.prot-dl>div:hover{background-color:rgba(239,230,211,.04)}
+.prot-dl dd{transition:color .3s var(--ease)}
+.prot-dl>div:hover dd{color:var(--ink)}
+.prot-dl>div::before,.cred-list li::before{
+  content:"";position:absolute;left:-14px;top:16px;bottom:14px;width:2px;
+  background:var(--brand);opacity:0;transform:scaleY(.3);
+  transition:opacity .3s var(--ease),transform .3s var(--ease);
+}
+.prot-dl>div:hover::before,.cred-list li:hover::before{opacity:1;transform:none}
 .prot-dl dt{font-weight:700;font-size:17px}
 .prot-dl dd{margin:0;color:var(--muted);font-size:16px;line-height:1.45}
 
@@ -1014,9 +1030,11 @@ table td,table th{font-variant-numeric:tabular-nums}
 .cred-list{display:grid;gap:0;list-style:none;padding:0;margin:0;
   border-top:1px solid var(--line)}
 .cred-list li{
-  display:grid;grid-template-columns:150px 1fr;gap:24px;
+  display:grid;grid-template-columns:150px 1fr;gap:24px;position:relative;
   padding:16px 0;border-bottom:1px solid var(--line);align-items:baseline;
+  transition:background-color .3s var(--ease),color .3s var(--ease);
 }
+.cred-list li:hover{background-color:rgba(239,230,211,.04);color:#fff}
 .cred-list li>span:last-child{font-size:17px;line-height:1.45}
 
 /* ---------- about: the closing ask ---------- */
@@ -1030,7 +1048,11 @@ table td,table th{font-variant-numeric:tabular-nums}
 .about-cta p{color:var(--muted);font-size:18px;line-height:1.45;max-width:54ch}
 
 .sw-cols{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--ink)}
-.sw-cols li{display:flex;flex-direction:column;gap:12px;padding:32px 28px;border-right:1px solid var(--line)}
+.sw-cols li{display:flex;flex-direction:column;gap:12px;padding:32px 28px;border-right:1px solid var(--line);
+  transition:background-color .35s var(--ease)}
+.sw-cols li:hover{background-color:rgba(239,230,211,.03)}
+.sw-cols li h2{transition:color .35s var(--ease)}
+.sw-cols li:hover h2{color:#fff}
 .sw-cols li:first-child{padding-left:0}
 .sw-cols li:last-child{padding-right:0;border-right:0}
 .sw-cols h2{font-size:28px;font-weight:800;font-stretch:112%;letter-spacing:-.03em}
@@ -1066,13 +1088,40 @@ table td,table th{font-variant-numeric:tabular-nums}
 }
 .cmp th.spacer{width:200px;padding:20px 0;border-bottom:1px solid var(--ink)}
 .cmp th[scope=row]{
-  padding:19px 20px 16px 0;font-weight:400;color:var(--muted);text-align:left;
+  /* the tick lives in this padding, so it never lands on the first letter */
+  padding:19px 20px 16px 12px;font-weight:400;color:var(--muted);text-align:left;
   border-bottom:1px solid var(--line);vertical-align:top;
   /* stays put while the board columns scroll sideways */
   position:sticky;left:0;z-index:1;background:var(--page-bg);
 }
 .cmp th.spacer{position:sticky;left:0;z-index:2;background:var(--page-bg)}
-.cmp td{padding:16px 20px 16px 0;vertical-align:top;border-bottom:1px solid var(--line);line-height:1.45}
+.cmp td{padding:16px 20px 16px 0;vertical-align:top;border-bottom:1px solid var(--line);line-height:1.45;
+  transition:background-color .25s var(--ease),color .25s var(--ease)}
+
+/* ---------- reading across the compare table ----------
+   A comparison table is read along a row, and this one is wide enough to
+   need scrolling sideways — which is exactly where the eye loses its line.
+   The row under the pointer takes a ground for its whole width and its
+   label comes up out of grey, so the line holds while the columns move.
+
+   The label is a sticky cell with its own background, so it has to be told
+   about the ground as well; left alone it keeps the page colour and the
+   highlight stops dead at the first column. */
+.cmp tbody tr{transition:color .25s var(--ease)}
+.cmp tbody tr:hover td{background-color:rgba(239,230,211,.045)}
+.cmp tbody tr:hover th[scope=row]{
+  background-image:linear-gradient(rgba(239,230,211,.045),rgba(239,230,211,.045));
+  color:var(--ink);
+}
+.cmp th[scope=row]{transition:color .25s var(--ease)}
+/* The same amber tick the spec rows use, meaning the same thing. */
+.cmp th[scope=row]{position:sticky}
+.cmp th[scope=row]::before{
+  content:"";position:absolute;left:0;top:14px;bottom:12px;width:2px;
+  background:var(--brand);opacity:0;transform:scaleY(.3);
+  transition:opacity .25s var(--ease),transform .25s var(--ease);
+}
+.cmp tbody tr:hover th[scope=row]::before{opacity:1;transform:none}
 
 /* ---------- contact ---------- */
 .contact-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px}
@@ -1255,4 +1304,11 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
   .board-row:hover .art img,
   .others a:hover .art img{transform:none}
   .btn:hover{transform:none}
+}
+
+
+@media (prefers-reduced-motion:reduce){
+  .cmp th[scope=row]::before,.prot-dl>div::before,.cred-list li::before{
+    transition:opacity .01s linear;
+  }
 }
