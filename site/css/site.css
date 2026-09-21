@@ -1312,3 +1312,66 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
     transition:opacity .01s linear;
   }
 }
+
+/* ---------- quote request ----------
+   A quotation is priced line by line, so the form is a line-item form. The
+   quantity boxes are the first thing in it and the only required part of
+   it: everything else is there to make the document that comes back
+   correct, not to qualify the person asking. */
+.q-items{border:0;padding:0;margin:0;min-width:0}
+.q-items legend{padding:0;margin-bottom:12px;color:var(--muted)}
+.q-list{list-style:none;padding:0;margin:0;border-top:1px solid var(--line)}
+.q-list li{
+  display:grid;grid-template-columns:1fr 92px;gap:16px;align-items:center;
+  padding:12px 0;border-bottom:1px solid var(--line);
+  transition:background-color .3s var(--ease);
+}
+.q-list li:hover,.q-list li:focus-within{background-color:rgba(239,230,211,.04)}
+.q-list label{display:flex;flex-direction:column;gap:3px;cursor:pointer;min-width:0}
+.q-name{font-size:17px;font-weight:600;letter-spacing:-.01em}
+.q-meta{line-height:1.4}
+/* `.form input` sets the underline treatment every other field wears, and
+   it is the more specific selector, so these have to be named through the
+   form to win. A quantity is a box you fill in, not a line you write on. */
+.form .q-qty{
+  width:100%;padding:9px 12px;text-align:right;font-variant-numeric:tabular-nums;
+  font-size:17px;font-weight:600;
+  background:var(--surface);border:1px solid var(--line);border-bottom:1px solid var(--line);
+  border-radius:10px;
+  transition:border-color .25s var(--ease),background-color .25s var(--ease);
+}
+.form .q-qty:hover{border-color:var(--muted)}
+.form .q-qty:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:transparent}
+/* A box with a number in it should look like it has one. */
+.form .q-qty:not(:placeholder-shown){border-color:var(--brand);background:rgba(243,154,0,.07)}
+/* The spinners are noise at this size and the field is already numeric. */
+.form .q-qty::-webkit-outer-spin-button,
+.form .q-qty::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.form .q-qty{-moz-appearance:textfield;appearance:textfield}
+
+/* The field name and its "optional" share a line; the label is a column
+   flex box, so they have to be one child of it rather than two. */
+.q-lab{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.q-total{display:block;margin-top:12px;line-height:1.5}
+
+.q-opt{font-style:normal;text-transform:none;letter-spacing:0;color:var(--muted);
+  font-weight:400;font-size:.92em}
+
+/* Next to the button rather than up the page: what actually comes back. */
+.q-promise{
+  border:1px solid var(--line);border-radius:14px;padding:18px 20px;
+  background:rgba(239,230,211,.02);
+}
+.q-promise>p{margin-bottom:10px}
+.q-promise ul{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.q-promise li{
+  position:relative;padding-left:20px;font-size:14.5px;line-height:1.45;color:var(--muted);
+}
+.q-promise li::before{
+  content:"";position:absolute;left:0;top:.55em;width:7px;height:7px;border-radius:50%;
+  background:var(--brand);
+}
+
+@media (max-width:860px){
+  .q-list li{grid-template-columns:1fr 84px}
+}

@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <script>document.documentElement.className+=" js"</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Contact — ForgeBoard</title>
-<meta name="description" content="Order ForgeBoard boards direct from Defence Forge Industries. Single boards, classroom packs and bulk.">
+<title>Request a quotation — ForgeBoard</title>
+<meta name="description" content="Request a quotation for ForgeBoard boards direct from Defence Forge Industries. Priced in rupees with GST, dispatched from Pune.">
 <meta name="theme-color" content="#141210">
-<meta property="og:title" content="Contact — ForgeBoard">
-<meta property="og:description" content="Order ForgeBoard boards direct from Defence Forge Industries. Single boards, classroom packs and bulk.">
+<meta property="og:title" content="Request a quotation — ForgeBoard">
+<meta property="og:description" content="Request a quotation for ForgeBoard boards direct from Defence Forge Industries. Priced in rupees with GST, dispatched from Pune.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://forgeboards.com/contact/">
 <meta property="og:image" content="https://forgeboards.com/assets/boards/hero-spark.webp">
@@ -18,9 +18,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/site.css?v=7d93065f">
+<link rel="stylesheet" href="../css/site.css?v=8f034621">
 
-<script src="../js/motion.js?v=68caffab" defer></script>
+<script src="../js/motion.js?v=f4eeac48" defer></script>
 </head>
 <body>
 <a href="#main" class="skip eyebrow">Skip to content</a>
@@ -38,11 +38,12 @@
 
 <section class="page">
   <div class="contact-grid">
-    <span class="eyebrow">Order · Ask</span>
+    <span class="eyebrow">Quotation · Ask</span>
     <div class="stack" style="gap:40px">
       <div class="stack" style="gap:28px">
         <h1 class="h-pg">Let’s talk.</h1>
-        <p class="lede" style="max-width:40ch">We sell direct. Tell us which board and how many; you’ll get pricing in ₹ and a dispatch date within one working day.</p>
+        <p class="lede" style="max-width:40ch">We sell direct. Put quantities against the boards you
+          need and you’ll have a quotation in ₹ within one working day.</p>
       </div>
       <dl class="contact-dl">
         <div><dt class="eyebrow mono-muted">Phone</dt><dd><a href="tel:+919637764898">+91 96377 64898</a></dd></div>
@@ -51,15 +52,39 @@
         <div><dt class="eyebrow mono-muted">GST</dt><dd class="gst">27AAJCD7152J1ZC</dd></div>
       </dl>
     </div>
-    <form class="form">
-      <label class="eyebrow">Name<input name="name" autocomplete="name" required></label>
-      <label class="eyebrow">Email<input name="email" type="email" autocomplete="email" spellcheck="false" required></label>
+
+    <form class="form quote-form">
+      <fieldset class="q-items">
+        <legend class="eyebrow">Boards and quantities</legend>
+        <ul class="q-list"><li><label for="qty-spark"><span class="q-name">Spark</span><span class="q-meta eyebrow mono-muted">ESP32‑S3 · 240 MHz dual‑core &middot; 32 GPIO</span></label><input class="q-qty" id="qty-spark" name="qty-spark" data-board="Spark" type="number" min="0" step="1" inputmode="numeric" placeholder="0" aria-label="Quantity of Spark"></li><li><label for="qty-sprint"><span class="q-name">Sprint</span><span class="q-meta eyebrow mono-muted">ESP32‑S3 · 240 MHz dual‑core &middot; 19 GPIO</span></label><input class="q-qty" id="qty-sprint" name="qty-sprint" data-board="Sprint" type="number" min="0" step="1" inputmode="numeric" placeholder="0" aria-label="Quantity of Sprint"></li><li><label for="qty-indus"><span class="q-name">Indus</span><span class="q-meta eyebrow mono-muted">STM32G4 · 170 MHz Cortex‑M4F &middot; 50 GPIO</span></label><input class="q-qty" id="qty-indus" name="qty-indus" data-board="Indus" type="number" min="0" step="1" inputmode="numeric" placeholder="0" aria-label="Quantity of Indus"></li><li><label for="qty-flint"><span class="q-name">Flint</span><span class="q-meta eyebrow mono-muted">ESP8266 · 80–160 MHz &middot; 12 GPIO</span></label><input class="q-qty" id="qty-flint" name="qty-flint" data-board="Flint" type="number" min="0" step="1" inputmode="numeric" placeholder="0" aria-label="Quantity of Flint"></li></ul>
+        <p class="q-total eyebrow mono-muted" data-q-total aria-live="polite">No quantities yet</p>
+      </fieldset>
+
       <div class="two">
-        <label class="eyebrow">Board<select name="board"><option>Spark</option><option>Sprint</option><option>Indus</option><option>Flint</option><option>Not sure yet</option></select></label>
-        <label class="eyebrow">Quantity<input name="qty" inputmode="numeric" placeholder="10"></label>
+        <label class="eyebrow">Name<input name="name" autocomplete="name" required></label>
+        <label class="eyebrow">Email<input name="email" type="email" autocomplete="email" spellcheck="false" required></label>
       </div>
-      <label class="eyebrow">Message<textarea name="message" rows="3" placeholder="What are you building?"></textarea></label>
-      <button type="submit">Send enquiry</button>
+      <div class="two">
+        <label class="eyebrow"><span class="q-lab">Company<i class="q-opt">optional</i></span><input name="company" autocomplete="organization"></label>
+        <label class="eyebrow"><span class="q-lab">Phone<i class="q-opt">optional</i></span><input name="phone" type="tel" autocomplete="tel" spellcheck="false"></label>
+      </div>
+      <div class="two">
+        <label class="eyebrow"><span class="q-lab">Delivery state<i class="q-opt">optional</i></span><input name="state" autocomplete="address-level1" placeholder="Maharashtra"></label>
+        <label class="eyebrow"><span class="q-lab">GSTIN<i class="q-opt">optional</i></span><input name="gstin" spellcheck="false"></label>
+      </div>
+      <label class="eyebrow">Anything else<textarea name="message" rows="3" placeholder="What are you building, and when do you need it?"></textarea></label>
+
+      <div class="q-promise">
+        <p class="eyebrow mono-muted">What comes back</p>
+        <ul>
+          <li>A unit price in ₹ against every line, and the order total</li>
+          <li>HSN code per line, and the GST split for your state — CGST + SGST inside Maharashtra, IGST outside it</li>
+          <li>How long the price holds, and a dispatch date</li>
+          <li>Within one working day, from the people who made the board</li>
+        </ul>
+      </div>
+
+      <button type="submit">Request quotation</button>
       <p class="eyebrow form-note" aria-live="polite"></p>
     </form>
   </div>

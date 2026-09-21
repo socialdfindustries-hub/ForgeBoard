@@ -1313,15 +1313,44 @@ def page_about() -> str:
 
 
 def page_contact() -> str:
-    opts = "".join(f"<option>{e(b['name'])}</option>" for b in BOARDS)
+    """The quote request.
+
+    A quotation is priced per line, so this is a line-item form: a quantity
+    against each board rather than one board and one number. That is the
+    whole of the difference between "which board are you interested in" and
+    something the people on the other end can actually price.
+
+    Everything past the quantities is optional except a name and a way to
+    reply — every field on a form like this costs completions, so only what a
+    quotation cannot be written without is required. GSTIN and the delivery
+    state are asked for because they change the document rather than because
+    they are nice to have: the state decides whether the tax splits into
+    CGST and SGST or lands as IGST, and without a GSTIN the buyer cannot take
+    input credit against the invoice that follows.
+    """
+    rows = ""
+    for b in BOARDS:
+        bid, name = e(b["id"]), e(b["name"])
+        rows += (
+            "<li>"
+            f'<label for="qty-{bid}"><span class="q-name">{name}</span>'
+            f'<span class="q-meta eyebrow mono-muted">{nb(e(b["chip_line"]))}'
+            f' &middot; {e(b["gpio"])} GPIO</span></label>'
+            f'<input class="q-qty" id="qty-{bid}" name="qty-{bid}" data-board="{name}"'
+            ' type="number" min="0" step="1" inputmode="numeric" placeholder="0"'
+            f' aria-label="Quantity of {name}">'
+            "</li>"
+        )
+
     body = f"""
 <section class="page">
   <div class="contact-grid">
-    <span class="eyebrow">Order · Ask</span>
+    <span class="eyebrow">Quotation · Ask</span>
     <div class="stack" style="gap:40px">
       <div class="stack" style="gap:28px">
         <h1 class="h-pg">Let’s talk.</h1>
-        <p class="lede" style="max-width:40ch">We sell direct. Tell us which board and how many; you’ll get pricing in ₹ and a dispatch date within one working day.</p>
+        <p class="lede" style="max-width:40ch">We sell direct. Put quantities against the boards you
+          need and you’ll have a quotation in ₹ within one working day.</p>
       </div>
       <dl class="contact-dl">
         <div><dt class="eyebrow mono-muted">Phone</dt><dd><a href="{CONTACT['phone_href']}">{CONTACT['phone']}</a></dd></div>
@@ -1330,15 +1359,39 @@ def page_contact() -> str:
         <div><dt class="eyebrow mono-muted">GST</dt><dd class="gst">{CONTACT['gst']}</dd></div>
       </dl>
     </div>
-    <form class="form">
-      <label class="eyebrow">Name<input name="name" autocomplete="name" required></label>
-      <label class="eyebrow">Email<input name="email" type="email" autocomplete="email" spellcheck="false" required></label>
+
+    <form class="form quote-form">
+      <fieldset class="q-items">
+        <legend class="eyebrow">Boards and quantities</legend>
+        <ul class="q-list">{rows}</ul>
+        <p class="q-total eyebrow mono-muted" data-q-total aria-live="polite">No quantities yet</p>
+      </fieldset>
+
       <div class="two">
-        <label class="eyebrow">Board<select name="board">{opts}<option>Not sure yet</option></select></label>
-        <label class="eyebrow">Quantity<input name="qty" inputmode="numeric" placeholder="10"></label>
+        <label class="eyebrow">Name<input name="name" autocomplete="name" required></label>
+        <label class="eyebrow">Email<input name="email" type="email" autocomplete="email" spellcheck="false" required></label>
       </div>
-      <label class="eyebrow">Message<textarea name="message" rows="3" placeholder="What are you building?"></textarea></label>
-      <button type="submit">Send enquiry</button>
+      <div class="two">
+        <label class="eyebrow"><span class="q-lab">Company<i class="q-opt">optional</i></span><input name="company" autocomplete="organization"></label>
+        <label class="eyebrow"><span class="q-lab">Phone<i class="q-opt">optional</i></span><input name="phone" type="tel" autocomplete="tel" spellcheck="false"></label>
+      </div>
+      <div class="two">
+        <label class="eyebrow"><span class="q-lab">Delivery state<i class="q-opt">optional</i></span><input name="state" autocomplete="address-level1" placeholder="Maharashtra"></label>
+        <label class="eyebrow"><span class="q-lab">GSTIN<i class="q-opt">optional</i></span><input name="gstin" spellcheck="false"></label>
+      </div>
+      <label class="eyebrow">Anything else<textarea name="message" rows="3" placeholder="What are you building, and when do you need it?"></textarea></label>
+
+      <div class="q-promise">
+        <p class="eyebrow mono-muted">What comes back</p>
+        <ul>
+          <li>A unit price in ₹ against every line, and the order total</li>
+          <li>HSN code per line, and the GST split for your state — CGST + SGST inside Maharashtra, IGST outside it</li>
+          <li>How long the price holds, and a dispatch date</li>
+          <li>Within one working day, from the people who made the board</li>
+        </ul>
+      </div>
+
+      <button type="submit">Request quotation</button>
       <p class="eyebrow form-note" aria-live="polite"></p>
     </form>
   </div>
@@ -1346,11 +1399,15 @@ def page_contact() -> str:
 """
     return shell(
         out_path="contact/index.html",
-        title="Contact — ForgeBoard",
-        description="Order ForgeBoard boards direct from Defence Forge Industries. Single boards, classroom packs and bulk.",
+        title="Request a quotation — ForgeBoard",
+        description=(
+            "Request a quotation for ForgeBoard boards direct from Defence Forge "
+            "Industries. Priced in rupees with GST, dispatched from Pune."
+        ),
         body=body,
         nav_key="",
     )
+
 
 
 # --------------------------------------------------------------------------

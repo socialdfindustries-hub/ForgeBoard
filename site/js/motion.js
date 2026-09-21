@@ -270,37 +270,101 @@
   }
 
   /* ------------------------------------------------------------------ *
-   * Enquiry form — composes an email, since there is no backend yet.
+   * Quote request
+   *
+   * A quotation is priced line by line, so what gets sent has to be lines:
+   * a quantity against each board, not one board and one number. The body
+   * is laid out as the quotation will be, so whoever prices it is reading
+   * the same shape they are about to fill in.
+   *
+   * Still a mailto, because there is still no backend. That is a real
+   * limit and it is why the quantities are also written into the subject —
+   * if the body is lost to a mail client that mangles long mailto links,
+   * the subject alone still says what was asked for.
    * ------------------------------------------------------------------ */
   const form = document.querySelector('.form');
   if (form) {
+    const qtys = [...form.querySelectorAll('.q-qty')];
+    const totalEl = form.querySelector('[data-q-total]');
+
+    /** Every line with a quantity on it, as {board, qty}. */
+    const lines = () => qtys
+      .map((el) => ({ board: el.dataset.board, qty: parseInt(el.value, 10) || 0 }))
+      .filter((l) => l.qty > 0);
+
+    // A running count while they type: it confirms the number went in, and
+    // it is the only feedback available on a form that cannot price itself.
+    const tally = () => {
+      if (!totalEl) return;
+      const picked = lines();
+      const units = picked.reduce((n, l) => n + l.qty, 0);
+      totalEl.textContent = !picked.length
+        ? 'No quantities yet'
+        : `${units} board${units === 1 ? '' : 's'} across ` +
+          `${picked.length} line${picked.length === 1 ? '' : 's'} — ` +
+          picked.map((l) => `${l.board} ×${l.qty}`).join(', ');
+    };
+    qtys.forEach((el) => el.addEventListener('input', tally));
+    tally();
+
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const f = new FormData(form);
       const get = (k) => String(f.get(k) || '').trim();
+      const picked = lines();
+      const note = form.querySelector('.form-note');
+
+      // Nothing to price is the one thing that has to be caught here: the
+      // quantities are separate inputs, so `required` cannot express "at
+      // least one of these".
+      if (qtys.length && !picked.length) {
+        if (note) note.textContent = 'Put a quantity against at least one board first.';
+        (qtys[0] || form).focus();
+        return;
+      }
+
+      const units = picked.reduce((n, l) => n + l.qty, 0);
       const body = [
-        `Name: ${get('name')}`,
-        `Email: ${get('email')}`,
-        `Board: ${get('board')}`,
-        `Quantity: ${get('qty') || '—'}`,
+        'Request for quotation',
         '',
-        get('message'),
+        'Lines',
+        ...picked.map((l) => `  ${l.board.padEnd(10)} ${String(l.qty).padStart(6)}`),
+        // Spread an empty list rather than an empty string: the blank lines
+        // between sections are wanted, so nothing may filter them out later.
+        ...(picked.length > 1
+          ? [`  ${'Total'.padEnd(10)} ${String(units).padStart(6)}`] : []),
+        '',
+        'Buyer',
+        `  Name      ${get('name')}`,
+        `  Email     ${get('email')}`,
+        `  Company   ${get('company') || '—'}`,
+        `  Phone     ${get('phone') || '—'}`,
+        '',
+        'For the tax split and the invoice',
+        `  Delivery state  ${get('state') || '—'}`,
+        `  GSTIN           ${get('gstin') || '—'}`,
+        '',
+        'Notes',
+        `  ${get('message') || '—'}`,
       ].join('\n');
+
+      const subject = picked.length
+        ? 'Quotation request — ' + picked.map((l) => `${l.board} ×${l.qty}`).join(', ')
+        : 'Quotation request';
 
       location.href =
         'mailto:contact@defenceforgeindustries.com' +
-        `?subject=${encodeURIComponent('ForgeBoard enquiry — ' + get('board'))}` +
+        `?subject=${encodeURIComponent(subject)}` +
         `&body=${encodeURIComponent(body)}`;
 
-      const note = form.querySelector('.form-note');
       const btn = form.querySelector('button[type=submit]');
       if (btn) {
         btn.textContent = 'Opening your email…';
-        setTimeout(() => { btn.textContent = 'Send enquiry'; }, 4000);
+        setTimeout(() => { btn.textContent = 'Request quotation'; }, 4000);
       }
       if (note) {
         note.textContent =
-          'If nothing opened, write to contact@defenceforgeindustries.com directly.';
+          'If nothing opened, send the same to contact@defenceforgeindustries.com.';
       }
     });
   }
