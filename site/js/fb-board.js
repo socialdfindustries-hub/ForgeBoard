@@ -515,16 +515,6 @@
       const ox = (w - bw) / 2, oy = (h - bh) / 2;
       const colL = Math.max(ox - 18, 96);
       const colR = Math.min(ox + bw + 18, w - 96);
-      // How much room each column really has, so a label can be told to wrap
-      // instead of running off the layer and over whatever is beside it.
-      const roomL = Math.max(90, colL - 6);
-      const roomR = Math.max(90, w - colR - 6);
-      if (roomL !== hs.roomL || roomR !== hs.roomR) {
-        hs.roomL = roomL; hs.roomR = roomR;
-        for (const it of hs.items) {
-          it.el.style.maxWidth = (it.side === 'l' ? roomL : roomR) + 'px';
-        }
-      }
 
       for (const it of hs.items) {
         it.at.getWorldPosition(hs.pos);

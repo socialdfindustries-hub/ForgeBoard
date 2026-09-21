@@ -724,61 +724,15 @@ table td,table th{font-variant-numeric:tabular-nums}
 }
 
 /* ---------- product page ---------- */
-/* ---------- product hero ----------
-   Two columns: the board on the left, and on the right the panel that
-   answers the questions someone actually arrives with — what is it, what is
-   in it, what does it cost, how do I get one.
-
-   The old layout put the board across the whole viewport and the name and
-   the buttons underneath it, which read bottom-first: the eye landed on the
-   board, then had to travel to the fold to find out what it was looking at
-   or what to do about it. Attention on a page like this goes headline,
-   then picture, then the one thing to click, and the layout should hand
-   them over in that order. */
 .pdp-hero{
-  position:relative;min-height:100vh;min-height:100svh;
-  display:grid;grid-template-rows:auto 1fr;overflow:hidden;
-  padding:120px var(--pad) 28px;
+  position:relative;min-height:100vh;min-height:100svh;display:grid;grid-template-rows:1fr auto;
+  overflow:hidden;padding-top:150px;
 }
-.pdp-grid{
-  display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,400px);
-  gap:clamp(24px,4vw,72px);align-items:center;min-height:0;
-  max-width:var(--maxw);width:100%;margin:0 auto;
-}
-.pdp-stage{display:grid;place-items:center;min-height:0;align-content:center}
-/* The callout columns live in the margins either side of the board, so the
-   board takes a share of this column rather than all of it. */
-.pdp-board{position:relative;width:100%;display:grid;place-items:center}
-.pdp-stage fb-board{width:min(36vw,470px);height:min(62vh,545px)}
-
-/* ---------- the buy panel ---------- */
-.pdp-buy{display:flex;flex-direction:column;gap:0;min-width:0;align-self:center}
-.pdp-buy h1{
-  font-size:clamp(52px,6.4vw,92px);line-height:.92;font-weight:800;font-stretch:112%;
-  letter-spacing:-.045em;margin:10px 0 0;
-}
-.pdp-tag{font-size:clamp(20px,1.8vw,26px);font-weight:600;letter-spacing:-.015em;
-  line-height:1.15;margin-top:14px}
-.pdp-lede{font-size:16.5px;line-height:1.5;color:var(--muted);margin-top:12px;max-width:42ch}
-/* The four figures that decide the board, on their own rules so they read as
-   a spec block and not as more prose. */
-.pdp-keys{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:26px;
-  border-top:1px solid var(--line)}
-.pdp-keys>div{padding:12px 0;border-bottom:1px solid var(--line)}
-.pdp-keys>div:nth-child(odd){padding-right:16px}
-.pdp-keys dt{margin-bottom:3px}
-.pdp-keys dd{margin:0;font-size:17px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
-.pdp-cta{display:flex;gap:22px;flex-wrap:wrap;align-items:center;margin-top:26px}
-/* One primary action. The link beside it is a way on for people who want
-   the numbers first, and it should read as that rather than as a second
-   button — the eyebrow treatment made it shout as loudly as the button. */
-.pdp-cta .link-ul{
-  font-family:inherit;font-size:15px;font-weight:600;letter-spacing:-.01em;
-  text-transform:none;color:var(--muted);
-}
-.pdp-cta .link-ul:hover{color:var(--ink)}
-.pdp-promise{font-size:14px;line-height:1.45;color:var(--muted);margin-top:16px;max-width:40ch}
-.pdp-trust{display:block;margin-top:14px}
+.pdp-stage{display:grid;place-items:center;min-height:0}
+/* The board no longer fills the stage: the callout columns live in the
+   margins either side of it, the way the design lays them out. */
+.pdp-board{position:relative;width:min(92vw,1180px);display:grid;place-items:center}
+.pdp-stage fb-board{width:min(42vw,545px);height:min(48vh,540px)}
 
 /* ---------- board callouts ----------
    The labels are HTML held over the board, not geometry in it: text that
@@ -827,13 +781,7 @@ table td,table th{font-variant-numeric:tabular-nums}
 .hs-wire.is-on{stroke:var(--brand);stroke-width:2}
 .hs.is-live .hs-pt{
   position:absolute;left:0;top:0;padding:0;border:0;border-radius:0;
-  background:none;pointer-events:auto;display:block;
-  /* Wraps rather than running on. The column beside the board is only as
-     wide as the layout leaves it, and at the widths where the buy panel
-     takes its share there is not room for "ADC · UART · SPI · I2C · I2S" on
-     one line — it used to simply overflow, straight through the panel's
-     own text. fb-board sets the width each label actually has. */
-  white-space:normal;
+  background:none;pointer-events:auto;white-space:nowrap;display:block;
   will-change:transform,opacity;transition:color .2s var(--ease);
 }
 /* The transform puts the origin on the reference line, so the text is lifted
@@ -882,7 +830,22 @@ table td,table th{font-variant-numeric:tabular-nums}
 .pdp-views button:hover{color:var(--ink)}
 .pdp-views button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .crumb{position:absolute;top:96px;left:var(--pad);color:var(--muted)}
-
+.pdp-title{
+  position:relative;z-index:2;align-self:end;padding:24px 32px 32px;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);align-items:end;gap:40px;
+}
+.pdp-title h1{
+  font-size:clamp(64px,11vw,200px);line-height:.88;font-weight:800;font-stretch:112%;
+  letter-spacing:-.045em;display:flex;flex-direction:column;
+}
+.pdp-title h1 .sup{
+  font-size:clamp(20px,1.6vw,28px);font-weight:600;font-stretch:100%;letter-spacing:-.01em;
+  color:var(--muted);margin-bottom:12px;
+}
+.pdp-intro{display:flex;flex-direction:column;gap:18px;min-width:0}
+.pdp-intro .tag{font-size:22px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.pdp-intro .tagline{font-size:16px;line-height:1.5;color:var(--muted)}
+.pdp-cta{display:flex;gap:10px;flex-wrap:wrap}
 .pdp-cta>*{padding:0 22px;font-size:15px;font-weight:700;border-radius:999px;display:inline-flex;align-items:center}
 
 .hl-grid{
@@ -1157,29 +1120,14 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
   .board-row .art{height:230px}
   .board-row .hl{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px}
 
-  /* One column on a phone: the board, then the panel that sells it. The
-     callouts have already stepped back to their list by this width, so the
-     board is just a picture here and the reading order is picture, name,
-     what it is, what it costs, how to get one. */
-  .pdp-hero{padding:104px var(--pad) 40px;min-height:auto}
-  .pdp-grid{grid-template-columns:1fr;gap:28px;align-items:start}
-  .pdp-buy{align-self:start}
-  .pdp-buy h1{font-size:clamp(46px,13vw,70px)}
-  .pdp-keys{margin-top:22px}
-  .pdp-cta{margin-top:22px}
+  .pdp-hero{padding-top:120px;min-height:auto}
   .stat-row{grid-template-columns:repeat(2,1fr)}
   .stat-row li{padding:24px 20px 26px}
   .stat-row li:nth-child(2n){border-right:0}
   .stat-row li:nth-child(-n+2){border-bottom:1px solid var(--line)}
   .prot-dl>div,.cred-list li{grid-template-columns:1fr;gap:6px}
-  .pdp-board{width:100%}
-  .pdp-stage fb-board{width:100%;height:38vh}
-  /* The callouts do not come to a phone at all. There is no room beside the
-     board for the columns they need, and the list they fall back to pushes
-     the name, the price and the button a screen and a half down the page —
-     on the one device where that matters most. Everything the list says is
-     in the spec table a scroll below it. */
-  .pdp-board .hs{display:none}
+  .pdp-board{width:94vw}
+  .pdp-stage fb-board{width:88vw;height:44vh}
   /* A phone has no margins to put two columns of labels in, and a wire
      across a 390px board points at everything at once. Below this width the
      layer stops being an overlay and goes back to being the list it is in
@@ -1197,7 +1145,7 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
   .hs.is-live .hs-pt b{display:inline;font-size:14px}
   .hs.is-live .hs-pt i{display:inline;font-size:13px}
   .crumb{top:72px}
-
+  .pdp-title{grid-template-columns:1fr;padding:24px var(--pad) 32px}
   .hl-grid{grid-template-columns:1fr}
   .specs>div{grid-template-columns:1fr;gap:4px}
   .sw-cols,.docs-grid{grid-template-columns:1fr}
