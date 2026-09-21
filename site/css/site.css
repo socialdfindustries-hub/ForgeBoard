@@ -707,7 +707,10 @@ table td,table th{font-variant-numeric:tabular-nums}
    still laid out in the cell and nothing overlaps at narrow widths. */
 .board-row .art{height:300px;display:grid;align-items:center;justify-items:center}
 .board-row .art img{transform:translateX(-26px)}
-.board-row:hover .art img{transform:translateX(-26px) scale(1.06)}
+.board-row:hover .art img{
+  transform:translateX(-26px) translateY(-8px) scale(1.06);
+  filter:drop-shadow(0 26px 34px rgba(0,0,0,.5));
+}
 .board-row .art img{
   /* height, not max-height. With `auto` the picture takes its intrinsic size
      from the `sizes` attribute — 24vw — rather than from this box, so the
@@ -715,12 +718,57 @@ table td,table th{font-variant-numeric:tabular-nums}
      and neither cap was reached. Driving the height off the slot makes it
      deterministic, and the width follows the 3:2 frame. */
   display:block;height:90%;width:auto;max-width:92%;object-fit:contain;
-  filter:drop-shadow(0 14px 24px rgba(40,25,5,.35));transition:transform .6s var(--ease);
+  filter:drop-shadow(0 14px 24px rgba(40,25,5,.35));
+  transition:transform .6s var(--ease),filter .6s var(--ease);
 }
 
 .board-row .hl{
   display:flex;flex-direction:column;gap:8px;font-size:15px;color:var(--muted);
   border-left:1px solid var(--line);padding-left:24px;
+  transition:color .45s var(--ease),border-color .45s var(--ease);
+}
+
+/* ---------- row hover ----------
+   The whole row is one link, so the whole row answers to the pointer rather
+   than the board alone doing it in isolation. Four things move together and
+   none of them move far: the row takes a faint ground, the name leans in and
+   grows an arrow, the board lifts off the page, and the points beside it
+   come up out of grey. All transform, opacity and colour, so none of it
+   touches the layout. */
+.board-rows>li{
+  transition:background-color .45s var(--ease),opacity .45s var(--ease);
+}
+.board-rows>li:hover{background-color:rgba(239,230,211,.03)}
+/* The rest of the list steps back so the row under the pointer is the one
+   being read. :has needs no JavaScript and no class bookkeeping; where it is
+   unsupported nothing happens, which is a fine outcome. */
+.board-rows:has(>li:hover)>li:not(:hover){opacity:.5}
+
+.board-row .nm{
+  /* align-self, because h2 is a column flex box and a stretched item would
+     put `left:100%` out at the edge of the column rather than at the end of
+     the word. The box has to be the width of the name for the arrow to sit
+     against it. */
+  position:relative;display:inline-block;align-self:flex-start;
+  transition:transform .5s var(--ease),color .3s var(--ease);
+}
+/* The arrow is a pseudo-element: no markup, and nothing a screen reader
+   will read out as a word. */
+.board-row .nm::after{
+  content:"→";position:absolute;left:100%;bottom:.1em;margin-left:.22em;
+  font-size:.42em;font-weight:600;color:var(--brand-ink);
+  opacity:0;transform:translateX(-10px);
+  transition:opacity .35s var(--ease),transform .5s var(--ease);
+}
+.board-row:hover .nm{transform:translateX(5px)}
+.board-row:hover .nm::after{opacity:1;transform:none}
+.board-row .tg{transition:color .35s var(--ease)}
+.board-row:hover .tg{color:var(--ink)}
+.board-row:hover .hl{color:var(--ink);border-left-color:var(--brand)}
+
+@media (prefers-reduced-motion:reduce){
+  .board-row:hover .nm{transform:none}
+  .board-row .nm::after{transition:opacity .01s linear}
 }
 
 /* ---------- product page ---------- */
