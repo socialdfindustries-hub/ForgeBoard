@@ -1392,6 +1392,38 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
 }
 .is-split[data-in] .wi{transform:none}
 
+/* ---------- the same words, lit by the scroll ----------
+   Where the browser can drive an animation from scroll position, the
+   heading stops being a thing that plays on arrival and becomes a thing you
+   read: the words come up out of the dark one after another exactly as fast
+   as you scroll, and go back down if you scroll up.
+
+   Each word takes its own slice of the section's pass across the screen —
+   its index over the total, which is why the splitter writes both — and the
+   slices overlap by more than half, so it reads as a wave rather than as
+   four separate events.
+
+   The dimming lives inside the @supports, never outside it. A browser with
+   no view timeline never sees `opacity:.16`, so the finished, fully legible
+   heading is what it renders — the unsupported state is the finished state,
+   not a hidden one. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion:no-preference){
+    .is-split .wi{
+      transform:none;transition:none;
+      animation:word-lit linear both;
+      animation-timeline:view();
+      animation-range:
+        entry calc(16% + (var(--i) / var(--n)) * 52%)
+        entry calc(48% + (var(--i) / var(--n)) * 52%);
+    }
+  }
+}
+@keyframes word-lit{
+  from{opacity:.14;transform:translateY(24%)}
+  to{opacity:1;transform:none}
+}
+
 /* ---------- scroll-linked drift ----------
    The two halves of the Made-in-India band move against each other as the
    section crosses the screen — the wide frame up, the tall one down — so

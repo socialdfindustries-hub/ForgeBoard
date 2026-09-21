@@ -67,6 +67,9 @@
       .join('<br>');
     // The heading is now a pile of inline-blocks. Name it once, and let the
     // pieces go unread, so it is still announced as one line of text.
+    // The total, so each word can work out where it sits in the run and
+    // take its own slice of the scroll.
+    el.style.setProperty('--n', String(Math.max(i - 1, 1)));
     el.setAttribute('aria-label', text);
     [...el.querySelectorAll('.w')].forEach((w) => w.setAttribute('aria-hidden', 'true'));
     el.classList.add('is-split');
