@@ -30,6 +30,60 @@
   }
 
   /* ------------------------------------------------------------------ *
+   * Headings arrive a word at a time
+   *
+   * Each word goes in a box that clips, and rises out of it on a short
+   * delay after the one before. It reads as the line being set rather than
+   * switched on, which is the whole difference between a heading that
+   * appears and one that arrives.
+   *
+   * Words rather than letters: a letter stagger on a heading this size is a
+   * novelty that costs legibility, and it multiplies the element count by
+   * five for the same half second of motion.
+   *
+   * The text is only taken apart for people who asked for motion. Everyone
+   * else keeps the heading exactly as the markup wrote it.
+   * ------------------------------------------------------------------ */
+  document.querySelectorAll('[data-split]').forEach((el) => {
+    if (reduced) return;
+    // Only plain text and line breaks; anything richer is left alone rather
+    // than have its markup rebuilt by a regular expression.
+    if ([...el.children].some((c) => c.tagName !== 'BR')) return;
+
+    // From the markup, not from textContent: a <br> contributes nothing
+    // to textContent, so the label came out as "One install.Every board."
+    // with the two lines run together.
+    const text = el.innerHTML
+      .replace(/<br\s*\/?>/gi, ' ')
+      .replace(/<[^>]*>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    let i = 0;
+    el.innerHTML = el.innerHTML
+      .split(/<br\s*\/?>/i)
+      .map((line) => line.trim().split(/\s+/).filter(Boolean)
+        .map((w) => `<span class="w"><span class="wi" style="--i:${i++}">${w}</span></span>`)
+        .join(' '))
+      .join('<br>');
+    // The heading is now a pile of inline-blocks. Name it once, and let the
+    // pieces go unread, so it is still announced as one line of text.
+    el.setAttribute('aria-label', text);
+    [...el.querySelectorAll('.w')].forEach((w) => w.setAttribute('aria-hidden', 'true'));
+    el.classList.add('is-split');
+  });
+
+  if ('IntersectionObserver' in window) {
+    const so = new IntersectionObserver((entries) => entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      e.target.setAttribute('data-in', '1');
+      so.unobserve(e.target);
+    }), { rootMargin: '0px 0px -12% 0px', threshold: 0.1 });
+    document.querySelectorAll('.is-split').forEach((el) => so.observe(el));
+  } else {
+    document.querySelectorAll('.is-split').forEach((el) => el.setAttribute('data-in', '1'));
+  }
+
+  /* ------------------------------------------------------------------ *
    * In-page anchors — native smooth scroll, plus the focus move that
    * scrolling alone does not do.
    * ------------------------------------------------------------------ */

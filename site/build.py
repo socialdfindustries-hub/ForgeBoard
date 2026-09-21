@@ -799,7 +799,7 @@ def page_home() -> str:
   <div class="wrap rail">
     <span class="eyebrow rv" style="color:var(--print-muted)">01 — Made in India</span>
     <div class="stack" style="gap:56px">
-      <h2 class="h-xl rv" id="mii-h" style="max-width:14ch">Designed and manufactured in India.</h2>
+      <h2 class="h-xl" id="mii-h" data-split style="max-width:14ch">Designed and manufactured in India.</h2>
       <div class="mii-grid">
         <div class="mii-col rv">
         <div class="mii-main">
@@ -825,7 +825,7 @@ def page_home() -> str:
   <div class="wrap stack" style="gap:64px">
     <div class="rail rail-end rv">
       <span class="eyebrow" style="color:var(--print-muted)">02 — Software</span>
-      <h2 class="h-xl" id="sw-h">One install.<br>Every board.</h2>
+      <h2 class="h-xl" id="sw-h" data-split>One install.<br>Every board.</h2>
       <a href="software/" class="eyebrow link-go">The ForgeBoard IDE <i aria-hidden="true">→</i></a>
     </div>
     <div class="sw-grid">

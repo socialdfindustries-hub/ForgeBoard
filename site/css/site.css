@@ -1375,3 +1375,52 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
 @media (max-width:860px){
   .q-list li{grid-template-columns:1fr 84px}
 }
+
+/* ---------- headings that arrive a word at a time ----------
+   Each word sits in a box that clips, and rises out of it a beat after the
+   one before. The box needs the line's own leading or the descenders get
+   cut, which is why the padding is on the clip and the inner span is pulled
+   back up by the same amount. */
+.is-split .w{
+  display:inline-block;overflow:hidden;vertical-align:bottom;
+  padding-bottom:.12em;margin-bottom:-.12em;
+}
+.is-split .wi{
+  display:inline-block;transform:translateY(108%);
+  transition:transform .85s var(--ease);
+  transition-delay:calc(var(--i) * 45ms);
+}
+.is-split[data-in] .wi{transform:none}
+
+/* ---------- scroll-linked drift ----------
+   The two halves of the Made-in-India band move against each other as the
+   section crosses the screen — the wide frame up, the tall one down — so
+   the band has some depth in it rather than sliding past as one flat plate.
+
+   Driven by the scroll position itself rather than by a scroll handler, so
+   it runs off the main thread and cannot fight the WebGL hero for frames.
+   Where the browser has no view timeline the rule simply does not apply and
+   nothing moves, which is a perfectly good version of the page. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion:no-preference) and (min-width:861px){
+    .mii-main{
+      animation:drift-up linear both;
+      animation-timeline:view();
+      animation-range:entry 0% exit 100%;
+    }
+    .mii-side{
+      animation:drift-down linear both;
+      animation-timeline:view();
+      animation-range:entry 0% exit 100%;
+    }
+    /* The heading holds back a little, which is what sells the rest. */
+    .band .h-xl{
+      animation:drift-slow linear both;
+      animation-timeline:view();
+      animation-range:entry 0% exit 100%;
+    }
+  }
+}
+@keyframes drift-up{from{transform:translateY(30px)}to{transform:translateY(-30px)}}
+@keyframes drift-down{from{transform:translateY(-22px)}to{transform:translateY(22px)}}
+@keyframes drift-slow{from{transform:translateY(14px)}to{transform:translateY(-14px)}}
