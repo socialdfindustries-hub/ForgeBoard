@@ -925,37 +925,58 @@ def page_product(b: dict) -> str:
     roll = BOARD_ROLL.get(b["id"], 0)
     roll_attr = f' roll="{roll}"' if roll else ""
 
+    # The four figures that decide whether this is the right board, in the
+    # order someone asks them. Wireless is dropped on the board that has none
+    # rather than printed as a dash, and the board's size takes the fourth
+    # slot instead — a fact rather than an absence.
+    keys = [("Processor", b["mcu"]), ("Clock", b["clock"])]
+    if b["wireless"] and b["wireless"] != "—":
+        keys.append(("Wireless", b["wireless"]))
+    keys.append(("GPIO", f'{b["gpio"]} pins'))
+    if len(keys) < 4 and b["size"]:
+        keys.append(("Board size", b["size"]))
+    key_html = "".join(
+        f'<div><dt class="eyebrow mono-muted">{e(k)}</dt><dd>{nb(e(v))}</dd></div>'
+        for k, v in keys
+    )
+
     body = f"""
 <article>
   <section class="pdp-hero">
     <nav class="crumb eyebrow" aria-label="Breadcrumb"><a href="../">Boards</a> <span aria-hidden="true">/</span> {e(b['name'])}</nav>
-    <div class="pdp-stage">
-      <div class="pdp-board">
-      <fb-board src="{model_url}"
-        data-model="{model_url}"
-        data-v-3d="../../{render(b['id'], '3d')}" data-s-3d="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}"
-        data-v-top="../../{render(b['id'], 'top')}" data-s-top="{srcset(render(b['id'], 'top'), render_sm(b['id'], 'top')).replace('assets/', '../../assets/')}"
-        data-v-bottom="../../{render(b['id'], 'bottom')}" data-s-bottom="{srcset(render(b['id'], 'bottom'), render_sm(b['id'], 'bottom')).replace('assets/', '../../assets/')}"
-        fallback="../../{render(b['id'], '3d')}" srcset="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}" sizes="(max-width:860px) 88vw, 55vw" alt="ForgeBoard {b['name']} 3D view" tilt="14"{roll_attr}>
-        <noscript><img src="../../{render_sm(b['id'], '3d')}" alt="ForgeBoard {b['name']} 3D view" style="width:100%;height:100%;object-fit:contain"></noscript>
-      </fb-board>
-      {callouts(b)}
+    <div class="pdp-grid">
+      <div class="pdp-stage">
+        <div class="pdp-board">
+        <fb-board src="{model_url}"
+          data-model="{model_url}"
+          data-v-3d="../../{render(b['id'], '3d')}" data-s-3d="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}"
+          data-v-top="../../{render(b['id'], 'top')}" data-s-top="{srcset(render(b['id'], 'top'), render_sm(b['id'], 'top')).replace('assets/', '../../assets/')}"
+          data-v-bottom="../../{render(b['id'], 'bottom')}" data-s-bottom="{srcset(render(b['id'], 'bottom'), render_sm(b['id'], 'bottom')).replace('assets/', '../../assets/')}"
+          fallback="../../{render(b['id'], '3d')}" srcset="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../../assets/')}" sizes="(max-width:860px) 88vw, 34vw" alt="ForgeBoard {b['name']} 3D view" tilt="14"{roll_attr}>
+          <noscript><img src="../../{render_sm(b['id'], '3d')}" alt="ForgeBoard {b['name']} 3D view" style="width:100%;height:100%;object-fit:contain"></noscript>
+        </fb-board>
+        {callouts(b)}
+        </div>
+        <div class="pdp-views eyebrow" role="group" aria-label="Board view">
+          <button type="button" data-view="3d" aria-pressed="true">3D</button>
+          <button type="button" data-view="top" aria-pressed="false">Top</button>
+          <button type="button" data-view="bottom" aria-pressed="false">Bottom</button>
+        </div>
       </div>
-      <div class="pdp-views eyebrow" role="group" aria-label="Board view">
-        <button type="button" data-view="3d" aria-pressed="true">3D</button>
-        <button type="button" data-view="top" aria-pressed="false">Top</button>
-        <button type="button" data-view="bottom" aria-pressed="false">Bottom</button>
-      </div>
-    </div>
-    <div class="pdp-title">
-      <h1><span class="sup">ForgeBoard</span>{e(b['name'])}</h1>
-      <div class="pdp-intro">
-        <p class="tag">{e(b['tag'])}</p>
-        <p class="tagline">{e(b['tagline'])}</p>
+
+      <div class="pdp-buy">
+        <p class="eyebrow mono-muted">ForgeBoard · Board {idx + 1:02d} of {len(BOARDS)}</p>
+        <h1>{e(b['name'])}</h1>
+        <p class="pdp-tag">{e(b['tag'])}</p>
+        <p class="pdp-lede">{nb(e(b['tagline']))}</p>
+        <dl class="pdp-keys">{key_html}</dl>
         <div class="pdp-cta">
           <a class="btn btn-ink" href="../../contact/">Order&nbsp;{e(b['name'])}</a>
-          <a class="btn btn-ghost" href="#specs">Tech specs ↓</a>
+          <a class="link-ul eyebrow" href="#specs">Full tech specs ↓</a>
         </div>
+        <p class="pdp-promise">Priced in ₹ with a GST invoice, and a dispatch date
+          within one working day.</p>
+        <p class="pdp-trust eyebrow mono-muted">Designed &amp; built in India · RoHS · CE · FCC</p>
       </div>
     </div>
   </section>
