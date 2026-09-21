@@ -1381,16 +1381,22 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
    one before. The box needs the line's own leading or the descenders get
    cut, which is why the padding is on the clip and the inner span is pulled
    back up by the same amount. */
-.is-split .w{
-  display:inline-block;overflow:hidden;vertical-align:bottom;
-  padding-bottom:.12em;margin-bottom:-.12em;
-}
+.is-split .w{display:inline-block;vertical-align:bottom}
+/* Each word travels in from the left and stops where it belongs — the whole
+   word, moving.
+   
+   It was a clipped wipe first, the word sliding out from behind the left
+   edge of its own box. That looks right in theory and wrong on the page:
+   because the word enters from the left, its tail clears the edge first, so
+   half way through "One install." reads "ne tall." — partial words that look
+   like other words. The mask is gone and the travel is short; what moves is
+   always a whole word. */
 .is-split .wi{
-  display:inline-block;transform:translateY(108%);
-  transition:transform .85s var(--ease);
-  transition-delay:calc(var(--i) * 45ms);
+  display:inline-block;opacity:0;transform:translateX(-.58em);
+  transition:transform .8s var(--ease),opacity .55s var(--ease);
+  transition-delay:calc(var(--i) * 55ms);
 }
-.is-split[data-in] .wi{transform:none}
+.is-split[data-in] .wi{transform:none;opacity:1}
 
 /* ---------- the same words, lit by the scroll ----------
    Where the browser can drive an animation from scroll position, the
@@ -1410,7 +1416,7 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion:no-preference){
     .is-split .wi{
-      transform:none;transition:none;
+      transform:translateX(-.58em);transition:none;
       animation:word-lit linear both;
       animation-timeline:view();
       animation-range:
@@ -1420,7 +1426,7 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
   }
 }
 @keyframes word-lit{
-  from{opacity:.14;transform:translateY(24%)}
+  from{opacity:0;transform:translateX(-.58em)}
   to{opacity:1;transform:none}
 }
 
