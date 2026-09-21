@@ -65,6 +65,7 @@
   const views = document.querySelector('.pdp-views');
   if (stage && views) {
     const buttons = [...views.querySelectorAll('button')];
+    const hsLayer0 = document.querySelector('[data-hs-layer]');
     let view = '3d';
     const show = (want) => {
       if (want === view) return;
@@ -78,6 +79,13 @@
       stage.setAttribute('fallback', d['v' + want.charAt(0).toUpperCase() + want.slice(1)] || d['v3d']);
       stage.setAttribute('srcset', d['s' + want.charAt(0).toUpperCase() + want.slice(1)] || d['s3d']);
       stage.setAttribute('alt', (stage.getAttribute('alt') || '').replace(/(3D view|top view|underside)$/, '') + label);
+      // Top and Bottom are the flat documentation renders, and the point of
+      // them is to see the board itself — the silkscreen, which pad is which.
+      // The callouts belong to the 3D view, where they have a model to point
+      // at; here they would have nothing to anchor to, so they go away
+      // entirely rather than falling back to their list.
+      if (hsLayer0) hsLayer0.classList.toggle('is-flat', want !== '3d');
+
       if (want === '3d') {
         stage.setAttribute('src', d.model);
         if (stage.upgrade) stage.upgrade(true);

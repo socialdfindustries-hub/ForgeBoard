@@ -744,6 +744,9 @@ table td,table th{font-variant-numeric:tabular-nums}
    wired to its part. No markers on the board itself: the wire lands on the
    component, which is what a technical callout has always done. */
 .hs.is-pending{display:none}
+/* Top and Bottom show the board on its own: no callouts, no list of them
+   either. They are the 3D view's furniture. */
+.hs.is-flat{display:none}
 .hs-lede{display:block;margin:22px 0 10px;text-align:center}
 .hs-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
   list-style:none;padding:0;margin:0}
