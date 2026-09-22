@@ -282,7 +282,7 @@ table td,table th{font-variant-numeric:tabular-nums}
   opacity:0;transition:opacity .45s var(--ease);
 }
 .hero.is-showing .hero-scene::after{opacity:1}
-@media (hover:none){.hero-scene::after{opacity:1}}
+@media (max-width:860px){.hero-scene::after{display:none}}   /* the plate sits below the scene on a phone; the shadow only dimmed the board */
 
 .orbit{position:absolute;inset:0;z-index:2;margin:0;padding:0;list-style:none}
 .orbit-item{
@@ -440,7 +440,6 @@ table td,table th{font-variant-numeric:tabular-nums}
   .hero-plate-name b{transform:none;transition:none}
   .hero-specs{background-position:-35% 0}
   .hero-specs::before,.hero-specs::after{transform:scaleX(1)}
-  .hero-scene::after{opacity:1}
 }
 
 /* And the stage warms under the board being looked at. */
@@ -502,15 +501,6 @@ table td,table th{font-variant-numeric:tabular-nums}
 .hero-cursor.is-on{opacity:1;scale:1}
 .hero-cursor i{font-style:normal;opacity:.55}
 @media (hover:none){.hero-cursor{display:none}}
-/* The hold bar: only on touch, only while a board is held. Sits under the
-   eyebrow line, clear of the board and the plate. */
-.hero-hold{display:none;position:absolute;left:var(--pad);right:var(--pad);top:112px;z-index:6;justify-content:center;align-items:center}
-.hero-hold button{
-  min-height:44px;min-width:44px;padding:0 16px;border-radius:999px;
-  border:1px solid rgba(239,230,211,.3);background:rgba(20,18,16,.72);color:var(--print-ink);
-  font-size:14px;font-weight:700;line-height:1;backdrop-filter:blur(6px);
-}
-@media (hover:none){.hero.is-showing .hero-hold{display:flex}}
 
 /* ---------- scroll cue ---------- */
 /* Just a mark: the trust line already fills this space, and the research is

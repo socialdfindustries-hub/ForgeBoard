@@ -230,7 +230,7 @@
   host.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') setFocus(-1); });
   // Touch has no leave: a tap on the stage away from any board is the release.
   host.addEventListener('click', (e) => {
-    if (focused >= 0 && !e.target.closest('.orbit-item') && !e.target.closest('.hero-hold')) setFocus(-1);
+    if (focused >= 0 && !e.target.closest('.orbit-item')) setFocus(-1);
   });
   // A finger turns the 3D ring. Only a finger: the mouse has hover and click
   // for that. A swipe with a board held lets it go and spins from there; a
@@ -261,9 +261,6 @@
   host.addEventListener('pointerup', spinEnd);
   host.addEventListener('pointercancel', spinEnd);
 
-  // With a board held, a phone has no obvious way to let go: a way out.
-  const hold = (k) => document.querySelector(`[data-hero="hold-${k}"]`);
-  if (hold('close')) hold('close').addEventListener('click', () => setFocus(-1));
 
   /** Ease every board's pop toward where it should be, and turn the ring
    *  unless a board is being held. Returns the frame delta in ms. */
@@ -468,9 +465,10 @@
     // clearcoat, is the most expensive thing on the site, and at DPR 2 the
     // fragment work is 78% higher again. Nobody can see the difference on a
     // board a third of the screen tall; everybody can feel a dropped frame.
-    // Phones render at 1: their screens are dense and small, and the same
-    // four models have to turn on a fraction of the GPU.
-    renderer.setPixelRatio(Math.min(devicePixelRatio, fine ? 1.5 : 1));
+    // 2 on a phone: its screen is dense and the boards are what the page is —
+    // at 1 they were soft. 1.5 on a desktop, where a board a third of the
+    // screen tall does not need more and the four models share one GPU.
+    renderer.setPixelRatio(Math.min(devicePixelRatio, fine ? 1.5 : 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
     renderer.outputColorSpace = THREE.SRGBColorSpace;

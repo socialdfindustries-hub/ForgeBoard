@@ -836,9 +836,6 @@ def page_home() -> str:
     <div class="hero-cursor" data-hero="cursor" aria-hidden="true"><span data-hero="cursor-name">Spark</span><i>→</i></div>
     <ul class="orbit">{"".join(orbit_items)}
     </ul>
-    <div class="hero-hold" data-hero="hold">
-      <button type="button" data-hero="hold-close">&#10005;&nbsp; All boards</button>
-    </div>
   </div>
 
   <div class="hero-plate">
