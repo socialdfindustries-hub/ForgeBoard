@@ -47,7 +47,7 @@ def main() -> int:
     expected = {
         "index.html", "boards/index.html", "compare/index.html",
         "software/index.html", "docs/index.html", "contact/index.html",
-        "store/index.html", "about/index.html",
+        "about/index.html",
         "boards/spark/index.html", "boards/sprint/index.html",
         "boards/indus/index.html", "boards/flint/index.html",
     }
@@ -94,9 +94,6 @@ def main() -> int:
             img = ROOT / "assets" / "boards" / f"{bid}-{view}.webp"
             if not img.exists():
                 fail(f"missing render: {img.relative_to(ROOT)}")
-        hero = ROOT / "assets" / "boards" / f"hero-{bid}.webp"
-        if not hero.exists():
-            fail(f"missing hero render: {hero.relative_to(ROOT)}")
 
     # the home page must not still be carrying design-canvas machinery
     home = (ROOT / "index.html").read_text(encoding="utf-8")

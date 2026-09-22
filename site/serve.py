@@ -36,6 +36,7 @@ _gz_lock = threading.Lock()
 mimetypes.add_type("model/gltf-binary", ".glb")
 mimetypes.add_type("image/webp", ".webp")
 mimetypes.add_type("video/mp4", ".mp4")
+mimetypes.add_type("application/pdf", ".pdf")
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("text/javascript", ".mjs")
 
