@@ -117,6 +117,7 @@
   // horizontal run that could be mistaken for part of the drawing or cut
   // across another label's line.
   const LANDING = 22;
+  const ZOOM_IN = 0.7, ZOOM_OUT = 1.3;    // camera distance factors: closest the canvas can hold, furthest
 
   const IDLE_AFTER = 1400;    // ms of stillness before it resumes turning
   const MAX_PITCH = 1.0;      // ~57°, so it never tumbles over
@@ -557,6 +558,7 @@
       const far = Math.max(...hs.items.map((i) => i.depth));
       const span = Math.max(far - near, 1e-4);
 
+
       FBBoard.column(hs.left, oy + 24, oy + bh - 24, 18, colL);
       FBBoard.column(hs.right, oy + 24, oy + bh - 24, 18, colR);
 
@@ -634,6 +636,14 @@
         }
       }
 
+      // The back of the board, as a whole: when every part faces away the
+      // leader layer goes with them, not just each line's own opacity —
+      // there is nothing on that side to point at, so no line may be seen.
+      const away = hs.items.length > 0 && hs.items.every((it) => it.facing < 0.04);
+      if (away !== hs.away) {
+        hs.away = away;
+        if (this.hsLayer) this.hsLayer.classList.toggle('is-away', away);
+      }
       if (hs.svg) hs.svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
     }
 

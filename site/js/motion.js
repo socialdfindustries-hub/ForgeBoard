@@ -220,33 +220,6 @@
     if (stage) stage.addEventListener('click', () => open(null));
   }
 
-  /* ------------------------------------------------------------------ *
-   * Scroll rail
-   *
-   * A hairline across the top that fills as the page goes by. Written on a
-   * frame, and only when the value actually moves, so scrolling stays on the
-   * compositor.
-   * ------------------------------------------------------------------ */
-  const rail = document.querySelector('.scroll-rail i');
-  if (rail) {
-    let last = -1, queued = false;
-    const draw = () => {
-      queued = false;
-      const max = document.documentElement.scrollHeight - innerHeight;
-      const k = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
-      if (Math.abs(k - last) < 0.001) return;
-      last = k;
-      rail.style.transform = 'scaleX(' + k.toFixed(4) + ')';
-    };
-    const onScroll = () => {
-      if (queued) return;
-      queued = true;
-      requestAnimationFrame(draw);
-    };
-    addEventListener('scroll', onScroll, { passive: true });
-    addEventListener('resize', onScroll, { passive: true });
-    draw();
-  }
 
   /* ------------------------------------------------------------------ *
    * Mobile nav
@@ -303,13 +276,19 @@
   if (vid) {
     const net = navigator.connection;
     const lean = !!(net && (net.saveData || /(^|-)[23]g$/.test(net.effectiveType || '')));
-    if (!reduced && !lean) {
+    if (reduced || lean) {
+      // Asked for no motion, or on a metered connection: a still frame with
+      // the controls, and nothing fetched until they press play.
+      vid.pause();
+      vid.removeAttribute('autoplay');
+      vid.preload = 'none';
+      vid.setAttribute('controls', '');
+    } else {
       vid.removeAttribute('controls');
       vid.muted = true;
-      // Phones get the smaller encode. Setting .src (not <source>) restarts
-      // resource selection; nothing has been fetched yet with preload=none.
-      const sm = vid.dataset.srcSm;
-      if (sm && matchMedia('(max-width:860px)').matches) vid.src = sm;
+      // The phone encode is picked by the <source media> in the markup, so
+      // the right file is chosen before any script runs and nothing is
+      // fetched twice.
 
       const play = () => {
         const p = vid.play();
@@ -327,101 +306,121 @@
   }
 
   /* ------------------------------------------------------------------ *
-   * Quote request
+   * Compare, on a phone. Two selectors head two columns; each names the
+   * board its column shows, and choosing the board the other already shows
+   * swaps them, so it is always two different boards. A row the two agree
+   * on is marked, the switch shows only the rows they don't, and the bar
+   * folds to the selectors alone once the page has scrolled past it.
+   * ------------------------------------------------------------------ */
+  const sel = document.querySelector('.cmp-sel');
+  const cmp = document.querySelector('.cmp');
+  if (sel && cmp) {
+    // The bar sticks exactly under the header, whatever height the header
+    // has on this screen: a fixed offset left a strip of page showing
+    // between the two.
+    const headEl = document.querySelector('.site-head');
+    // Its rendered bottom edge, not its box height: the header rides up a
+    // few pixels as the page scrolls, and the bar has to follow it.
+    const setHead = () => { if (headEl) document.documentElement.style.setProperty('--head-h', Math.max(0, Math.round(headEl.getBoundingClientRect().bottom)) + 'px'); };
+    setHead(); addEventListener('resize', setHead, { passive: true });
+    const col = { a: sel.querySelector('[data-col="a"]'), b: sel.querySelector('[data-col="b"]') };
+    const img = { a: sel.querySelector('[data-col-img="a"]'), b: sel.querySelector('[data-col-img="b"]') };
+    const tag = { a: sel.querySelector('[data-col-tag="a"]'), b: sel.querySelector('[data-col-tag="b"]') };
+    const rows = [...cmp.querySelectorAll('tbody tr:not(.cmp-group)')];
+    const groups = [...cmp.querySelectorAll('tbody tr.cmp-group')];
+    const diff = sel.querySelector('[data-diff]');
+    const count = sel.querySelector('[data-diff-count]');
+
+    const head = (k) => {
+      const o = col[k].selectedOptions[0];
+      if (img[k]) { img[k].src = o.dataset.img; img[k].srcset = o.dataset.srcset; }
+      if (tag[k]) tag[k].textContent = o.dataset.tag;
+    };
+    const apply = () => {
+      rows.forEach((tr) => {
+        let a = null, b = null;
+        tr.querySelectorAll('td').forEach((td) => {
+          const isA = td.dataset.board === col.a.value, isB = td.dataset.board === col.b.value;
+          td.classList.toggle('is-a', isA); td.classList.toggle('is-b', isB);
+          if (isA) a = td; if (isB) b = td;
+        });
+        tr.classList.toggle('is-same', !!(a && b && a.dataset.v === b.dataset.v));
+      });
+      const n = rows.filter((tr) => !tr.classList.contains('is-same')).length;
+      if (count) count.textContent = `${n} of ${rows.length} differ`;
+      groups.forEach((g) => {
+        let t = g.nextElementSibling, any = false;
+        while (t && !t.classList.contains('cmp-group')) { if (!t.classList.contains('is-same')) any = true; t = t.nextElementSibling; }
+        g.classList.toggle('is-empty', !any);
+      });
+    };
+    let fade = 0;
+    const change = (k, other) => () => {
+      if (col[k].value === col[other].value) col[other].value = col[k].dataset.prev;   // swap
+      col.a.dataset.prev = col.a.value; col.b.dataset.prev = col.b.value;
+      head('a'); head('b');
+      clearTimeout(fade);
+      cmp.classList.add('is-swapping');
+      fade = setTimeout(() => { apply(); cmp.classList.remove('is-swapping'); }, 180);
+    };
+    col.a.dataset.prev = col.a.value; col.b.dataset.prev = col.b.value;
+    col.a.addEventListener('change', change('a', 'b'));
+    col.b.addEventListener('change', change('b', 'a'));
+    if (diff) diff.addEventListener('change', () => cmp.classList.toggle('diff-only', diff.checked));
+    head('a'); head('b'); apply();
+
+    // The bar folds once the page has scrolled past where it started.
+    const selTop = sel.getBoundingClientRect().top + window.scrollY;
+    let compact = false;
+    let settle = 0;
+    const fold = () => {
+      setHead();
+      // and once more when the header has finished its own move
+      clearTimeout(settle); settle = setTimeout(setHead, 380);
+      const c = window.scrollY > selTop - 40;
+      if (c !== compact) { compact = c; sel.classList.toggle('is-compact', c); }
+    };
+    addEventListener('scroll', fold, { passive: true });
+    fold();
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Contact form
    *
-   * A quotation is priced line by line, so what gets sent has to be lines:
-   * a quantity against each board, not one board and one number. The body
-   * is laid out as the quotation will be, so whoever prices it is reading
-   * the same shape they are about to fill in.
-   *
-   * Still a mailto, because there is still no backend. That is a real
-   * limit and it is why the quantities are also written into the subject —
-   * if the body is lost to a mail client that mangles long mailto links,
-   * the subject alone still says what was asked for.
+   * Name, email, message. Still a mailto, because there is still no
+   * backend: the fields are folded into a mail the visitor's own client
+   * sends, and the note under the button says where to write if no client
+   * opens.
    * ------------------------------------------------------------------ */
   const form = document.querySelector('.form');
   if (form) {
-    const qtys = [...form.querySelectorAll('.q-qty')];
-    const totalEl = form.querySelector('[data-q-total]');
-
-    /** Every line with a quantity on it, as {board, qty}. */
-    const lines = () => qtys
-      .map((el) => ({ board: el.dataset.board, qty: parseInt(el.value, 10) || 0 }))
-      .filter((l) => l.qty > 0);
-
-    // A running count while they type: it confirms the number went in, and
-    // it is the only feedback available on a form that cannot price itself.
-    const tally = () => {
-      if (!totalEl) return;
-      const picked = lines();
-      const units = picked.reduce((n, l) => n + l.qty, 0);
-      totalEl.textContent = !picked.length
-        ? 'No quantities yet'
-        : `${units} board${units === 1 ? '' : 's'} across ` +
-          `${picked.length} line${picked.length === 1 ? '' : 's'} — ` +
-          picked.map((l) => `${l.board} ×${l.qty}`).join(', ');
-    };
-    qtys.forEach((el) => el.addEventListener('input', tally));
-    tally();
-
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const f = new FormData(form);
       const get = (k) => String(f.get(k) || '').trim();
-      const picked = lines();
       const note = form.querySelector('.form-note');
 
-      // Nothing to price is the one thing that has to be caught here: the
-      // quantities are separate inputs, so `required` cannot express "at
-      // least one of these".
-      if (qtys.length && !picked.length) {
-        if (note) note.textContent = 'Put a quantity against at least one board first.';
-        (qtys[0] || form).focus();
-        return;
-      }
-
-      const units = picked.reduce((n, l) => n + l.qty, 0);
       const body = [
-        'Request for quotation',
+        get('message'),
         '',
-        'Lines',
-        ...picked.map((l) => `  ${l.board.padEnd(10)} ${String(l.qty).padStart(6)}`),
-        // Spread an empty list rather than an empty string: the blank lines
-        // between sections are wanted, so nothing may filter them out later.
-        ...(picked.length > 1
-          ? [`  ${'Total'.padEnd(10)} ${String(units).padStart(6)}`] : []),
-        '',
-        'Buyer',
-        `  Name      ${get('name')}`,
-        `  Email     ${get('email')}`,
-        `  Company   ${get('company') || '—'}`,
-        `  Phone     ${get('phone') || '—'}`,
-        '',
-        'For the tax split and the invoice',
-        `  Delivery state  ${get('state') || '—'}`,
-        `  GSTIN           ${get('gstin') || '—'}`,
-        '',
-        'Notes',
-        `  ${get('message') || '—'}`,
+        '—',
+        `${get('name')}`,
+        `${get('email')}`,
       ].join('\n');
 
-      const subject = picked.length
-        ? 'Quotation request — ' + picked.map((l) => `${l.board} ×${l.qty}`).join(', ')
-        : 'Quotation request';
-
       location.href =
-        'mailto:contact@defenceforgeindustries.com' +
-        `?subject=${encodeURIComponent(subject)}` +
+        'mailto:contact@forgeboard.in' +
+        `?subject=${encodeURIComponent('Message from ' + get('name'))}` +
         `&body=${encodeURIComponent(body)}`;
 
       const btn = form.querySelector('button[type=submit]');
       if (btn) {
         btn.textContent = 'Opening your email…';
-        setTimeout(() => { btn.textContent = 'Request quotation'; }, 4000);
+        setTimeout(() => { btn.textContent = 'Send message'; }, 4000);
       }
       if (note) {
         note.textContent =
-          'If nothing opened, send the same to contact@defenceforgeindustries.com.';
+          'If nothing opened, write to contact@forgeboard.in.';
       }
     });
   }

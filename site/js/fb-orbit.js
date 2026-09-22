@@ -34,7 +34,7 @@
 
   const N = items.length;
   const STEP = (Math.PI * 2) / N;
-  const TURN = (Math.PI * 2) / 34000;          // one lap every 34 seconds
+  const TURN = (Math.PI * 2) / 45000;          // one lap every 45 seconds
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // How much the boards reflect, as a fraction of the lighting the models
@@ -53,6 +53,11 @@
 
   let angle = 0;
   let focused = -1;
+  // The flat renders run the orbit from the first paint. This goes false
+  // the moment the 3D scene is ready to place the boards itself.
+  let twoD = true;
+  let swipeLock = false;   // set for a beat after a swipe on the phone ring
+  let spinV = 0;           // rad/ms the 3D ring is still turning from a swipe
   let named = -1;
   const pop = items.map(() => 0);               // 0 in the ring, 1 at the front
   let last = performance.now();
@@ -149,48 +154,116 @@
     });
   };
 
+  const plateEl = document.querySelector('.hero-plate');
+  let swapTimer = 0;
   const nameBoard = (i) => {
     if (i === named) return;
     named = i;
     const d = items[i].dataset;
-    if (plate.name) plate.name.textContent = d.name;
-    if (plate.mcu) scramble(plate.mcu, d.mcu);
-    if (plate.clock) countUp(plate.clock, d.clock);
-    if (plate.gpio) countUp(plate.gpio, d.gpio);
-    if (plate.radio) scramble(plate.radio, d.radio);
-    // The way to buy follows the board you are looking at, so the button is
-    // never one board behind what is on the stage.
-    if (plate.order) plate.order.textContent = 'Order ' + d.name;
-    if (plate.specs) plate.specs.setAttribute('href', 'boards/' + d.board + '/');
+    const setAll = () => {
+      if (plate.name) plate.name.textContent = d.name;
+      if (plate.mcu) plate.mcu.textContent = d.mcu;
+      if (plate.clock) plate.clock.textContent = d.clock;
+      if (plate.gpio) plate.gpio.textContent = d.gpio;
+      if (plate.radio) plate.radio.textContent = d.radio;
+      // The way to buy follows the board you are looking at, so the button is
+      // never one board behind what is on the stage.
+      if (plate.order) plate.order.textContent = 'Order ' + d.name;
+      if (plate.specs) plate.specs.setAttribute('href', 'boards/' + d.board + '/');
+    };
+    if (fine) {
+      // Desktop: the readout powers up — a scramble on the words, a count on
+      // the numbers — as the board you clicked comes forward.
+      setAll();
+      if (plate.mcu) scramble(plate.mcu, d.mcu);
+      if (plate.clock) countUp(plate.clock, d.clock);
+      if (plate.gpio) countUp(plate.gpio, d.gpio);
+      if (plate.radio) scramble(plate.radio, d.radio);
+      return;
+    }
+    // Touch: the ring turns on its own every few seconds, and a scramble on
+    // every turn is noise — random glyphs of random widths, the figures
+    // jumping between one line and two. So the plate dips out, the words
+    // change while nothing can be seen, and it comes back: one clean swap.
+    clearTimeout(swapTimer);
+    if (plateEl) { plateEl.classList.remove('is-in'); plateEl.classList.add('is-swapping'); }
+    swapTimer = setTimeout(() => {
+      setAll();
+      if (!plateEl) return;
+      plateEl.classList.remove('is-swapping');
+      // Then it powers up for this board: name, figures and button rise in
+      // one after another, the light crosses the strip, the rules redraw.
+      // The class is taken off and put back with a reflow between, so the
+      // animation restarts for every board and not just the first.
+      void plateEl.offsetWidth;
+      plateEl.classList.add('is-in');
+    }, 190);
   };
 
-  // Where the pointer was when the focus last changed. A board travelling to
-  // the front sweeps out from under a still cursor and another slides in
-  // behind it — which fires pointerenter and hands focus away, and the two
-  // boards then trade it back and forth. A focus change has to be caused by
-  // the pointer moving, not by the scene moving underneath it.
-  let px = -1e4, py = -1e4, fx = -1e4, fy = -1e4;
+  // The pointer's place, for the held board to lean toward.
+  let px = -1e4, py = -1e4;
   addEventListener('pointermove', (e) => { px = e.clientX; py = e.clientY; }, { passive: true });
-  const pointerMoved = () => Math.hypot(px - fx, py - fy) > 10;
 
+  // Hovering names a board; it does not move it. A board only comes to the
+  // front when it is clicked — the same two steps a phone has always had:
+  // one to bring it forward, one more on the board that is forward to open
+  // its page. Bringing boards forward on hover meant every pass of the mouse
+  // across the stage rearranged it, and nothing could be settled on.
   items.forEach((li, i) => {
     li.addEventListener('pointerenter', () => {
-      if (focused >= 0 && !pointerMoved()) return;
-      fx = px; fy = py;
-      setFocus(i);
+      if (focused < 0 && cursorName) cursorName.textContent = li.dataset.name;
     });
     const link = li.querySelector('a');
     if (!link) return;
-    link.addEventListener('focus', () => setFocus(i));
-    // Touch has no pointer to rest: first tap brings a board forward, the
-    // second follows the link to its page.
+    // Keyboard only: a mouse-down also focuses the link, and treating that
+    // as a pick made the very first click open the page.
+    link.addEventListener('focus', () => { if (link.matches(':focus-visible')) setFocus(i); });
     link.addEventListener('click', (e) => {
-      if (matchMedia('(hover:hover)').matches || focused === i) return;
+      if (swipeLock) { e.preventDefault(); return; }        // the end of a swipe is not a tap
+      if (focused === i) return;                            // second click: follow the link
       e.preventDefault();
       setFocus(i);
     });
   });
-  host.addEventListener('pointerleave', () => setFocus(-1));
+  // Mouse only: a lifted finger also 'leaves', a beat before its tap's
+  // click arrives, and that let go of the board the tap was about to open.
+  host.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') setFocus(-1); });
+  // Touch has no leave: a tap on the stage away from any board is the release.
+  host.addEventListener('click', (e) => {
+    if (focused >= 0 && !e.target.closest('.orbit-item') && !e.target.closest('.hero-hold')) setFocus(-1);
+  });
+  // A finger turns the 3D ring. Only a finger: the mouse has hover and click
+  // for that. A swipe with a board held lets it go and spins from there; a
+  // vertical drag is still the page scrolling.
+  let spin = null;
+  host.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch' || !host.classList.contains('is-3d')) return;
+    if (focused >= 0) setFocus(-1);
+    spin = { x0: e.clientX, a0: angle, x: e.clientX, t: performance.now(), v: 0, moved: false };
+  }, { passive: true });
+  host.addEventListener('pointermove', (e) => {
+    if (!spin || e.pointerType !== 'touch') return;
+    const now = performance.now();
+    spin.v = (e.clientX - spin.x) / Math.max(1, now - spin.t);
+    spin.x = e.clientX; spin.t = now;
+    if (Math.abs(e.clientX - spin.x0) > 8) spin.moved = true;
+    angle = spin.a0 + ((e.clientX - spin.x0) / (host.clientWidth * 0.8)) * STEP;
+  }, { passive: true });
+  const spinEnd = (e) => {
+    if (!spin || e.pointerType !== 'touch') return;
+    if (spin.moved) {
+      swipeLock = true;
+      setTimeout(() => { swipeLock = false; }, 350);
+      spinV = (spin.v / (host.clientWidth * 0.8)) * STEP;   // px/ms -> rad/ms
+    }
+    spin = null;
+  };
+  host.addEventListener('pointerup', spinEnd);
+  host.addEventListener('pointercancel', spinEnd);
+
+  // With a board held, a phone has no obvious way to let go: a way out.
+  const hold = (k) => document.querySelector(`[data-hero="hold-${k}"]`);
+  if (hold('close')) hold('close').addEventListener('click', () => setFocus(-1));
 
   /** Ease every board's pop toward where it should be, and turn the ring
    *  unless a board is being held. Returns the frame delta in ms. */
@@ -199,6 +272,8 @@
     last = now;
     if (focused < 0) {
       if (!reduced) angle += TURN * dt;
+      angle += spinV * dt;                       // a swipe's momentum, dying away
+      spinV *= Math.pow(0.12, dt / 1000);
     } else {
       // Keep turning the ring until the held board's own slot is the one at
       // the front of it. The three left behind then always come to rest in
@@ -214,9 +289,12 @@
       let d = (want - angle) % (Math.PI * 2);
       if (d > Math.PI) d -= Math.PI * 2;
       else if (d < -Math.PI) d += Math.PI * 2;
-      angle += d * (1 - Math.pow(0.004, dt / 1000));
+      // Eased to settle in a little over a second. It was ~0.4 s, which
+      // read as the ring snapping round rather than turning to meet you.
+      angle += d * (1 - Math.pow(0.03, dt / 1000));
     }
-    const k = 1 - Math.pow(0.002, dt / 1000);
+    // The held board's trip to the front, at the same unhurried pace.
+    const k = 1 - Math.pow(0.02, dt / 1000);
     for (let i = 0; i < N; i++) {
       const want = i === focused ? 1 : 0;
       pop[i] += (want - pop[i]) * k;
@@ -229,24 +307,98 @@
    * Fallback: the same orbit in CSS, with the flat renders
    * ------------------------------------------------------------------ */
   const run2d = () => {
+    host.classList.remove('is-loading');   // nothing to count: the sheet goes at once
+    // The phone ring turns under your finger. A swipe spins it, with a
+    // little momentum, and it settles on the nearest board; a tap holds a
+    // board and opens its plate; left alone it drifts on to the next board
+    // every few seconds. The angle here is the phone's own — the shared
+    // `angle` keeps turning for the desktop fallback.
+    const HOLD = 2600;   // left alone, on to the next board every 2.6 s
+    let pa = 0, target = 0, lastMove = performance.now(), held = -1, drag = null;
+    if (matchMedia('(max-width:860px)').matches) {
+      host.style.touchAction = 'pan-y';      // vertical swipes still scroll the page
+      const span = () => host.clientWidth * 0.8;    // most of a screen's swipe is one board
+      host.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        drag = { x0: e.clientX, a0: pa, x: e.clientX, t: performance.now(), v: 0, moved: false };
+      });
+      host.addEventListener('pointermove', (e) => {
+        if (!drag) return;
+        const now = performance.now();
+        drag.v = (e.clientX - drag.x) / Math.max(1, now - drag.t);
+        drag.x = e.clientX; drag.t = now;
+        if (Math.abs(e.clientX - drag.x0) > 8) drag.moved = true;
+        pa = drag.a0 + ((e.clientX - drag.x0) / span()) * STEP;
+        target = pa;
+        lastMove = now;
+      });
+      const end = () => {
+        if (!drag) return;
+        if (drag.moved) {
+          swipeLock = true;
+          setTimeout(() => { swipeLock = false; }, 350);
+          const fling = (drag.v * 110 / span()) * STEP;          // a little momentum, then settle
+          target = Math.round((pa + fling) / STEP) * STEP;
+        } else {
+          target = Math.round(pa / STEP) * STEP;
+        }
+        drag = null;
+        lastMove = performance.now();
+      };
+      host.addEventListener('pointerup', end);
+      host.addEventListener('pointercancel', end);
+    }
     const frame = (now) => {
-      step(now);
+      const dt = step(now);
+      if (focused !== held) { held = focused; lastMove = now; }
+      if (focused >= 0) {
+        // the held board's slot comes to the front, the short way round
+        let d = (-focused * STEP - pa) % (Math.PI * 2);
+        if (d > Math.PI) d -= Math.PI * 2; else if (d < -Math.PI) d += Math.PI * 2;
+        target = pa + d;
+      } else if (!drag && now - lastMove > HOLD) {
+        target -= STEP; lastMove = now;
+      }
+      if (!drag) pa += (target - pa) * (1 - Math.pow(0.004, dt / 1000));   // and a brisk turn
       const w = host.clientWidth, h = host.clientHeight;
-      const rx = Math.min(w * 0.3, 430);
-      const ry = Math.min(h * 0.1, 76);
-      const bw = Math.min(Math.max(w * 0.22, 118), 300), bh = bw * 1.25;
-      const cy = h * 0.43;      // above centre, clear of the name plate
+      // A phone is the main reader of this path. Its plate is off until a
+      // board is tapped, so the boards have the whole band between the
+      // eyebrow lines and where the plate will come up — read off the page
+      // each frame — and they use it: the front board at nearly two thirds
+      // of the width, the ring flat enough that none of the four is ever
+      // small. The band is measured, not guessed, so the board a tap brings
+      // forward never lands on the plate that lights up under it.
+      const narrow = w < 861;
+      let bandTop = 0, bandBot = h;
+      if (narrow) {
+        const meta = host.parentElement.querySelector('.hero-meta');
+        const plate = host.parentElement.querySelector('.hero-plate');
+        if (meta) bandTop = meta.offsetTop + meta.offsetHeight + 6;
+        if (plate) bandBot = plate.offsetTop - 6;
+      }
+      const band = bandBot - bandTop;
+      const rx = narrow ? w * 0.42 : Math.min(w * 0.3, 430);
+      const ry = narrow ? band * 0.06 : Math.min(h * 0.1, 76);
+      const bw = narrow ? Math.min(w * 0.62, band / (1.25 * 1.1) - ry, 300)
+                        : Math.min(Math.max(w * 0.22, 118), 300);
+      const bh = bw * 1.25;
+      const cy = narrow ? (bandTop + bandBot) / 2 : h * 0.43;   // above centre, clear of the name plate
       let bestD = -2, bestI = 0;
       items.forEach((li, i) => {
-        const th = angle + i * STEP;
+        const th = (narrow ? pa : angle) + i * STEP;
         const od = Math.cos(th);
         const p = pop[i];
         const x = Math.sin(th) * rx * (1 - p);
         const y = od * ry * (1 - p) + ry * p;
         const d = od * (1 - p) + p;
         const t = (d + 1) / 2;
-        let s = (0.55 + 0.45 * t) * (1 + 0.5 * p);
-        let o = 0.3 + 0.7 * t;
+        // On a phone the far boards keep more of their size and the pop is
+        // modest: the front board is already most of the screen wide.
+        // Phone: the front board full size, the two beside it at half and
+        // dimmed, the one at the back gone — three on screen reads as a ring
+        // without being a crowd. The tap grows the front board only a touch.
+        let s = narrow ? (0.55 + 0.45 * t) * (1 + 0.1 * p) : (0.55 + 0.45 * t) * (1 + 0.5 * p);
+        let o = narrow ? Math.max(0, Math.min(1, (od + 0.3) / 0.9)) : 0.3 + 0.7 * t;
         if (focused >= 0 && focused !== i) { s *= 0.86; o *= 0.45; }
         li.style.width = bw + 'px';
         li.style.height = bh + 'px';
@@ -258,7 +410,7 @@
         if (od > bestD) { bestD = od; bestI = i; }
       });
       nameBoard(focused >= 0 ? focused : bestI);
-      requestAnimationFrame(frame);
+      if (twoD) requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
   };
@@ -275,8 +427,11 @@
 
   const capable = () =>
     !metered && hasWebGL() &&
-    (navigator.deviceMemory === undefined || navigator.deviceMemory >= 4) &&
-    (navigator.hardwareConcurrency === undefined || navigator.hardwareConcurrency >= 4);
+    // The same bar the product pages set. It used to be 4 and 4 here, so a
+    // machine that ran the model on every board page was handed the flat
+    // renders on the home page — every visit, with no way to ask for more.
+    (navigator.deviceMemory === undefined || navigator.deviceMemory >= 2) &&
+    (navigator.hardwareConcurrency === undefined || navigator.hardwareConcurrency >= 2);
 
   // Framing. The camera sits far enough back that the nearest board reads
   // about a third of the screen and the far one about half that — real
@@ -284,9 +439,13 @@
   // swings down into the name plate.
   const R = 3.1;             // orbit radius, world units — a wide sweep
   const FOV = 34;
+  const HELD_TURN = (Math.PI * 2) / 11000;   // a held board: one turn per 11 s
   const FRONT = R * 1.1;     // how far forward a held board comes
   const UNIT = 2.4;          // every board reads this tall, whatever its mm
   const POP_SCALE = 0.15;    // extra size on the board that has come forward
+  const POP_PHONE = 0.12;    // on a phone a tapped board comes forward and grows a little more
+  const LIFT_DESK = 0.46;    // how far the far side of the ring rides up (turntable from above)
+  const LIFT_PHONE = 0.95;   // portrait has height to spend and no width: a steeper table
   const REF = 200;           // px per world unit the hit boxes are sized at
 
   async function run3d() {
@@ -297,15 +456,21 @@
     canvas.className = 'hero-canvas';
     canvas.setAttribute('aria-hidden', 'true');
     host.insertBefore(canvas, list);
-    // From here until every model is up, the stage is the counter alone. The
-    // links have no position until the first frame places them, so they must
-    // not be on screen before it.
+    // Until every model is up the stage is the counter alone. The flat
+    // renders are for devices that will never get the models; nobody wants
+    // to watch them turn for a few seconds and then be swapped out.
     host.classList.add('is-loading');
 
     const renderer = new THREE.WebGLRenderer({
       canvas, antialias: true, alpha: true, powerPreference: 'high-performance',
     });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    // 1.5, not 2: four boards at over a million vertices between them, with
+    // clearcoat, is the most expensive thing on the site, and at DPR 2 the
+    // fragment work is 78% higher again. Nobody can see the difference on a
+    // board a third of the screen tall; everybody can feel a dropped frame.
+    // Phones render at 1: their screens are dense and small, and the same
+    // four models have to turn on a fraction of the GPU.
+    renderer.setPixelRatio(Math.min(devicePixelRatio, fine ? 1.5 : 1));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -381,12 +546,13 @@
       const ringDist = camera.position.z - R * fitR;
       const heldDist = camera.position.z - FRONT * fitR;
       const ringPer = (UNIT * h) / (2 * ringDist * tan);
-      const heldPer = (UNIT * (1 + POP_SCALE) * h) / (2 * heldDist * tan);
-      const liftPer = (0.92 * h) / (2 * camera.position.z * tan);
+      const portrait = camera.aspect < 1;
+      const heldPer = (UNIT * (1 + (portrait ? POP_PHONE : POP_SCALE)) * h) / (2 * heldDist * tan);
+      const liftPer = ((portrait ? 2 * LIFT_PHONE : 2 * LIFT_DESK) * h) / (2 * camera.position.z * tan);
 
       // 1.12 and 1.14 for what the bounding box does not cover: the boards sit
       // tilted, and headers and modules stand proud of the board's outline.
-      const usableTop = h * (camera.aspect < 1 ? 0.17 : 0.13);   // clear the meta row
+      const usableTop = h * (camera.aspect < 1 ? 0.14 : 0.13);   // clear the meta row
       const showBottom = (plateEl ? plateEl.offsetTop : h) - 16;
       const showUsable = Math.max(140, showBottom - usableTop);
       const restUsable = Math.max(140, h * 0.94 - usableTop);
@@ -396,10 +562,33 @@
       fitRest = Math.min(cap, restUsable / ringWants);
       if (fitShow > fitRest) fitShow = fitRest;   // never larger than at rest
 
-      // Tighten the ring until the two boards at the sides fit the frame with
-      // their own width — measured at the larger of the two sizes.
-      const boardHalfW = UNIT * fitRest * 0.34;
-      fitR = Math.min(fitR, Math.max(0.1, (halfW * 0.95 - boardHalfW) / R));
+      if (portrait) {
+        // A phone is solved for directly, not scaled down from the desktop.
+        // The composition is a diamond seen from above: the front board a
+        // set share of the width at the foot of the band, the two beside it
+        // a step up at the edges (a little off the edge is fine — it reads
+        // as the ring continuing), the one across the back at the top. The
+        // ring's radius comes from the front board's own width, so the
+        // sides can never sit on it; only the band's height can shrink it.
+        const WIDTH_FRAC = 0.56;   // the front board's share of the screen width
+        const RING_K = 1.9;        // ring radius, in front-board half-widths
+        let fr = 0.4, fs = 1;
+        for (let k = 0; k < 3; k++) {          // radius and size depend on each other
+          const px = h / (2 * (camera.position.z - R * fr) * tan);   // px per unit, front of ring
+          fs = (WIDTH_FRAC * w) / (UNIT * 0.62 * px);
+          fr = (RING_K * UNIT * fs * 0.31) / R;
+        }
+        const px = h / (2 * (camera.position.z - R * fr) * tan);
+        const needs = (2 * LIFT_PHONE * fs + UNIT * fs * (0.56 + 0.5 * 0.42)) * px;   // rise + front half + back half (at its 42%)
+        if (needs > showUsable) { const k = showUsable / needs; fs *= k; fr *= k; }
+        fitShow = fitRest = fs;
+        fitR = fr;
+      } else {
+        // Tighten the ring until the two boards at the sides fit the frame with
+        // their own width — measured at the larger of the two sizes.
+        const boardHalfW = UNIT * fitRest * 0.34;
+        fitR = Math.min(fitR, Math.max(0.1, (halfW * 0.95 - boardHalfW) / R));
+      }
 
       // The lift bias centres the ring nicely, but a held board is taller than
       // the ones in the ring, so the bias gives way to keeping its own edges
@@ -407,7 +596,9 @@
       const heldHalf = heldPer * fitShow * 0.56;
       bandShow = Math.max(
         usableTop + heldHalf,
-        Math.min((usableTop + showBottom) / 2 + liftPer * fitShow * 0.4, showBottom - heldHalf)
+        // the lift bias sits the ring lower to make room for the back board's
+        // rise; on portrait that board is half size, so less room is needed
+        Math.min((usableTop + showBottom) / 2 + liftPer * fitShow * (portrait ? 0.12 : 0.4), showBottom - heldHalf)
       );
       const restHalf = ringPer * fitRest * 0.56 + liftPer * fitRest * 0.4;
       bandRest = Math.min(Math.max(h / 2, usableTop + restHalf), h - restHalf - h * 0.06);
@@ -421,10 +612,15 @@
     const meter = document.querySelector('[data-hero="load"]');
     const meterNum = document.querySelector('[data-hero="num"]');
     const meterBar = document.querySelector('[data-hero="bar"]');
+    let shown = 0;
     const showLoad = (raw) => {
       // Clamped: hosts gzip the models, and the progress event then reports
       // inflated bytes against the compressed length, which counts past 100.
-      const frac = Math.max(0, Math.min(1, raw));
+      // And never backwards: one model's over-count can otherwise put the
+      // number above where the next one starts, and a count that dips reads
+      // as something going wrong.
+      const frac = Math.max(shown, Math.max(0, Math.min(1, raw)));
+      shown = frac;
       if (meterNum) meterNum.textContent = String(Math.round(frac * 100)).padStart(3, '0');
       if (meterBar) meterBar.style.transform = 'scaleX(' + frac.toFixed(3) + ')';
     };
@@ -438,6 +634,11 @@
       });
       showLoad((i + 1) / N);
       const obj = gltf.scene;
+      // Turned in its own plane, as the page asks (data-roll, degrees). The
+      // models lie flat with Y through the board, so a Y rotation is the
+      // turn you would give it on a desk.
+      const roll = parseFloat(items[i].dataset.roll);
+      if (roll) obj.rotation.y = (roll * Math.PI) / 180;
 
       const pivot = new THREE.Group();
       pivot.add(obj);
@@ -478,6 +679,10 @@
           // layer that makes the solder mask and the lenses read as wet, and
           // it is the one dial that takes the gloss off without touching the
           // colour or the material under it.
+          // Anisotropy is a second, costly specular lobe for brushed metal.
+          // On the product page a board fills the stage and earns it; here
+          // four boards share the screen at a third of the size and do not.
+          if (typeof m.anisotropy === 'number') m.anisotropy = 0;
           if (typeof m.clearcoat === 'number' && m.clearcoat > 0) {
             m.clearcoat *= GLOSS;
             m.clearcoatRoughness = Math.min(1, (m.clearcoatRoughness || 0) + 0.25);
@@ -504,13 +709,25 @@
         tiltX: 0, tiltY: 0, sx: 0, sy: 0,
         dim: 1, lastDim: 1,
       });
-      items[i].classList.add('has-model');   // its flat render steps aside
-      if (nodes.length === 1) list.classList.add('is-3d');
+      // Its render stays until the handoff below: hiding it here, with the
+      // 3D loop not yet running, left an empty slot on the ring for every
+      // board that had loaded while the last one was still on its way.
     }
 
     host.classList.remove('is-loading');
     host.classList.add('is-3d');
-    if (meter) meter.classList.add('is-done');
+    list.classList.add('is-3d');
+    host.style.touchAction = 'pan-y';   // sideways is ours, up and down is the page
+    if (meter) {
+      meter.classList.add('is-done');                       // lifts off the page
+      setTimeout(() => meter.classList.add('is-gone'), 1000); // then out of the layout
+    }
+    items.forEach((li) => li.classList.add('has-model'));   // renders step aside, all at once
+    // Take the links over from the 2D orbit: it stops on its next frame, and
+    // the opacity it was fading the renders with must not linger on the
+    // hit areas the 3D frame is about to place.
+    twoD = false;
+    items.forEach((li) => { li.style.opacity = ''; });
 
     let visible = true;
     new IntersectionObserver(
@@ -562,19 +779,24 @@
         const behind = (1 - Math.cos(th)) / 2;
         const tuck = held * behind * behind;
         const away = held * 1.5 + tuck * 4.4;
-        const lift = (1 - Math.cos(th)) * 0.46 + tuck * 2.9;
+        // portrait: the board across the back is small and the band has no
+        // headroom, so it rises less when a held board needs it out of the way
+        const lift = (1 - Math.cos(th)) * (w < h ? LIFT_PHONE : LIFT_DESK) + tuck * (w < h ? 1.4 : 2.9);
         n.slot.position.set(
           Math.sin(th) * R * fitR * spread * (1 - p),
           lift * fitS * (1 - p),
           (Math.cos(th) * R * fitR - away) * (1 - p) + FRONT * fitR * p
         );
         // The board being held turns right round — a full revolution in about
-        // seven seconds — so you see its face, its edge and its back. The
-        // three in the ring instead settle facing you and sway, because a
-        // board showing its blank underside is just a black rectangle.
+        // eleven seconds — so you see its face, its edge and its back. It
+        // is deliberately slow: this is the board you are being invited to
+        // click, and a face that comes and goes every couple of seconds
+        // reads as a thing being taken away from you rather than offered.
+        // The three in the ring instead settle facing you and sway, because
+        // a board showing its blank underside is just a black rectangle.
         if (!reduced) {
           if (p > 0.02) {
-            n.spin += 0.00095 * dt;
+            n.spin += HELD_TURN * dt;
           } else {
             const front = Math.round(n.spin / (Math.PI * 2)) * (Math.PI * 2);
             n.spin += (front - n.spin) * (1 - Math.pow(0.12, dt / 1000));
@@ -594,7 +816,13 @@
 
         n.slot.rotation.y = n.spin + Math.sin(n.sway) * 0.3 * (1 - p) + n.tiltY;
         n.slot.rotation.x = -0.22 + 0.1 * p + n.tiltX;
-        n.holder.scale.setScalar(n.unit * fitS * (1 + POP_SCALE * p));
+        const popK = w < h ? POP_PHONE : POP_SCALE;
+        // Portrait: depth is drawn, not just implied. The board across the
+        // back is smaller and the sides between, so the ring reads as a ring
+        // and not as four boards laid on one another; a held board is full.
+        const tDepth = (Math.cos(th) + 1) / 2;
+        const depthK = w < h ? (0.42 + 0.58 * tDepth) * (1 - p) + p : 1;   // small at the back, full in front
+        n.holder.scale.setScalar(n.unit * fitS * (1 + popK * p) * depthK);
 
         // Keep this board's link exactly over it, at its apparent size, so
         // the pointer and the keyboard land on the thing they can see.
@@ -604,7 +832,7 @@
         const sx = (v.x * 0.5 + 0.5) * w;
         const sy = (-v.y * 0.5 + 0.5) * h;
         n.sx = sx; n.sy = sy;
-        const perPx = (fitS * (1 + POP_SCALE * p) * h) / (2 * dist * tanHalf);
+        const perPx = (fitS * (1 + popK * p) * depthK * h) / (2 * dist * tanHalf);
         const li = items[i];
         if (!n.sized) {
           // Once: the box at a reference scale. Everything after is transform.
@@ -624,7 +852,8 @@
         // meshes' materials every frame for an unchanged value is waste.
         // Held: lifted out of the dark. Not held, while another is: sat back
         // into it. Nothing held: as lit as it was.
-        const want = focused < 0 ? 1 : (focused === i ? 1.25 : 0.38);
+        const depthDim = w < h ? 0.3 + 0.7 * tDepth : 1;   // portrait: the back goes dark
+        const want = (focused < 0 ? 1 : (focused === i ? 1.25 : 0.38)) * (focused === i ? 1 : depthDim);
         n.dim += (want - n.dim) * (1 - Math.pow(0.004, dt / 1000));
         if (Math.abs(n.dim - n.lastDim) > 0.004) {
           n.lastDim = n.dim;

@@ -74,7 +74,7 @@ BOARDS = [
         "mcu": "ESP32-S3",
         "clock": "240 MHz",
         "wireless": "Wi-Fi 4 + BLE 5.0",
-        "gpio": "19",
+        "gpio": "16",
         "size": "",
         "temp_note": "On-board 1S Li-ion charging with status LEDs.",
         "tagline": (
@@ -85,7 +85,7 @@ BOARDS = [
             "4 sensors & a buzzer on board",
             "Charges a Li-ion cell — runs unplugged",
             "Wi-Fi & Bluetooth 5.0 built in",
-            "19 GPIO still free for your parts",
+            "16 GPIO still free for your parts",
             "USB-C, ESD & thermal protection",
             "Updates over the air — Wi-Fi or BLE",
         ],
@@ -94,12 +94,12 @@ BOARDS = [
             ("Wi-Fi", "IEEE 802.11 b/g/n (2.4 GHz), up to 150 Mbps (HT40)"),
             ("Bluetooth", "Bluetooth 5.0 LE, 125 kbps to 2 Mbps"),
             ("Sensors", "IR sensor, light sensor (LDR), DHT11 temperature & humidity, piezo buzzer"),
-            ("Battery", "1S Li-ion, 4.2 V charge up to 1 A; charge & standby LEDs"),
-            ("GPIO", "19 programmable pins on headers"),
+            ("Battery", "1S Li-ion with BMS, 4.2 V charge up to 1 A; charge & standby LEDs"),
+            ("GPIO", "16 programmable pins on headers"),
             ("Interfaces", "2× ADC, 3× UART, 2× SPI, 2× I2C, 2× I2S"),
             ("PWM", "8-channel LED PWM, 2× motor-control PWM"),
-            ("USB", "USB Type-C 2.0, data + power; 5–12 V DC in"),
-            ("Protection", "USB ESD, reverse-polarity, thermal shutdown"),
+            ("USB", "2× USB Type-C 2.0 — one for programming & data, one for battery charging"),
+            ("Protection", "USB ESD, reverse-polarity, over-current, thermal shutdown"),
             ("LEDs", "1× addressable RGB (16M colours), 1× GPIO LED"),
             ("Buttons", "RST + BOOT"),
             ("Programming", "USB-C, OTA over Wi-Fi / BLE"),
@@ -115,7 +115,7 @@ BOARDS = [
         "mcu": "STM32G484",
         "clock": "170 MHz",
         "wireless": "—",
-        "gpio": "50",
+        "gpio": "40",
         "size": "35 × 56 mm",
         "temp_note": "Industrial temperature grade, –40 °C to +85 °C.",
         "tagline": (
@@ -129,7 +129,7 @@ BOARDS = [
             "Encrypts in hardware, AES-256",
             "Shrugs off ±15 kV static",
             "Drives motors with 184 ps timing",
-            "Debug over SWD, 50 GPIO",
+            "Debug over SWD, 40 GPIO",
         ],
         "specs": [
             ("Processor", "STM32G484RET6 Arm Cortex-M4 with FPU & DSP, 170 MHz, 213 DMIPS / 550 CoreMark"),
@@ -140,7 +140,7 @@ BOARDS = [
             ("Maths", "CORDIC trigonometric engine, FMAC filter accelerator"),
             ("Timers & PWM", "12-channel high-resolution timer (184 ps), motor-control PWM with dead-time insertion"),
             ("Interfaces", "3× CAN FD (8 Mbit/s), 4× I2C, 4× SPI / I2S, USART · UART · LPUART, SAI, Quad-SPI"),
-            ("GPIO", "50 programmable pins on 2.54 mm headers"),
+            ("GPIO", "40 programmable pins on 2.54 mm headers"),
             ("USB", "USB Type-C 2.0, data + power, on-board USB-to-serial"),
             ("Power", "2 A synchronous buck, up to 96 % efficient, 1 A 3.3 V rail"),
             ("Protection", "USB ESD (IEC 61000-4-2 level 4, ±15 kV air / ±8 kV contact), reverse-polarity, over-current, thermal shutdown"),
@@ -185,7 +185,7 @@ BOARDS = [
             ("GPIO", "12 programmable pins on headers"),
             ("USB", "USB Type-C 2.0, data + power, on-board USB-to-serial, 50 bps to 2 Mbps"),
             ("Power", "1 A low-noise CMOS LDO, 450 mV dropout, over-current & over-temperature protection"),
-            ("Protection", "Reverse-polarity — P-channel MOSFET (30 V, 4 A) + 40 V / 3 A Schottky"),
+            ("Protection", "USB ESD; reverse-polarity — P-channel MOSFET (30 V, 4 A) + 40 V / 3 A Schottky"),
             ("Power saving", "80 mA average, 20 µA deep sleep"),
             ("LEDs", "2× LED (power, GPIO)"),
             ("Buttons", "RST + FLASH"),
@@ -228,8 +228,12 @@ TICKER = [
     "Home automation",
 ]
 
+# The one row in DOWNLOADS that has files behind it; a board carrying a
+# "datasheet" path gets View and Download here instead of "Soon".
+DATASHEET = "Datasheet (PDF)"
+
 DOWNLOADS = [
-    "Datasheet (PDF)",
+    DATASHEET,
     "Pinout diagram",
     "Schematic",
     "Mechanical drawing",
@@ -272,12 +276,12 @@ HERO = [
 
 # Canonical origin, used for absolute URLs (social previews, canonical links).
 # forgeboards.in redirects here.
-SITE_URL = "https://forgeboards.com"
+# No www: forgeboard.in is canonical and www.forgeboard.in should 301 to it,
+# so the site is indexed once rather than as two copies of itself.
+SITE_URL = "https://forgeboard.in"
 
 CONTACT = {
-    "phone": "+91 96377 64898",
-    "phone_href": "tel:+919637764898",
-    "email": "contact@defenceforgeindustries.com",
+    "email": "contact@forgeboard.in",
     "address": (
         "Defence Forge Laboratory, AIC MIT-ADT Incubator Forum, "
         "Loni Kalbhor, Pune, Maharashtra 412201"
@@ -325,6 +329,10 @@ CALLOUT_BOARDS = {"spark", "sprint", "indus", "flint"}
 # so the leaders fan rather than bunch, and leaves the board the way up it
 # is drawn — antenna at the top, USB at the bottom.
 BOARD_ROLL = {"spark": 45, "sprint": 225, "indus": 30, "flint": 30}
+# How each board is turned in its own plane on the home hero, in degrees.
+# Separate from BOARD_ROLL: the product page frames one board for its
+# callouts; the hero composes four together.
+HERO_ROLL = {"sprint": 270}
 
 # (key, material, which one, title, second line, spec row, side)
 #
@@ -370,7 +378,7 @@ FEATURES = {
          "Dual Core 240 MHz", "Processor", None),
         ("rgb", "LED_Lens_Orange", None, "RGB LED",
          "16M Colours", "LEDs", None),
-        ("gpio", "@-5.4,-19.0", None, "19 GPIO Pins",
+        ("gpio", "@-5.4,-19.0", None, "16 GPIO Pins",
          "SPI · I2C · UART · I2S · CAN · USB OTG", "GPIO", None),
         ("charge", "USB_Shell_Steel", "z<0", "USB-C for charging",
          "", "Battery", None),
@@ -410,7 +418,7 @@ FEATURES = {
          "", "Buttons", None),
         ("swd", "@0.0,-24.0", None, "SWD Debug",
          "SWCLK · SWDIO · SWO", "Debug", None),
-        ("gpio", "@15.0,2.0", None, "50 GPIO Pins",
+        ("gpio", "@15.0,2.0", None, "40 GPIO Pins",
          "CAN FD · I2C · SPI · UART", "GPIO", None),
     ],
     "flint": [
@@ -475,6 +483,58 @@ def version(rel: str) -> str:
 
 def asset(r: str, rel: str) -> str:
     return f"{r}{rel}?v={version(rel)}"
+
+
+def human_size(rel: str) -> str:
+    """File size the way the page should say it, from the file itself, so the
+    number on the button can never disagree with the download behind it."""
+    n = (ROOT / rel).stat().st_size
+    return f"{n / 1_000_000:.1f} MB" if n >= 1_000_000 else f"{round(n / 1000)} KB"
+
+
+def download_items(b: dict, *, r: str, soon_href: str, reveal: bool,
+                   show_size: bool = True) -> str:
+    """One board's download list, rendered once for both the docs page and the
+    product page so the two can never disagree about what is available.
+
+    A row backed by a real file offers View and Download; everything still to
+    come keeps the row it always had and says Soon. `r` is the page's path back
+    to the site root, `reveal` whether the rows animate in on this page.
+
+    `show_size` is off in the docs cards, which are a quarter of the page wide:
+    the size there is the one thing that pushes the actions onto a second line,
+    and an index is for finding the file, not for reading its particulars. It
+    stays in the link's own label, so hovering or a screen reader still has it.
+    """
+    rv = ' class="rv"' if reveal else ""
+    rows = []
+    for d in DOWNLOADS:
+        rel = b.get("datasheet") if d == DATASHEET else None
+        if not rel:
+            rows.append(
+                f'<li{rv}><a href="{soon_href}"><span>{e(d)}</span>'
+                f'<span class="eyebrow mono-muted">Soon</span></a></li>'
+            )
+            continue
+        href = asset(r, rel)
+        size = human_size(rel)
+        what = f"{b['name']} datasheet, PDF, {size}"
+        chip = (
+            f'<span class="eyebrow mono-muted dl-size">{e(size)}</span>'
+            if show_size else ""
+        )
+        rows.append(
+            f'<li{rv}><span class="dl-row">'
+            f'<span class="dl-name">{e(d)}{chip}</span>'
+            f'<span class="dl-acts">'
+            f'<a class="act act-view" href="{href}" target="_blank" rel="noopener"'
+            f' aria-label="View the {e(what)}, opens in a new tab">View</a>'
+            f'<a class="act act-get" href="{href}"'
+            f' download="ForgeBoard-{e(b["name"])}-Datasheet.pdf"'
+            f' title="{e(size)}" aria-label="Download the {e(what)}">Download</a>'
+            f'</span></span></li>'
+        )
+    return "".join(rows)
 
 
 def depth_prefix(out_path: str) -> str:
@@ -613,7 +673,7 @@ def shell(*, out_path: str, title: str, description: str, body: str,
 
     # "home" is the site root, so it has no path segment of its own.
     nav_items = [("home", "Home"), ("boards", "Boards"), ("compare", "Compare"),
-                 ("store", "Store"), ("software", "Software"), ("docs", "Docs"),
+                 ("software", "Software"), ("docs", "Docs"),
                  ("about", "About")]
     nav_html = "".join(
         f'<a href="{root if slug == "home" else r + slug + "/"}"{cur(slug)}>{label}</a>'
@@ -626,7 +686,9 @@ def shell(*, out_path: str, title: str, description: str, body: str,
     nav_id = "primary-nav"
 
     needs_board = "<fb-board" in body
-    needs_orbit = 'class="hero-scene"' in body
+    # A prefix match: the scene now ships with `is-loading` on it, and an
+    # exact match on the bare class quietly dropped the orbit script.
+    needs_orbit = 'class="hero-scene' in body
     has_model = "assets/models/" in body
     script_tags = (
         f'<script src="{asset(r, "js/fb-board.js")}" defer></script>' if needs_board else ""
@@ -671,7 +733,7 @@ def shell(*, out_path: str, title: str, description: str, body: str,
 <meta property="og:description" content="{e(description)}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="{page_url}">
-<meta property="og:image" content="{SITE_URL}/assets/boards/hero-spark.webp">
+<meta property="og:image" content="{SITE_URL}/assets/boards/spark-3d.webp">
 <link rel="canonical" href="{page_url}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="{r}assets/logo-on-light.png">
@@ -684,7 +746,6 @@ def shell(*, out_path: str, title: str, description: str, body: str,
 </head>
 <body>
 <a href="#main" class="skip eyebrow">Skip to content</a>
-<div class="scroll-rail" aria-hidden="true"><i></i></div>
 <header class="site-head eyebrow">
   <a class="brand" href="{root}" aria-label="ForgeBoard home">
     <img class="mark" src="{r}assets/logo-on-dark.webp" alt="" width="128" height="112" decoding="async">
@@ -702,7 +763,7 @@ def shell(*, out_path: str, title: str, description: str, body: str,
     <div class="foot-cols">
       <div class="eyebrow"><span>Boards</span>{foot_boards}<a href="{r}compare/">Compare</a></div>
       <div class="eyebrow"><span>Support</span><a href="{r}docs/">Documentation</a><a href="{r}software/">Software</a><a href="{r}contact/">Contact</a><a href="mailto:{CONTACT['email']}">Email us</a></div>
-      <div class="eyebrow"><span>Company</span><a href="{r}contact/">Defence Forge Industries</a><a href="{CONTACT['phone_href']}">{CONTACT['phone']}</a></div>
+      <div class="eyebrow"><span>Company</span><a href="{r}contact/">Defence Forge Industries</a><a href="mailto:{CONTACT['email']}">{CONTACT['email']}</a></div>
       <p>Microcontroller boards designed and manufactured in India by Defence Forge Industries Pvt. Ltd.</p>
     </div>
     <img class="foot-mark" src="{r}assets/logo-on-dark.webp" alt="" width="128" height="112" loading="lazy" decoding="async">
@@ -733,10 +794,10 @@ def page_home() -> str:
     lead = BOARDS[0]
 
     def hero_render(bid: str) -> str:
-        return f"assets/boards/hero-{bid}.webp"
+        return f"assets/boards/{bid}-3d.webp"
 
     def hero_srcset(bid: str) -> str:
-        return srcset(hero_render(bid), f"assets/boards/hero-{bid}-sm.webp")
+        return srcset(hero_render(bid), f"assets/boards/{bid}-3d-sm.webp")
 
     orbit_items = []
     for i, b in enumerate(BOARDS):
@@ -746,6 +807,7 @@ def page_home() -> str:
             data-board="{bid}"
             data-model="{asset(r, f'assets/models/{bid}.glb')}"
             data-name="{e(b['name'])}"
+            data-roll="{HERO_ROLL.get(bid, 0)}"
             data-spec="{e(spec_line(b))}"
             data-mcu="{e(b['mcu'])}"
             data-clock="{e(b['clock'])}"
@@ -765,14 +827,18 @@ def page_home() -> str:
     <span>Designed &amp; built in India</span>
   </div>
 
-  <div class="hero-scene">
+  <div class="hero-scene is-loading">
     <div class="hero-load" data-hero="load" aria-hidden="true">
-      <span class="load-bar"><i data-hero="bar"></i></span>
+      <span class="load-lbl eyebrow">Loading · ForgeBoard</span>
       <b data-hero="num">000</b>
+      <span class="load-bar"><i data-hero="bar"></i></span>
     </div>
     <div class="hero-cursor" data-hero="cursor" aria-hidden="true"><span data-hero="cursor-name">Spark</span><i>→</i></div>
     <ul class="orbit">{"".join(orbit_items)}
     </ul>
+    <div class="hero-hold" data-hero="hold">
+      <button type="button" data-hero="hold-close">&#10005;&nbsp; All boards</button>
+    </div>
   </div>
 
   <div class="hero-plate">
@@ -803,7 +869,8 @@ def page_home() -> str:
       <div class="mii-grid">
         <div class="mii-col rv">
         <div class="mii-main">
-          <video class="line-video" poster="{asset('', 'assets/video/line-poster.webp')}" data-src-sm="{asset('', 'assets/video/line-sm.mp4')}" width="1280" height="720" muted playsinline loop preload="none" controls aria-label="The pick-and-place line placing components on a ForgeBoard">
+          <video class="line-video" poster="{asset('', 'assets/video/line-poster.webp')}" width="1280" height="720" autoplay muted playsinline loop preload="auto" aria-label="The pick-and-place line placing components on a ForgeBoard">
+            <source src="{asset('', 'assets/video/line-sm.mp4')}" type="video/mp4" media="(max-width:860px)">
             <source src="{asset('', 'assets/video/line.mp4')}" type="video/mp4">
           </video>
         </div>
@@ -889,7 +956,7 @@ def page_boards() -> str:
   <div class="rail" style="margin-bottom:80px">
     <span class="eyebrow mono-muted">Boards · 04</span>
     <div class="stack" style="gap:28px">
-      <h1 class="h-pg">From first blink to factory floor.</h1>
+      <h1 class="h-pg" data-split>From first blink to factory floor.</h1>
       <p class="lede">Same USB-C, same protection, same IDE — the only thing that changes is the chip.</p>
     </div>
   </div>
@@ -920,11 +987,7 @@ def page_product(b: dict) -> str:
     )
 
     chips = "".join(f"<li>{e(i)}</li>" for i in b["works_with"])
-    dls = "".join(
-        f'<li class="rv"><a href="../../docs/"><span>{e(d)}</span>'
-        f'<span class="eyebrow mono-muted">Soon</span></a></li>'
-        for d in DOWNLOADS
-    )
+    dls = download_items(b, r="../../", soon_href="../../docs/", reveal=True)
 
     size_note = f"Board size {b['size']}. " if b["size"] else ""
     roll = BOARD_ROLL.get(b["id"], 0)
@@ -1001,21 +1064,74 @@ def page_compare() -> str:
         f'<th scope="col"><a href="../boards/{b["id"]}/">{e(b["name"])}</a><span class="tag">{e(b["tag"])}</span></th>'
         for b in BOARDS
     )
-    rows = "".join(
-        "<tr><th scope=\"row\" class=\"eyebrow\">{k}</th>{cells}</tr>".format(
-            k=e(k), cells="".join(f"<td>{e(v)}</td>" for v in vals)
+    def cell(b, v):
+        v = str(v)
+        inner = '<span class="dash">\u2014</span><span class="na">Not on this board</span>' if v == "\u2014" else e(v)
+        return f'<td data-board="{e(b["name"])}" data-v="{e(v)}">{inner}</td>'
+    rows_list = [
+        "<tr{big}><th scope=\"row\" class=\"eyebrow\">{k}</th>{cells}</tr>".format(
+            big=' data-big' if k in ("Clock", "GPIO", "Board size") else "",
+            # Each cell carries its board's name and its value: on a phone the
+            # table is two chosen columns, and a row whose two values match is
+            # set back. A dash is written out there — "Not on this board" —
+            # and stays a dash in the desktop table.
+            k=e(k), cells="".join(cell(b, v) for b, v in zip(BOARDS, vals))
         )
         for k, vals in COMPARE_ROWS
+    ]
+    # Sections, for the phone: the desktop table reads all thirteen rows at
+    # once; a phone reads them in three sittings.
+    groups = {
+        "MCU": "The chip", "Clock": "The chip", "Wireless": "The chip", "GPIO": "The chip",
+        "Board size": "On the board", "Sensors on board": "On the board", "Battery charging": "On the board",
+        "CAN": "For hard jobs", "Hardware crypto": "For hard jobs", "Protection": "For hard jobs",
+        "Debug": "For hard jobs", "Temperature": "For hard jobs", "Best for": "Best for",
+    }
+    out, last = [], None
+    for (k, vals), row in zip(COMPARE_ROWS, rows_list):
+        g = groups.get(k, "")
+        if g != last:
+            out.append(f'<tr class="cmp-group"><th colspan="5">{e(g)}</th></tr>')
+            last = g
+        out.append(row)
+    rows = "".join(out)
+    # Phone only (the stylesheet shows it under 861px): two boards side by
+    # side, each column headed by its own selector, the way Apple lays a
+    # comparison out on a phone. The selectors stay put while the specs
+    # scroll underneath them.
+    def up(path):  # the compare page sits one level down
+        return path.replace("assets/", "../assets/")
+    def picker(which, chosen):
+        opts = "".join(
+            f'<option value="{e(b["name"])}"{" selected" if b["name"] == chosen else ""}'
+            f' data-img="{up(render(b["id"], "3d"))}" data-srcset="{up(srcset(render(b["id"], "3d"), render_sm(b["id"], "3d")))}"'
+            f' data-tag="{e(b["tag"])}">{e(b["name"])}</option>'
+            for b in BOARDS
+        )
+        b0 = next(b for b in BOARDS if b["name"] == chosen)
+        return (
+            f'<div class="cmp-sel-col">'
+            f'<img class="cmp-sel-img" data-col-img="{which}" src="{up(render(b0["id"], "3d"))}"'
+            f' srcset="{up(srcset(render(b0["id"], "3d"), render_sm(b0["id"], "3d")))}" sizes="40vw" alt="" decoding="async">'
+            f'<label><span class="sr-only">Board {which}</span><select data-col="{which}">{opts}</select></label>'
+            f'<p class="cmp-sel-tag" data-col-tag="{which}">{e(b0["tag"])}</p>'
+            f'</div>'
+        )
+    selectors = (
+        picker("a", BOARDS[0]["name"]) + picker("b", BOARDS[1]["name"])
+        + '<label class="cmp-diff"><span>Only the differences</span>'
+          '<small data-diff-count aria-live="polite"></small><input type="checkbox" data-diff></label>'
     )
     body = f"""
 <section class="page stack" style="gap:64px">
   <div class="rail">
     <span class="eyebrow mono-muted">Compare</span>
     <div class="stack" style="gap:28px">
-      <h1 class="h-pg">Side by side.</h1>
+      <h1 class="h-pg" data-split>Side by side.</h1>
       <p class="lede">Straight from the datasheets. Need a figure that isn’t here? Ask.</p>
     </div>
   </div>
+  <div class="cmp-sel" role="group" aria-label="Boards to compare">{selectors}</div>
   <div class="cmp-scroll" tabindex="0" role="region" aria-label="Board comparison, scrolls sideways">
     <table class="cmp">
       <thead><tr><th class="spacer"></th>{heads}</tr></thead>
@@ -1039,7 +1155,7 @@ def page_software() -> str:
   <div class="rail">
     <span class="eyebrow mono-muted">Software</span>
     <div class="stack" style="gap:28px">
-      <h1 class="h-pg">ForgeBoard IDE.</h1>
+      <h1 class="h-pg" data-split>ForgeBoard IDE.</h1>
       <p class="lede">One install for the whole family. Plug a board in over USB-C and the IDE detects which ForgeBoard it is, loads the right examples and flashes with one click. Serial monitor and plotter built in.</p>
       <div class="pdp-cta">
         <span class="btn btn-ink">Coming soon</span>
@@ -1071,9 +1187,9 @@ def page_software() -> str:
 def page_docs() -> str:
     cards = []
     for b in BOARDS:
-        items = "".join(
-            f'<li><a href="../boards/{b["id"]}/"><span>{e(d)}</span><span class="eyebrow mono-muted">Soon</span></a></li>'
-            for d in DOWNLOADS
+        items = download_items(
+            b, r="../", soon_href=f'../boards/{b["id"]}/', reveal=False,
+            show_size=False,
         )
         cards.append(f"""
       <li class="rv">
@@ -1090,7 +1206,7 @@ def page_docs() -> str:
   <div class="rail">
     <span class="eyebrow mono-muted">Docs</span>
     <div class="stack" style="gap:28px">
-      <h1 class="h-pg">Documentation.</h1>
+      <h1 class="h-pg" data-split>Documentation.</h1>
       <p class="lede">Datasheets, pinouts, schematics and getting-started guides for every ForgeBoard.</p>
     </div>
   </div>
@@ -1108,75 +1224,12 @@ def page_docs() -> str:
 
 
 
-def page_store() -> str:
-    """Where to buy. No prices are printed anywhere in this project, so none are
-    invented here — the page routes to the enquiry, which is how the boards are
-    actually sold."""
-    rows = []
-    for i, b in enumerate(BOARDS):
-        rows.append(f"""
-      <li class="rv">
-        <a class="board-row" href="../boards/{b['id']}/">
-          <span class="eyebrow mono-muted">{str(i+1).zfill(2)}</span>
-          <div class="stack" style="gap:10px">
-            <h2><span class="nm">{e(b['name'])}</span><span class="tg">{e(b['tag'])}</span></h2>
-            <p class="eyebrow mono-muted">{e(spec_line(b))}</p>
-          </div>
-          <div class="art"><img src="../{render(b['id'], '3d')}" srcset="{srcset(render(b['id'], '3d'), render_sm(b['id'], '3d')).replace('assets/', '../assets/')}" sizes="(max-width:860px) 70vw, 24vw" alt="ForgeBoard {b['name']} board" loading="lazy" decoding="async"></div>
-          <ul class="hl"><li>Ships from Pune</li><li>Priced in ₹, GST invoice</li><li>Specs &amp; order →</li></ul>
-        </a>
-      </li>""")
-
-    ways = [
-        ("Single boards", "One board, or a handful. Dispatched from Pune, usually the next working day."),
-        ("Classroom packs", "Ten boards and up for labs and workshops, with a single GST invoice and one point of contact."),
-        ("Bulk &amp; OEM", "Volume pricing for products going to market. Tell us the quantity and the schedule."),
-    ]
-    way_html = "".join(
-        f'<li class="rv"><h2>{w}</h2><p>{d}</p></li>' for w, d in ways
-    )
-
-    body = f"""
-<section class="page">
-  <div class="rail" style="margin-bottom:80px">
-    <span class="eyebrow mono-muted">Store</span>
-    <div class="stack" style="gap:28px">
-      <h1 class="h-pg">Buy direct.</h1>
-      <p class="lede">We sell the boards ourselves — no distributor in the middle. Tell us which board and how
-        many, and you get pricing in ₹ and a dispatch date within one working day.</p>
-      <div class="pdp-cta">
-        <a class="btn btn-ink" href="../contact/">Request pricing</a>
-        <a class="btn btn-ghost" href="../compare/">Compare the four ↓</a>
-      </div>
-    </div>
-  </div>
-  <ul class="board-rows">{"".join(rows)}
-  </ul>
-  <div class="rail" style="margin-top:var(--sect)">
-    <span class="eyebrow mono-muted">How you buy</span>
-    <ul class="sw-cols">{way_html}</ul>
-  </div>
-</section>
-"""
-    return shell(
-        out_path="store/index.html",
-        title="Store — buy ForgeBoard direct",
-        description=(
-            "Buy ForgeBoard boards direct from Defence Forge Industries. Single boards, "
-            "classroom packs and bulk, priced in rupees and shipped across India."
-        ),
-        body=body,
-        nav_key="store",
-    )
-
-
 def page_about() -> str:
     facts = [
         ("Company", "Defence Forge Industries Pvt. Ltd."),
         ("CIN", CONTACT["cin"]),
         ("GST", CONTACT["gst"]),
         ("Startup India", CONTACT["dipp"]),
-        ("Address", CONTACT["address"]),
     ]
     fact_html = "".join(
         f'<div><dt class="eyebrow mono-muted">{k}</dt><dd>{e(v)}</dd></div>' for k, v in facts
@@ -1236,7 +1289,7 @@ def page_about() -> str:
   <div class="rail">
     <span class="eyebrow mono-muted">About</span>
     <div class="stack" style="gap:28px">
-      <h1 class="h-pg">We build the boards we wanted.</h1>
+      <h1 class="h-pg" data-split>We build the boards the world wanted.</h1>
       <p class="lede">Defence Forge Industries designs, manufactures and supports every ForgeBoard in India —
         from the schematic to the pick-and-place line to the engineer who answers when something goes wrong.</p>
     </div>
@@ -1247,7 +1300,7 @@ def page_about() -> str:
       <div class="mii-main">
         <img class="photo" src="../assets/photos/lab-wide.webp" srcset="{srcset("assets/photos/lab-wide.webp", "assets/photos/lab-wide-sm.webp").replace('assets/', '../assets/')}" sizes="(max-width:860px) 92vw, 58vw" alt="The Defence Forge laboratory" loading="lazy" decoding="async">
       </div>
-      <p class="mii-cap eyebrow"><span>Defence Forge Laboratory · Loni Kalbhor, Pune</span></p>
+      <p class="mii-cap eyebrow"><span>Defence Forge Laboratory · Pune</span></p>
     </div>
     <div class="mii-side rv">
       <a class="shot shot-go" href="../boards/">
@@ -1313,85 +1366,36 @@ def page_about() -> str:
 
 
 def page_contact() -> str:
-    """The quote request.
+    """Contact. Name, email, message — and the ways to reach us directly.
 
-    A quotation is priced per line, so this is a line-item form: a quantity
-    against each board rather than one board and one number. That is the
-    whole of the difference between "which board are you interested in" and
-    something the people on the other end can actually price.
-
-    Everything past the quantities is optional except a name and a way to
-    reply — every field on a form like this costs completions, so only what a
-    quotation cannot be written without is required. GSTIN and the delivery
-    state are asked for because they change the document rather than because
-    they are nice to have: the state decides whether the tax splits into
-    CGST and SGST or lands as IGST, and without a GSTIN the buyer cannot take
-    input credit against the invoice that follows.
+    It used to be a line-item quotation form (quantities per board, delivery
+    state, GSTIN). That is a lot to ask of someone who just wants to say
+    hello, so it is now the plain page: three fields, and the phone number
+    and email right beside them for anyone who would rather skip the form.
     """
-    rows = ""
-    for b in BOARDS:
-        bid, name = e(b["id"]), e(b["name"])
-        rows += (
-            "<li>"
-            f'<label for="qty-{bid}"><span class="q-name">{name}</span>'
-            f'<span class="q-meta eyebrow mono-muted">{nb(e(b["chip_line"]))}'
-            f' &middot; {e(b["gpio"])} GPIO</span></label>'
-            f'<input class="q-qty" id="qty-{bid}" name="qty-{bid}" data-board="{name}"'
-            ' type="number" min="0" step="1" inputmode="numeric" placeholder="0"'
-            f' aria-label="Quantity of {name}">'
-            "</li>"
-        )
-
     body = f"""
 <section class="page">
   <div class="contact-grid">
-    <span class="eyebrow">Quotation · Ask</span>
+    <span class="eyebrow">Contact</span>
     <div class="stack" style="gap:40px">
       <div class="stack" style="gap:28px">
-        <h1 class="h-pg">Let’s talk.</h1>
-        <p class="lede" style="max-width:40ch">We sell direct. Put quantities against the boards you
-          need and you’ll have a quotation in ₹ within one working day.</p>
+        <h1 class="h-pg" data-split>Let’s talk.</h1>
+        <p class="lede" style="max-width:40ch">Orders, bulk pricing for colleges, a pin you can’t make
+          sense of — write to us and it reaches the engineers who made the board.</p>
       </div>
       <dl class="contact-dl">
-        <div><dt class="eyebrow mono-muted">Phone</dt><dd><a href="{CONTACT['phone_href']}">{CONTACT['phone']}</a></dd></div>
         <div><dt class="eyebrow mono-muted">Email</dt><dd><a href="mailto:{CONTACT['email']}">{CONTACT['email']}</a></dd></div>
-        <div><dt class="eyebrow mono-muted">Address</dt><dd>{e(CONTACT['address'])}</dd></div>
         <div><dt class="eyebrow mono-muted">GST</dt><dd class="gst">{CONTACT['gst']}</dd></div>
       </dl>
     </div>
 
-    <form class="form quote-form">
-      <fieldset class="q-items">
-        <legend class="eyebrow">Boards and quantities</legend>
-        <ul class="q-list">{rows}</ul>
-        <p class="q-total eyebrow mono-muted" data-q-total aria-live="polite">No quantities yet</p>
-      </fieldset>
-
+    <form class="form">
       <div class="two">
         <label class="eyebrow">Name<input name="name" autocomplete="name" required></label>
         <label class="eyebrow">Email<input name="email" type="email" autocomplete="email" spellcheck="false" required></label>
       </div>
-      <div class="two">
-        <label class="eyebrow"><span class="q-lab">Company<i class="q-opt">optional</i></span><input name="company" autocomplete="organization"></label>
-        <label class="eyebrow"><span class="q-lab">Phone<i class="q-opt">optional</i></span><input name="phone" type="tel" autocomplete="tel" spellcheck="false"></label>
-      </div>
-      <div class="two">
-        <label class="eyebrow"><span class="q-lab">Delivery state<i class="q-opt">optional</i></span><input name="state" autocomplete="address-level1" placeholder="Maharashtra"></label>
-        <label class="eyebrow"><span class="q-lab">GSTIN<i class="q-opt">optional</i></span><input name="gstin" spellcheck="false"></label>
-      </div>
-      <label class="eyebrow">Anything else<textarea name="message" rows="3" placeholder="What are you building, and when do you need it?"></textarea></label>
-
-      <div class="q-promise">
-        <p class="eyebrow mono-muted">What comes back</p>
-        <ul>
-          <li>A unit price in ₹ against every line, and the order total</li>
-          <li>HSN code per line, and the GST split for your state — CGST + SGST inside Maharashtra, IGST outside it</li>
-          <li>How long the price holds, and a dispatch date</li>
-          <li>Within one working day, from the people who made the board</li>
-        </ul>
-      </div>
-
-      <button type="submit">Request quotation</button>
+      <label class="eyebrow">Message<textarea name="message" rows="5" placeholder="What are you building, and how can we help?" required></textarea></label>
+      <button type="submit">Send message</button>
       <p class="eyebrow form-note" aria-live="polite"></p>
     </form>
   </div>
@@ -1399,10 +1403,10 @@ def page_contact() -> str:
 """
     return shell(
         out_path="contact/index.html",
-        title="Request a quotation — ForgeBoard",
+        title="Contact — ForgeBoard",
         description=(
-            "Request a quotation for ForgeBoard boards direct from Defence Forge "
-            "Industries. Priced in rupees with GST, dispatched from Pune."
+            "Contact Defence Forge Industries about ForgeBoard boards, orders, "
+            "bulk pricing for colleges and support."
         ),
         body=body,
         nav_key="",
@@ -1420,7 +1424,6 @@ def main() -> int:
         "software/index.html": page_software(),
         "docs/index.html": page_docs(),
         "contact/index.html": page_contact(),
-        "store/index.html": page_store(),
         "about/index.html": page_about(),
     }
     for b in BOARDS:
