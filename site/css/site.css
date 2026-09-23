@@ -1484,6 +1484,11 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
   .pdp-hero h1{order:1;padding:12px var(--pad) 0}
   .pdp-board{order:2;width:100%;min-height:var(--pdp-board-h);justify-self:stretch}
   .pdp-stage fb-board{width:52vw;height:var(--pdp-board-h)}
+  /* Top and Bottom on a phone are renders, not the sheet: there are no
+     margins to keep for labels, so the board takes the width and the
+     stage only the height the render needs. */
+  .pdp-hero:has(.hs.is-flat) .pdp-board{min-height:0}
+  .pdp-hero:has(.hs.is-flat) .pdp-stage fb-board{width:84vw;height:min(56vh,520px)}
   .pdp-views{order:3;justify-self:center;margin:10px 0 6px}
   .pdp-intro{order:4;padding:20px var(--pad) 0;gap:12px}
   /* The labels at a phone's size: wrapping within the margin, each line
