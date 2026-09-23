@@ -531,6 +531,17 @@
     })();
     const HALO = 2.3;        // the light's width, in board heights
     const BOB = 0.06;        // how far the front board rides up and down, in units of fit
+    // Phone, at rest: the board that comes to the front pops — up, forward
+    // and a size larger, on a spring with a little overshoot, so its
+    // arrival is an event rather than a drift. The ring makes room: the
+    // board across the back rises as the front one pops. Phone only; on a
+    // desktop the pointer does this on hover.
+    const POP_FRONT = 0.10;  // larger by this much
+    const POP_RISE = 0.05;   // up by this much, in units of fit
+    const POP_FWD = 0.30;    // forward by this much, in ring radii
+    const POP_ROOM = 0.14;   // how far the board across the back rises to make room, in units of fit
+    const POP_W = 9, POP_Z = 0.6;   // the spring: rad/s, damping ratio — under-damped, so it pops
+    let frontI = -1;         // the board at the front, from the last frame
 
     // A field of points well behind the ring. It gives the dark somewhere to
     // be — the boards read as floating in a space rather than on a flat panel
@@ -756,6 +767,7 @@
 
       nodes.push({
         slot, holder, mats, unit, halo, fk: 0,
+        pk: 0, pv: 0,   // the pop: how far in, and its speed
         // Each board's own extents, not its largest side: a tall board should
         // not claim a wide hit area it does not fill.
         halfX: (size.x * unit) / 2,
@@ -916,6 +928,21 @@
         n.fk = focused >= 0 ? (i === focused ? 1 : 0) : Math.pow(Math.max(0, Math.cos(th)), 3);
         if (!reduced && focused < 0) n.slot.position.y += Math.sin(now / 1300 + i * 1.3) * BOB * fitS * n.fk;
 
+        // The pop, on a phone: sprung in when this board becomes the front
+        // one, sprung out when it stops being; the rest of the ring rises
+        // out of its way by how far the front one is in.
+        const popWant = phone && focused < 0 && i === frontI ? 1 : 0;
+        if (reduced) { n.pk = popWant; n.pv = 0; }
+        else {
+          const dts = Math.min(dt, 50) / 1000;
+          n.pv += ((popWant - n.pk) * POP_W * POP_W - n.pv * 2 * POP_Z * POP_W) * dts;
+          n.pk += n.pv * dts;
+        }
+        const popIn = phone ? Math.max(0, n.pk) : 0;
+        const frontIn = phone && frontI >= 0 && frontI !== i ? Math.max(0, nodes[frontI].pk) : 0;
+        n.slot.position.y += (POP_RISE * popIn + POP_ROOM * behind * behind * frontIn) * fitS;
+        n.slot.position.z += POP_FWD * fitR * popIn * (1 - p);
+
         // The board being held turns right round — a full revolution in about
         // eleven seconds — so you see its face, its edge and its back. It
         // is deliberately slow: this is the board you are being invited to
@@ -952,7 +979,7 @@
         const tDepth = (Math.cos(th) + 1) / 2;
         const depthK = w < h ? (0.42 + 0.58 * tDepth) * (1 - p) + p : 1;   // small at the back, full in front
         // Phone, on the row: the size the row was solved for.
-        let sf = fitS * (1 + popK * p) * depthK;
+        let sf = fitS * (1 + popK * p) * depthK * (1 + POP_FRONT * popIn);
         if (onRow) sf += (n.shelfAt.sf - sf) * onRow;
         n.holder.scale.setScalar(n.unit * sf);
 
@@ -1011,6 +1038,7 @@
         if (zc > bestZ) { bestZ = zc; bestI = i; }
       });
 
+      frontI = bestI;
       nameBoard(focused >= 0 ? focused : bestI);
       if (cursorEl && fine) {
         cursorEl.style.transform = 'translate3d(' + px + 'px,' + py + 'px,0)';
