@@ -62,14 +62,14 @@
   // a board comes to the front it pops, the plate names it, and its own
   // turn begins — right round once, slowly — carrying on as the ring moves
   // it along. A swipe adds its momentum; the turn goes on from there.
-  const PHONE_TURN = TURN * 3.2;   // the ring's pace on a phone: a board every three and a half seconds
+  const PHONE_TURN = TURN * 2.3;   // the ring's pace on a phone: a board every five seconds
   const POP_ZONE = 0.42;   // radians either side of the front within which a board is "at the front"
   // A board's own turn is tied to its passage, not to a clock: it begins
   // as the board comes in from the left, this far from the front, and it
   // faces you again as the board leaves on the right, the same distance
   // past it. The ring's pace sets the turn's; a swipe drives it like a
   // gear, backwards too.
-  const TURN_ZONE = 1.2;   // radians either side of the front over which the turn runs
+  const TURN_ZONE = 1.4;   // radians either side of the front over which the turn runs
   // The boards' own motion on a phone is the product page's: a swing of
   // 0.3 rad each way over nine seconds, with a slight nod on a period that
   // does not divide into it, so it never repeats the same arc twice.
