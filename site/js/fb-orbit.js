@@ -1072,9 +1072,11 @@
         // back is smaller and the sides between, so the ring reads as a ring
         // and not as four boards laid on one another; a held board is full.
         const tDepth = (Math.cos(th) + 1) / 2;
-        // 45% at the back, about 60% at the sides, full in front — a circle
-        // seen from above, each board the size its depth gives it.
-        const depthK = (0.45 + 0.55 * Math.pow(tDepth, 2)) * (1 - p) + p;
+        // Portrait: 45% at the back, about 60% at the sides, full in front —
+        // a circle seen from above, each board the size its depth gives it.
+        // Landscape: the ring is wide and deep enough that the camera's own
+        // perspective grades the sizes; scaled as well, the sides were specks.
+        const depthK = w < h ? (0.45 + 0.55 * Math.pow(tDepth, 2)) * (1 - p) + p : 1;
         // Phone, on the row: the size the row was solved for.
         let sf = fitS * (1 + popK * p) * depthK;
         if (onRow) sf += (n.shelfAt.sf - sf) * onRow;
@@ -1110,7 +1112,7 @@
         // meshes' materials every frame for an unchanged value is waste.
         // Held: lifted out of the dark. Not held, while another is: sat back
         // into it. Nothing held: as lit as it was.
-        const depthDim = 0.78 + 0.22 * tDepth;   // the back sits back a little, still clearly lit
+        const depthDim = phone ? 0.78 + 0.22 * tDepth : 1;   // portrait: the back sits back a little, still clearly lit
         // Phone, one held: the row is behind, not in the dark — lit enough
         // to be read as the three boards it is.
         const want = focused < 0 ? depthDim * (1 + 0.1 * n.fk)   // the front board, lifted a little
