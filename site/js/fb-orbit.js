@@ -64,7 +64,7 @@
   // arrival, a pause and a departure. A swipe takes over; when it is
   // spent the ring settles on the nearest board and the cycle goes on.
   const DWELL = 2000;      // ms the ring stops at each board
-  const PHONE_TURN = TURN * 2.5;   // the ring's pace between stops on a phone: a board every four and a half seconds
+  const PHONE_TURN = TURN * 3.2;   // the ring's pace between stops on a phone: a board every three and a half seconds
   const FRONT_TURN = (Math.PI * 2) / 24000;   // the stopped board's own gentle turn, radians per ms
   let stepping = false;    // set by the 3D frame: portrait, boards up
   let atRest = false;      // the ring is settled on a board (the pop's cue)
