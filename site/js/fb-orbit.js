@@ -64,7 +64,12 @@
   // it along. A swipe adds its momentum; the turn goes on from there.
   const PHONE_TURN = TURN * 3.2;   // the ring's pace on a phone: a board every three and a half seconds
   const POP_ZONE = 0.42;   // radians either side of the front within which a board is "at the front"
-  const SPIN_MS = 6000;    // ms a board's own turn takes, right round once
+  // A board's own turn is tied to its passage, not to a clock: it begins
+  // as the board comes in from the left, this far from the front, and it
+  // faces you again as the board leaves on the right, the same distance
+  // past it. The ring's pace sets the turn's; a swipe drives it like a
+  // gear, backwards too.
+  const TURN_ZONE = 1.2;   // radians either side of the front over which the turn runs
   // The boards' own motion on a phone is the product page's: a swing of
   // 0.3 rad each way over nine seconds, with a slight nod on a period that
   // does not divide into it, so it never repeats the same arc twice.
@@ -962,18 +967,21 @@
         // within a few degrees of it either side — sprung out as it passes
         // on; the rest of the ring rises out of its way by how far the
         // front one is in.
-        const thN = ((th % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-        const offFront = Math.min(thN, Math.PI * 2 - thN);
+        // The signed angle from the front: negative to the left, positive to
+        // the right, ±π across the back.
+        const sth = (((th + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+        const offFront = Math.abs(sth);
         const popWant = phone && focused < 0 && offFront < POP_ZONE ? 1 : 0;
         if (popWant) zoneI = i;
-        if (popWant && !n.popOn) n.showK = 0;   // at the front: its turn begins
         n.popOn = !!popWant;
-        // The turn: right round once at a near-constant pace, carrying on
-        // as the ring moves the board along, until it faces you again. A
-        // ramp with soft ends: a tenth of the turn to get going, a tenth
-        // to stop.
+        // The turn: how far across the front the board is, from its left
+        // edge to its right — 0 before, 1 (facing you, a full turn done)
+        // after. A held board finishes its turn and faces you. A ramp with
+        // soft ends: a tenth of the turn to get going, a tenth to stop.
         if (reduced) n.showK = 1;
-        else if (n.showK < 1) n.showK = Math.min(1, n.showK + dt / SPIN_MS);
+        else if (focused >= 0) n.showK = Math.min(1, n.showK + dt / 2000);
+        else if (phone) n.showK = Math.max(0, Math.min(1, (sth + TURN_ZONE) / (2 * TURN_ZONE)));
+        else n.showK = 1;
         const kk = n.showK, ra = 0.1, rs = 1 / (1 - ra);
         n.showA = Math.PI * 2 * (kk < ra ? (rs / (2 * ra)) * kk * kk
           : kk > 1 - ra ? 1 - (rs / (2 * ra)) * (1 - kk) * (1 - kk) : rs * (kk - ra / 2));
