@@ -989,6 +989,8 @@ def page_product(b: dict) -> str:
     size_note = f"Board size {b['size']}. " if b["size"] else ""
     roll = BOARD_ROLL.get(b["id"], 0)
     roll_attr = f' roll="{roll}"' if roll else ""
+    roll_p = HERO_ROLL.get(b["id"], 0)       # upright, as the home hero shows it
+    roll_attr += f' roll-phone="{roll_p}"'
 
     body = f"""
 <article>

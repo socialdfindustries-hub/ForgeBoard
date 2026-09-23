@@ -1449,53 +1449,27 @@ fb-board.is-3d,fb-board.is-3d *{touch-action:none;-webkit-user-select:none;user-
   .board-row .art{height:230px}
   .board-row .hl{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px}
 
-  /* Product hero on a phone. The board takes the screen's width; the
-     callouts become a strip under it that you swipe through, and the board
-     carries one at a time — a dot on the part, one leader from it down to
-     the rule the card's words sit on. The stage and title wrappers are
-     dissolved so their children are items of the hero grid, in this
-     order: name, board, strip, view switch, the line and the buttons. */
-  /* One column that cannot grow past the screen: the strip's eight cards
-     would otherwise size the column to their sum and nothing would scroll. */
-  .pdp-hero{--pdp-board-h:min(42vh,420px);padding-top:100px;min-height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-auto-rows:auto;row-gap:0}
-  .pdp-stage,.pdp-board,.pdp-title{display:contents}
+  /* Product hero on a phone: the desktop's callout sheet, on a tall screen.
+     The board stands upright and takes the middle of the stage; the labels
+     take the margins either side, wired to their parts as they are on the
+     desktop, and may wrap within a margin's width. The stage and title
+     wrappers are dissolved so their children are items of the hero grid,
+     in this order: name, the board with its labels, view switch, the line
+     and the buttons. One column that cannot grow past the screen. */
+  .pdp-hero{--pdp-board-h:min(62vh,600px);padding-top:100px;min-height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-auto-rows:auto;row-gap:0}
+  .pdp-stage,.pdp-title{display:contents}
   .pdp-hero h1{order:1;padding:12px var(--pad) 0}
-  .pdp-stage fb-board{order:2;justify-self:stretch;width:100%;height:var(--pdp-board-h)}
-  .pdp-hero .hs{order:3}
-  .pdp-views{order:4;justify-self:center;margin:20px 0 6px}
-  .pdp-intro{order:5;padding:20px var(--pad) 0;gap:12px}
-  /* The strip: in the flow, not an overlay; its leader layer reaches up
-     over the board from it. */
-  .hs.is-live{position:relative;inset:auto;min-width:0;pointer-events:auto;padding:4px 0 0}
-  .hs.is-live .hs-lede{display:flex;justify-content:space-between;align-items:baseline;margin:0 var(--pad) 12px;text-align:left}
-  .hs-count{font-variant-numeric:tabular-nums}
-  .hs.is-live .hs-wires{top:calc(-1 * var(--pdp-board-h) - 4px);height:calc(100% + var(--pdp-board-h) + 4px);pointer-events:none}
-  .hs.is-strip .hs-wire{stroke:var(--brand);stroke-width:1.5}
-  .hs-dot{fill:var(--brand)}
-  .hs.is-live .hs-list{
-    display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:18px;overflow-x:auto;overscroll-behavior-x:contain;
-    scroll-snap-type:x mandatory;scroll-padding-left:var(--pad);scrollbar-width:none;
-    padding:0 var(--pad);-webkit-overflow-scrolling:touch;
-  }
-  .hs.is-live .hs-list::-webkit-scrollbar{display:none}
-  .hs.is-live .hs-item{flex:0 0 72vw;scroll-snap-align:start}
-  /* A card: the words on their rule, nothing drawn around them. */
-  .hs.is-live .hs-pt{
-    position:static;transform:none!important;display:block;width:100%;
-    padding:12px 0 6px;margin:0;border:0;border-top:1px solid var(--line);border-radius:0;
-    background:none;white-space:normal;text-align:left;pointer-events:auto;
-    opacity:1!important;transition:opacity .25s var(--ease);
-  }
-  .hs.is-live .hs-item:not(.is-cur) .hs-pt{opacity:.45!important}
-  .hs.is-live .hs-txt{display:block;transform:none}
-  /* one alignment for every card, whichever side of the board its part is on:
-     the words start where the leader's run along the rule ends */
-  .hs.is-live .hs-pt.hs-l .hs-txt,.hs.is-live .hs-pt.hs-r .hs-txt{text-align:left}
-  .hs.is-live .hs-pt b{font-size:17px}
-  .hs.is-live .hs-pt i{margin-top:5px}
-  /* The board turned to its back has nothing to point at: the leader goes,
-     the strip stays — it is the list, and the list is always readable. */
-  .hs.is-away .hs-pt{visibility:visible}
+  .pdp-board{order:2;width:100%;min-height:var(--pdp-board-h);justify-self:stretch}
+  .pdp-stage fb-board{width:52vw;height:var(--pdp-board-h)}
+  .pdp-views{order:3;justify-self:center;margin:10px 0 6px}
+  .pdp-intro{order:4;padding:20px var(--pad) 0;gap:12px}
+  /* The labels at a phone's size: wrapping within the margin, each line
+     aligned to its column's side (the desktop's rule), the second line in
+     the same small-print voice. */
+  .hs.is-live .hs-pt{white-space:normal}
+  .hs.is-live .hs-txt{max-width:calc(24vw - 18px)}
+  .hs.is-live .hs-pt b{font-size:13px;line-height:1.15}
+  .hs.is-live .hs-pt i{font-size:9.5px;letter-spacing:.05em;line-height:1.3;margin-top:3px}
   .stat-row{grid-template-columns:repeat(2,1fr)}
   .stat-row li{padding:24px 20px 26px}
   .stat-row li:nth-child(2n){border-right:0}

@@ -54,18 +54,6 @@
   const PHONE = matchMedia('(max-width: 860px)');
   const phone = () => PHONE.matches;
 
-  // Which card of the strip is in front: the one whose left edge is nearest
-  // the strip's own, inside its padding — where scroll-snap rests it.
-  const stripPick = (list, lis) => {
-    const x0 = list.getBoundingClientRect().left + (parseFloat(getComputedStyle(list).paddingLeft) || 0);
-    let best = 0, bd = Infinity;
-    lis.forEach((li, i) => {
-      const d = Math.abs(li.getBoundingClientRect().left - x0);
-      if (d < bd) { bd = d; best = i; }
-    });
-    return best;
-  };
-
   // The idle turn: how far the board swings, and how long one pass takes.
   // Seventeen degrees each way, so a third of a turn end to end — enough
   // that you watch it move and enough for the board to show its own depth,
@@ -194,8 +182,16 @@
       // Belt and braces for phones: while the real model is up, no touch on
       // it may become a page scroll, whatever the browser thinks of touch-action.
       this.addEventListener('touchmove', (e) => { if (this.group && !phone()) e.preventDefault(); }, { passive: false });
-      // Across the breakpoint the callouts change shape: lay them out again.
-      PHONE.addEventListener('change', () => { if (this.hs) this.remountHotspots(); });
+      // Across the breakpoint the board changes pose (upright on a phone)
+      // and the callouts change sides: bring the model up again in the new one.
+      PHONE.addEventListener('change', () => {
+        if (!this.group || !this.getAttribute('src')) return;
+        this.gen = (this.gen || 0) + 1;
+        this.teardown3d();
+        if (this.hsLayer) this.hsLayer.classList.add('is-pending');   // the list waits for the model, as at first load
+        this.mountEmpty();
+        this.upgrade(true);
+      });
       this.raf = requestAnimationFrame(this.tick);
 
       if (this.getAttribute('src') && autoCapable()) {
@@ -447,6 +443,7 @@
       }
 
       const items = nodes.map((el) => {
+        const side = el.dataset.side;   // the desktop's column; a phone decides its own at first sight
         // An empty object parented to the model: three.js then carries it
         // through the same centring, uprighting and spin as the geometry,
         // and we never repeat that arithmetic here.
@@ -455,11 +452,11 @@
         this.modelRoot.add(at);
         const wire = document.createElementNS(NS, 'path');
         wire.setAttribute('class', 'hs-wire');
-        wire.setAttribute('stroke', `url(#hsw-${el.dataset.side})`);
+        wire.setAttribute('stroke', `url(#hsw-${side})`);
         if (svg) svg.appendChild(wire);
         return {
           el, wire, at,
-          side: el.dataset.side,
+          side,
           i: 0,
           local: new THREE.Vector3().fromArray(el.dataset.n.split(',').map(Number)),
           normal: new THREE.Vector3(),
@@ -475,175 +472,16 @@
         toCam: new THREE.Vector3(),
       };
       layer.classList.add('is-live');
-      if (phone()) this.mountStrip();
       this.placeHotspots();
     }
 
     unmountHotspots() {
       const hs = this.hs;
       if (!hs) return;
-      hs.items.forEach((it) => { if (this.modelRoot) this.modelRoot.remove(it.at); });
-      hs.layer.classList.remove('is-live', 'is-strip', 'is-away', 'has-open');
-      if (hs.strip) {
-        hs.lis.forEach((li) => li.classList.remove('is-cur'));
-        hs.items.forEach((it) => { it.el.style.transform = ''; it.el.style.opacity = ''; it.el.style.pointerEvents = ''; });
-      }
+      hs.layer.classList.remove('is-live', 'is-away', 'has-open');
+      // Back to the plain list: no placement left on the labels.
+      hs.items.forEach((it) => { it.el.style.transform = ''; it.el.style.opacity = ''; it.el.style.pointerEvents = ''; });
       this.hs = null;
-    }
-
-    remountHotspots() {
-      if (!this.group) return;
-      this.unmountHotspots();
-      this.mountHotspots();
-    }
-
-    /* ---------------- the phone: a strip ----------------
-     *
-     * A phone has no margins to hold two columns of labels, and eight
-     * leaders across a board the width of the screen point at everything
-     * at once. So the list becomes a strip under the board that you swipe
-     * through, and the board carries one callout at a time: a dot on the
-     * part in front of you and one leader from it down to the rule the
-     * card's words sit on. The label is the card itself — the leader
-     * reaches it, runs along its rule, and the words sit on that line,
-     * which is the same drawing convention the desktop uses. Swipe, and
-     * the leader draws itself out to the next part.
-     * ---------------- */
-
-    mountStrip() {
-      const hs = this.hs;
-      const layer = hs.layer;
-      const list = layer.querySelector('.hs-list');
-      if (!list) return;
-      const NS = 'http://www.w3.org/2000/svg';
-      hs.strip = true;
-      hs.list = list;
-      hs.lis = hs.items.map((it) => it.el.closest('.hs-item') || it.el);
-      // "3 / 8" at the end of the lede: the strip is longer than the screen.
-      const lede = layer.querySelector('.hs-lede');
-      if (lede && !lede.querySelector('.hs-count')) {
-        const c = document.createElement('span');
-        c.className = 'hs-count';
-        c.setAttribute('aria-hidden', 'true');
-        lede.appendChild(c);
-      }
-      hs.count = lede ? lede.querySelector('.hs-count') : null;
-      hs.items.forEach((it) => {
-        // any placement the desktop layout left on the label
-        it.el.style.transform = '';
-        it.el.style.opacity = '';
-        it.el.style.pointerEvents = '';
-        it.wire.style.opacity = '0';
-        it.wire.style.strokeDasharray = 'none';
-        const dot = document.createElementNS(NS, 'circle');
-        dot.setAttribute('class', 'hs-dot');
-        dot.setAttribute('r', '3');
-        dot.style.opacity = '0';
-        if (hs.svg) hs.svg.appendChild(dot);
-        it.dot = dot;
-      });
-      layer.classList.add('is-strip');
-      hs.cur = -1;
-      this.setCur(stripPick(list, hs.lis));   // wherever the strip was left — a remount after Top keeps its place
-      if (list.dataset.bound) return;   // the listeners outlive a remount; the strip's list does not change
-      list.dataset.bound = '1';
-
-      const padL = () => parseFloat(getComputedStyle(list).paddingLeft) || 0;
-      const pick = () => stripPick(list, this.hs && this.hs.lis ? this.hs.lis : []);
-      let queued = false;
-      list.addEventListener('scroll', () => {
-        if (queued) return;
-        queued = true;
-        requestAnimationFrame(() => { queued = false; if (this.hs && this.hs.strip) this.setCur(pick()); });
-      }, { passive: true });
-      // A tap on a card that is not in front brings it in front.
-      hs.lis.forEach((li, i) => {
-        li.addEventListener('click', () => {
-          if (!this.hs || !this.hs.strip || i === this.hs.cur) return;
-          const lr = li.getBoundingClientRect(), sr = list.getBoundingClientRect();
-          list.scrollTo({ left: list.scrollLeft + (lr.left - sr.left) - padL(), behavior: 'smooth' });
-        });
-      });
-    }
-
-    setCur(i) {
-      const hs = this.hs;
-      if (!hs || !hs.strip || i === hs.cur) return;
-      hs.cur = i;
-      hs.t0 = performance.now();   // the leader draws itself out to the new part
-      hs.lis.forEach((li, j) => li.classList.toggle('is-cur', j === i));
-      if (hs.count) hs.count.textContent = (i + 1) + ' / ' + hs.items.length;
-      hs.items.forEach((it, j) => {
-        if (j === i) return;
-        it.wire.style.opacity = '0';
-        if (it.dot) it.dot.style.opacity = '0';
-      });
-    }
-
-    placeStrip() {
-      const hs = this.hs;
-      const svg = hs.svg;
-      if (!svg) return;
-      const sr = svg.getBoundingClientRect();
-      const br = this.getBoundingClientRect();
-      const w = sr.width, h = sr.height, bw = br.width, bh = br.height;
-      if (!w || !h || !bw || !bh) return;
-      const cam = this.camera;
-      this.group.updateWorldMatrix(true, true);
-      // The leader layer hangs from the strip and reaches up over the board,
-      // so the projection — in canvas pixels — is shifted into its frame.
-      const ox = br.left - sr.left, oy = br.top - sr.top;
-
-      for (const it of hs.items) {
-        it.at.getWorldPosition(hs.pos);
-        it.normal.copy(it.local).transformDirection(this.modelRoot.matrixWorld);
-        hs.toCam.copy(cam.position).sub(hs.pos).normalize();
-        it.facing = it.normal.dot(hs.toCam);
-        hs.pos.project(cam);
-        it.px = ox + (hs.pos.x * 0.5 + 0.5) * bw;
-        it.py = oy + (-hs.pos.y * 0.5 + 0.5) * bh;
-      }
-
-      const it = hs.items[hs.cur];
-      const li = hs.lis[hs.cur];
-      if (it && li) {
-        const lr = li.getBoundingClientRect();
-        const xL = lr.left - sr.left;            // the rule's left end: where the words start
-        const xR = lr.right - sr.left;
-        const yR = lr.top - sr.top + 0.5;        // the rule: the card's top border
-        // Down from the part to the rule, landing under the part where it
-        // can (never past the card's ends), then along the rule to the words.
-        const xE = Math.max(xL + 12, Math.min(xR - 12, it.px));
-        it.wire.setAttribute('d',
-          'M' + it.px.toFixed(1) + ' ' + it.py.toFixed(1) +
-          'L' + xE.toFixed(1) + ' ' + yR.toFixed(1) +
-          'H' + xL.toFixed(1));
-        const facing = Math.max(0, Math.min(1, (it.facing - 0.04) / 0.30));
-        const t = performance.now() - hs.t0;
-        const k = 1 - Math.pow(1 - Math.max(0, Math.min(1, (t - 60) / 420)), 3);
-        it.wire.style.opacity = (facing * k).toFixed(3);
-        if (k < 1) {
-          const len = it.wire.getTotalLength() || 0;
-          it.wire.style.strokeDasharray = len.toFixed(1);
-          it.wire.style.strokeDashoffset = (len * (1 - k)).toFixed(1);
-        } else {
-          it.wire.style.strokeDasharray = 'none';
-          it.wire.style.strokeDashoffset = '0';
-        }
-        if (it.dot) {
-          it.dot.setAttribute('cx', it.px.toFixed(1));
-          it.dot.setAttribute('cy', it.py.toFixed(1));
-          it.dot.setAttribute('r', (3 * k).toFixed(2));
-          it.dot.style.opacity = facing.toFixed(3);
-        }
-      }
-
-      const away = hs.items.length > 0 && hs.items.every((x) => x.facing < 0.04);
-      if (away !== hs.away) {
-        hs.away = away;
-        hs.layer.classList.toggle('is-away', away);
-      }
-      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
     }
 
     /** Lay a column out: in the order the parts appear up the board, evenly
@@ -692,7 +530,6 @@
 
     placeHotspots() {
       const hs = this.hs;
-      if (hs.strip) { this.placeStrip(); return; }
       const host = hs.layer;
       const w = host.clientWidth, h = host.clientHeight;
       const bw = this.clientWidth, bh = this.clientHeight;
@@ -704,8 +541,18 @@
       // labels live in the margins either side. Projection is in canvas
       // pixels, so everything is shifted into the layer's frame once here.
       const ox = (w - bw) / 2, oy = (h - bh) / 2;
-      const colL = Math.max(ox - 18, 96);
-      const colR = Math.min(ox + bw + 18, w - 96);
+      // The columns sit just outside the canvas. The clamp keeps a column
+      // inside the layer with room for its labels: 96px is a desktop label.
+      // On a phone the margins are all there is, so a column may run to
+      // within a few pixels of the screen's edge and stands off the canvas
+      // less; and the labels take the layer's whole height, not the
+      // canvas's, since the layer is the taller of the two there.
+      const ph = phone();
+      const edge = ph ? 8 : 96, off = ph ? 10 : 18;
+      const colL = Math.max(ox - off, edge);
+      const colR = Math.min(ox + bw + off, w - edge);
+      const landing = ph ? 14 : LANDING;
+      const cTop = ph ? 24 : oy + 24, cBot = ph ? h - 24 : oy + bh - 24;
 
       for (const it of hs.items) {
         it.at.getWorldPosition(hs.pos);
@@ -724,6 +571,23 @@
         it.y = it.py;
         it.h = it.el.offsetHeight || 20;
         it.w = it.el.offsetWidth || 80;
+      }
+
+      // On a phone the side is decided here, from where the part actually
+      // projects at rest, rather than at build time: the model's own origin
+      // is not the board's centre, and at the upright pose that puts most
+      // of a board's parts on one side of it. Once, like the desktop's.
+      if (ph && !hs.sided) {
+        hs.sided = true;
+        const mid = ox + bw / 2;
+        for (const it of hs.items) {
+          it.side = it.px < mid ? 'l' : 'r';
+          it.el.classList.toggle('hs-l', it.side === 'l');
+          it.el.classList.toggle('hs-r', it.side !== 'l');
+          it.wire.setAttribute('stroke', `url(#hsw-${it.side})`);
+        }
+        hs.left = hs.items.filter((i) => i.side === 'l');
+        hs.right = hs.items.filter((i) => i.side !== 'l');
       }
 
       // Run the reveal down each column from the top, not in markup order,
@@ -749,8 +613,21 @@
       const span = Math.max(far - near, 1e-4);
 
 
-      FBBoard.column(hs.left, oy + 24, oy + bh - 24, 18, colL);
-      FBBoard.column(hs.right, oy + 24, oy + bh - 24, 18, colR);
+      // A phone's stage is a set height; a board with many parts, or a small
+      // screen, can need more for its columns than that. Measured once the
+      // labels have a size, and the stage grows to fit — the canvas keeps
+      // its height and stays centred in it.
+      if (ph && !hs.grown) {
+        const need = Math.max(...[hs.left, hs.right].map((col) =>
+          col.reduce((s, it) => s + it.h, 0) + Math.max(0, col.length - 1) * 10)) + 48;
+        hs.grown = true;
+        if (need > h + 1 && host.parentElement) {
+          host.parentElement.style.minHeight = Math.ceil(need) + 'px';
+          return;                                  // laid out again next frame, at the new height
+        }
+      }
+      FBBoard.column(hs.left, cTop, cBot, ph ? 10 : 18, colL);
+      FBBoard.column(hs.right, cTop, cBot, ph ? 10 : 18, colR);
 
       for (const it of hs.items) {
         const el = it.el;
@@ -798,7 +675,7 @@
         // shallow run, which leaves a landing most of the way across the
         // stage, and that near-horizontal rule cuts straight through the
         // leaders of the labels above it. A short shelf cannot.
-        const elbowX = colX - dir * LANDING;
+        const elbowX = colX - dir * landing;
 
         it.wire.setAttribute('d',
           'M' + it.px.toFixed(1) + ' ' + it.py.toFixed(1) +
@@ -934,7 +811,10 @@
       // the page presents is a property of the board, not of the camera.
       soften(obj, GLOSS);
 
-      const roll = parseFloat(this.getAttribute('roll'));
+      // The phone stands the board upright — its own pose, the one the home
+      // hero shows it in — so that it is tall on a tall screen and its parts
+      // sit beside their labels.
+      const roll = parseFloat(this.getAttribute(phone() && this.hasAttribute('roll-phone') ? 'roll-phone' : 'roll'));
       if (!Number.isNaN(roll)) obj.rotation.y = (roll * Math.PI) / 180;
 
       let box = new THREE.Box3().setFromObject(obj);
