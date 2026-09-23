@@ -62,7 +62,7 @@
   // board for two seconds. In them the board pops and the plate names it;
   // then the ring goes on. A swipe takes over; when it is spent the ring
   // settles on the nearest board and the cycle goes on from there.
-  const DWELL = 4000;      // ms the ring stops at each board: the turn below at the same slow pace
+  const DWELL = 4800;      // ms the ring stops at each board: the turn below, a little slower
   const PHONE_TURN = TURN * 3.2;   // the ring's pace between stops on a phone
   // The boards' own motion on a phone is the product page's: a swing of
   // 0.3 rad each way over nine seconds, with a slight nod on a period that
