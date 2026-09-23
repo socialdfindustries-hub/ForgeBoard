@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Local server that behaves like a real host.
 
-    python3 site/serve.py            # http://localhost:8791/ and on the LAN
+    python3 tools/serve.py            # http://localhost:8791/ and on the LAN
 
 Python's built-in `http.server` sends every byte raw and no cache headers,
 which makes the site feel far slower on a phone than it will in production:
@@ -26,7 +26,7 @@ import threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
-ROOT = pathlib.Path(__file__).resolve().parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent / "site"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8791
 
 COMPRESS = {".glb", ".js", ".css", ".html", ".json", ".svg", ".txt", ".md", ".mjs"}

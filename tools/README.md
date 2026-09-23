@@ -10,7 +10,7 @@ HTML, CSS and JavaScript, no framework and no dependencies to install.
 ## Build
 
 ```
-python3 site/build.py
+python3 tools/build.py
 ```
 
 Ten pages are generated from the board dataset at the top of `build.py`, so the
@@ -20,7 +20,7 @@ script writes **only** `.html` files and never touches `assets/`, `css/` or `js/
 ## Check
 
 ```
-python3 site/check.py
+python3 tools/check.py
 ```
 
 Confirms every page exists, every internal link, image, script and model
@@ -29,7 +29,7 @@ resolves on disk, and that no design-canvas markup survived into the output.
 ## Preview
 
 ```
-python3 site/serve.py
+python3 tools/serve.py
 ```
 
 It prints a localhost URL and a phone URL for the same Wi-Fi. Use this rather
@@ -91,7 +91,7 @@ node transform into the vertices, merges everything that shares a material
 Python, no dependencies, about two seconds for all four.
 
 ```
-python3 site/optimize_models.py "~/Desktop/Forgeboard/Infographics/GLB files"
+python3 tools/optimize_models.py "~/Desktop/Forgeboard/Infographics/GLB files"
 ```
 
 | board  | export | served | draw calls |

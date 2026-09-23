@@ -4,7 +4,7 @@
 Renders the static pages from one board dataset, so the product pages, the
 compare table and the docs index can never drift apart.
 
-    python3 site/build.py
+    python3 tools/build.py
 
 Writes only .html files. Never touches assets/, css/ or js/.
 """
@@ -19,7 +19,7 @@ import sys
 
 import hotspots
 
-ROOT = pathlib.Path(__file__).resolve().parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent / "site"   # the site: this tooling lives beside it, not in it
 
 # --------------------------------------------------------------------------
 # Data — ported from the ForgeBoard v2 design.
@@ -664,9 +664,11 @@ def shell(*, out_path: str, title: str, description: str, body: str,
     was cream with dark panels cut into it; the site is charcoal throughout
     now, so there is nothing to swap between.
     """
-    r = depth_prefix(out_path)
+    # The 404 page is served by the host at whatever address was missing,
+    # so nothing in it may be relative: its assets and links go from the root.
+    r = "/" if out_path == "404.html" else depth_prefix(out_path)
     root = r or "./"          # "" would mean "this document", not the root
-    page_url = SITE_URL + "/" + out_path[: -len("index.html")]
+    page_url = SITE_URL + "/" + (out_path[: -len("index.html")] if out_path.endswith("index.html") else out_path)
 
     def cur(key: str) -> str:
         return ' aria-current="page"' if key == nav_key else ""
@@ -1364,6 +1366,29 @@ def page_about() -> str:
     )
 
 
+def page_404() -> str:
+    """The page for an address that is not one. The host serves it with a
+    404 status wherever the miss was, so it says so plainly and points at
+    the places that exist, by absolute paths."""
+    body = """
+<section class="page stack" style="gap:40px">
+  <div class="rail">
+    <span class="eyebrow mono-muted">404</span>
+    <div class="stack" style="gap:28px">
+      <h1 class="h-pg" data-split>Not found.</h1>
+      <p class="lede">There is nothing at this address. The boards, the comparison and the documentation are where they always are.</p>
+      <div class="pdp-cta">
+        <a class="btn btn-ink" href="/boards/">All boards</a>
+        <a class="btn btn-ghost" href="/">Home</a>
+      </div>
+    </div>
+  </div>
+</section>
+"""
+    return shell(out_path="404.html", title="Not found — ForgeBoard",
+                 description="There is nothing at this address.", body=body)
+
+
 def page_contact() -> str:
     """Contact. Name, email, message — and the ways to reach us directly.
 
@@ -1424,6 +1449,7 @@ def main() -> int:
         "docs/index.html": page_docs(),
         "contact/index.html": page_contact(),
         "about/index.html": page_about(),
+        "404.html": page_404(),
     }
     for b in BOARDS:
         pages[f"boards/{b['id']}/index.html"] = page_product(b)

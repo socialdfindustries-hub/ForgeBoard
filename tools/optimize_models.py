@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Shrink the board models for the web. Pure Python, no dependencies.
 
-    python3 site/optimize_models.py "~/Desktop/Forgeboard/Infographics/GLB files"
+    python3 tools/optimize_models.py "~/Desktop/Forgeboard/Infographics/GLB files"
 
 Reads each Blender export and writes site/assets/models/<board>.glb, doing
 three things the exporter does not:
@@ -31,7 +31,7 @@ import struct
 import sys
 from array import array
 
-OUT_DIR = pathlib.Path(__file__).resolve().parent / "assets" / "models"
+OUT_DIR = pathlib.Path(__file__).resolve().parent.parent / "site" / "assets" / "models"
 
 # Texture recompression is the one place a dependency helps: these exports ship
 # 512x512 PNGs that carry no alpha, and the same image as JPEG is about a fifth

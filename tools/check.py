@@ -5,7 +5,7 @@ Verifies that every internal link, image, script, stylesheet and 3D model
 referenced by the built pages actually exists on disk, and that each page
 carries the things it is supposed to.
 
-    python3 site/check.py
+    python3 tools/check.py
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ import pathlib
 import re
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent / "site"
 
 EXTERNAL = re.compile(r"^(https?:|mailto:|tel:|#|data:)")
 REFS = re.compile(r'(?:href|src|poster)="([^"]+)"')
@@ -30,7 +30,10 @@ def fail(msg: str) -> None:
 
 def resolve(page: pathlib.Path, ref: str) -> pathlib.Path:
     ref = ref.split("#")[0].split("?")[0]
-    target = (page.parent / ref).resolve()
+    # A reference from the root ("/css/...") is the 404 page's: the host
+    # serves that page at whatever address was missing, so its paths
+    # cannot be relative. Resolved against the site root here.
+    target = (ROOT / ref.lstrip("/")).resolve() if ref.startswith("/") else (page.parent / ref).resolve()
     # Directory URLs map to their index.html
     if ref.endswith("/") or target.is_dir():
         target = target / "index.html"

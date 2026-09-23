@@ -18,7 +18,7 @@ needs no tolerance tuning — and each cluster is one physical part.
 
 Pure Python, no dependencies. Run it directly to see what a board is made of:
 
-    python3 site/hotspots.py site/assets/models/spark.glb
+    python3 tools/hotspots.py site/assets/models/spark.glb
 """
 
 from __future__ import annotations
