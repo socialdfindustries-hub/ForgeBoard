@@ -58,24 +58,19 @@
   let twoD = true;
   let swipeLock = false;   // set for a beat after a swipe on the phone ring
   let spinV = 0;           // rad/ms the 3D ring is still turning from a swipe
-  // Phone, at rest: the ring turns at its own pace and stops at each
-  // board for two seconds. In them the board pops and the plate names it;
-  // then the ring goes on. A swipe takes over; when it is spent the ring
-  // settles on the nearest board and the cycle goes on from there.
-  const DWELL = 9000;      // ms the ring stops at each board: one full turn at the pace the swing had
-  const PHONE_TURN = TURN * 3.2;   // the ring's pace between stops on a phone
+  // Phone, at rest: the ring turns at its own pace and does not stop. As
+  // a board comes to the front it pops, the plate names it, and its own
+  // turn begins — right round once, slowly — carrying on as the ring moves
+  // it along. A swipe adds its momentum; the turn goes on from there.
+  const PHONE_TURN = TURN * 3.2;   // the ring's pace on a phone: a board every three and a half seconds
+  const POP_ZONE = 0.42;   // radians either side of the front within which a board is "at the front"
+  const SPIN_MS = 6000;    // ms a board's own turn takes, right round once
   // The boards' own motion on a phone is the product page's: a swing of
   // 0.3 rad each way over nine seconds, with a slight nod on a period that
   // does not divide into it, so it never repeats the same arc twice.
   const PHONE_SWAY = (Math.PI * 2) / 9000;   // radians per ms
   const PHONE_REACH = 0.3;                   // radians each way on a phone, as the product page's
-  // And while the ring is stopped on it, the board turns right round once,
-  // slowly and at a near-constant pace — eased only at its start and end,
-  // so it leaves facing you and lands facing you as the ring goes on.
   let stepping = false;    // set by the 3D frame: portrait, boards up
-  let atRest = false;      // the ring is settled on a board (the pop's cue)
-  let dwellAt = -1;        // when the current stop began; -1 before it has settled
-  let turning = false, turnTo = 0;   // on the way to the next board, and where that is
   let named = -1;
   const pop = items.map(() => 0);               // 0 in the ring, 1 at the front
   let last = performance.now();
@@ -326,38 +321,14 @@
   const step = (now) => {
     const dt = Math.min(now - last, 64);       // a backgrounded tab must not lurch
     last = now;
-    if (focused < 0 && stepping && !reduced) {
-      atRest = false;
-      if (spin || Math.abs(spinV) > 5e-5) {
-        // A finger, or its momentum: the ring is theirs.
-        angle += spinV * dt;
-        spinV *= Math.pow(0.12, dt / 1000);
-        turning = false; dwellAt = -1;
-      } else if (turning) {
-        // On to the next board at the ring's own pace, and stop there.
-        angle = Math.min(turnTo, angle + PHONE_TURN * dt);
-        if (angle >= turnTo) { turning = false; dwellAt = now; }
-      } else {
-        // Settle on the nearest board, stop, then go on to the next.
-        spinV = 0;
-        const near = Math.round(angle / STEP) * STEP;
-        if (Math.abs(near - angle) > 0.003) {
-          angle += (near - angle) * (1 - Math.pow(0.004, dt / 1000));
-          dwellAt = -1;
-        } else {
-          angle = near;
-          atRest = true;
-          if (dwellAt < 0) dwellAt = now;
-          if (now - dwellAt > DWELL) { turning = true; turnTo = angle + STEP; }
-        }
-      }
-    } else if (focused < 0) {
-      atRest = false;
-      if (!reduced) angle += TURN * dt;
-      angle += spinV * dt;                       // a swipe's momentum, dying away
+    if (focused < 0) {
+      // The ring's own pace — a phone's is brisker — and never under a
+      // finger, which has the ring to itself; plus a swipe's momentum,
+      // dying away.
+      if (!reduced && !spin) angle += (stepping ? PHONE_TURN : TURN) * dt;
+      angle += spinV * dt;
       spinV *= Math.pow(0.12, dt / 1000);
     } else {
-      atRest = false;
       // Keep turning the ring until the held board's own slot is the one at
       // the front of it. The three left behind then always come to rest in
       // the same three places — one either side, one across the back —
@@ -870,7 +841,7 @@
       const h = host.clientHeight, w = host.clientWidth;
       const tanHalf = Math.tan((FOV * Math.PI) / 360);
 
-      let bestZ = -Infinity, bestI = 0;
+      let bestZ = -Infinity, bestI = 0, zoneI = -1;
       // How far into "one board is held" we are. Taken from the pops, so it
       // is already eased. While a board is coming forward the other three
       // clear out of its way — without this they stay on the ring and the
@@ -987,19 +958,22 @@
         n.fk = focused >= 0 ? (i === focused ? 1 : 0) : Math.pow(Math.max(0, Math.cos(th)), 3);
         if (!reduced && focused < 0) n.slot.position.y += Math.sin(now / 1300 + i * 1.3) * BOB * fitS * n.fk;
 
-        // The pop, on a phone: sprung in when the ring stops on this board,
-        // sprung out when it goes on; the rest of the ring rises out of its
-        // way by how far the front one is in.
-        const popWant = phone && focused < 0 && i === frontI && atRest ? 1 : 0;
-        if (popWant && !n.popOn) n.showK = 0;   // the stop begins: so does the turn
+        // The pop, on a phone: sprung in as this board comes to the front —
+        // within a few degrees of it either side — sprung out as it passes
+        // on; the rest of the ring rises out of its way by how far the
+        // front one is in.
+        const thN = ((th % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        const offFront = Math.min(thN, Math.PI * 2 - thN);
+        const popWant = phone && focused < 0 && offFront < POP_ZONE ? 1 : 0;
+        if (popWant) zoneI = i;
+        if (popWant && !n.popOn) n.showK = 0;   // at the front: its turn begins
         n.popOn = !!popWant;
-        // The turn during the stop: right round once. Cut short by a swipe,
-        // it finishes the turn at the same pace rather than freezing on its
-        // back. A ramp with soft ends: a tenth of the turn to get going, a
-        // tenth to stop.
+        // The turn: right round once at a near-constant pace, carrying on
+        // as the ring moves the board along, until it faces you again. A
+        // ramp with soft ends: a tenth of the turn to get going, a tenth
+        // to stop.
         if (reduced) n.showK = 1;
-        else if (popWant && dwellAt >= 0) n.showK = Math.min(1, (now - dwellAt) / DWELL);
-        else if (n.showK > 0 && n.showK < 1) n.showK = Math.min(1, n.showK + dt / DWELL);
+        else if (n.showK < 1) n.showK = Math.min(1, n.showK + dt / SPIN_MS);
         const kk = n.showK, ra = 0.1, rs = 1 / (1 - ra);
         n.showA = Math.PI * 2 * (kk < ra ? (rs / (2 * ra)) * kk * kk
           : kk > 1 - ra ? 1 - (rs / (2 * ra)) * (1 - kk) * (1 - kk) : rs * (kk - ra / 2));
@@ -1102,7 +1076,9 @@
       });
 
       frontI = bestI;
-      if (!(stepping && turning)) nameBoard(focused >= 0 ? focused : bestI);   // on the phone the name lands with the board
+      // On the phone the plate names a board as it comes to the front and
+      // keeps it until the next one does.
+      nameBoard(focused >= 0 ? focused : stepping ? (zoneI >= 0 ? zoneI : (named >= 0 ? named : bestI)) : bestI);
       if (cursorEl && fine) {
         cursorEl.style.transform = 'translate3d(' + px + 'px,' + py + 'px,0)';
       }
