@@ -68,7 +68,11 @@
   // 0.3 rad each way over nine seconds, with a slight nod on a period that
   // does not divide into it, so it never repeats the same arc twice.
   const PHONE_SWAY = (Math.PI * 2) / 9000;   // radians per ms
-  const PHONE_REACH = 0.5;                   // radians each way on a phone (the product page's is 0.3)
+  const PHONE_REACH = 0.3;                   // radians each way on a phone, as the product page's
+  // And while the ring is stopped on it, the board turns through ninety
+  // degrees: forty-five to the left, through to forty-five to the right,
+  // and back to facing you as the ring goes on.
+  const SWING = Math.PI / 4;                 // radians each way during the stop
   let stepping = false;    // set by the 3D frame: portrait, boards up
   let atRest = false;      // the ring is settled on a board (the pop's cue)
   let dwellAt = -1;        // when the current stop began; -1 before it has settled
@@ -821,6 +825,7 @@
       nodes.push({
         slot, holder, mats, unit, fk: 0,
         pk: 0, pv: 0,   // the pop: how far in, and its speed
+        showA: 0,       // the turn during the stop, radians
         // Each board's own extents, not its largest side: a tall board should
         // not claim a wide hit area it does not fill.
         halfX: (size.x * unit) / 2,
@@ -987,6 +992,11 @@
         // way by how far the front one is in.
         const popWant = phone && focused < 0 && i === frontI && atRest ? 1 : 0;
         n.popOn = !!popWant;
+        // The turn during the stop: left, through to the right, back to
+        // facing you. Cut short by a swipe, it eases back to facing you.
+        if (popWant && !reduced && dwellAt >= 0) {
+          n.showA = -SWING * Math.sin(2 * Math.PI * Math.min(1, (now - dwellAt) / DWELL));
+        } else n.showA += (0 - n.showA) * (1 - Math.pow(0.05, dt / 1000));
         if (reduced) { n.pk = popWant; n.pv = 0; }
         else {
           const dts = Math.min(dt, 50) / 1000;
@@ -1025,7 +1035,7 @@
         n.tiltY += (wantY - n.tiltY) * g;
         n.tiltX += (wantX - n.tiltX) * g;
 
-        n.slot.rotation.y = n.spin + Math.sin(n.sway) * (phone ? PHONE_REACH : 0.3) * (1 - p) + n.tiltY;
+        n.slot.rotation.y = n.spin + Math.sin(n.sway) * (phone ? PHONE_REACH : 0.3) * (1 - p) + n.tiltY + n.showA;
         n.slot.rotation.x = -0.22 + 0.1 * p + 0.07 * popIn + n.tiltX   // popped: leans back a touch, face to you
           + (phone ? Math.sin(n.sway / 1.618) * 0.078 * (1 - p) : 0);   // the product page's nod
         const popK = popEff;
