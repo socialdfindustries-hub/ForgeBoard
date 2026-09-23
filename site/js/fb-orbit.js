@@ -857,6 +857,7 @@
         slot, holder, mats, unit, fk: 0,
         pk: 0, pv: 0,   // the pop: how far in, and its speed
         showA: 0,       // the turn during the stop, radians
+        entry: 0,       // the turn carried on the way round, radians
         showK: 1,       // how far round that turn is (1 = facing front again)
         // Each board's own extents, not its largest side: a tall board should
         // not claim a wide hit area it does not fill.
@@ -1045,9 +1046,19 @@
         if (reduced) n.showK = 1;
         else if (mine) n.showK = Math.max(0, Math.min(1, (tIn - PAUSE_IN) / TURN_MS));
         else if (n.showK > 0 && n.showK < 1) n.showK = Math.min(1, n.showK + dt / TURN_MS);
-        // On its way in the board is turned, straightening to face you as
-        // it arrives.
-        const entry = phone && focused < 0 && turning && i === incoming ? -ENTRY_YAW * (1 - travelE) : 0;
+        // The turn a board carries on its way round: it turns to 45 degrees
+        // while going round the back, waits so at the left, straightens to
+        // face you as it comes in, and stays facing you as it leaves on the
+        // right. A function of where it is on the circle, continuous all the
+        // way round — so nothing ever flips — and eased besides.
+        const sth = (((th + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+        const carried = sth < -Math.PI / 2 ? 1
+          : sth < 0 ? -sth / (Math.PI / 2)
+          : sth < Math.PI / 2 ? 0
+          : (sth - Math.PI / 2) / (Math.PI / 2);
+        const entryWant = phone && focused < 0 ? -ENTRY_YAW * carried : 0;
+        n.entry += (entryWant - n.entry) * (1 - Math.pow(0.02, dt / 1000));
+        const entry = n.entry;
         const kk = n.showK, ra = 0.1, rs = 1 / (1 - ra);
         n.showA = Math.PI * 2 * (kk < ra ? (rs / (2 * ra)) * kk * kk
           : kk > 1 - ra ? 1 - (rs / (2 * ra)) * (1 - kk) * (1 - kk) : rs * (kk - ra / 2));
