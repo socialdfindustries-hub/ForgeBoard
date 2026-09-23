@@ -63,9 +63,9 @@
   // left to right, and the plate names it; then the ring goes on. A swipe
   // takes over; when it is spent the ring settles on the nearest board
   // and the cycle goes on from there.
-  const DWELL = 1000;      // ms the ring stops at each board
+  const DWELL = 1400;      // ms the ring stops at each board: the length of one slow swing
   const PHONE_TURN = TURN * 3.2;   // the ring's pace between stops on a phone
-  const SWING = 0.3;       // radians the stopped board swings each way, left then right
+  const SWING = 0.26;      // radians the stopped board swings each way, left then right
   let stepping = false;    // set by the 3D frame: portrait, boards up
   let atRest = false;      // the ring is settled on a board (the pop's cue)
   let dwellAt = -1;        // when the current stop began; -1 before it has settled
