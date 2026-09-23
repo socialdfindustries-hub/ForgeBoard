@@ -59,16 +59,16 @@
   let swipeLock = false;   // set for a beat after a swipe on the phone ring
   let spinV = 0;           // rad/ms the 3D ring is still turning from a swipe
   // Phone, at rest: the ring turns at its own pace and stops at each
-  // board. A board comes to the front, the ring holds for a moment — the
-  // pop, the light and the plate land here — and then it goes on: an
-  // arrival, a pause and a departure. A swipe takes over; when it is
-  // spent the ring settles on the nearest board and the cycle goes on.
-  const DWELL = 2000;      // ms the ring stops at each board
-  const PHONE_TURN = TURN * 3.2;   // the ring's pace between stops on a phone: a board every three and a half seconds
-  const FRONT_TURN = (Math.PI * 2) / 24000;   // the stopped board's own gentle turn, radians per ms
+  // board for a second. In that second the board pops and swings once,
+  // left to right, and the plate names it; then the ring goes on. A swipe
+  // takes over; when it is spent the ring settles on the nearest board
+  // and the cycle goes on from there.
+  const DWELL = 1000;      // ms the ring stops at each board
+  const PHONE_TURN = TURN * 3.2;   // the ring's pace between stops on a phone
+  const SWING = 0.3;       // radians the stopped board swings each way, left then right
   let stepping = false;    // set by the 3D frame: portrait, boards up
   let atRest = false;      // the ring is settled on a board (the pop's cue)
-  let dwellAt = -1;        // when the current hold began; -1 before it has settled
+  let dwellAt = -1;        // when the current stop began; -1 before it has settled
   let turning = false, turnTo = 0;   // on the way to the next board, and where that is
   let named = -1;
   const pop = items.map(() => 0);               // 0 in the ring, 1 at the front
@@ -332,7 +332,7 @@
         angle = Math.min(turnTo, angle + PHONE_TURN * dt);
         if (angle >= turnTo) { turning = false; dwellAt = now; }
       } else {
-        // Settle on the nearest board, hold, then go on to the next.
+        // Settle on the nearest board, stop, then go on to the next.
         spinV = 0;
         const near = Math.round(angle / STEP) * STEP;
         if (Math.abs(near - angle) > 0.003) {
@@ -558,7 +558,7 @@
     // 2 on a phone: its screen is dense and the boards are what the page is —
     // at 1 they were soft. 1.5 on a desktop, where a board a third of the
     // screen tall does not need more and the four models share one GPU.
-    renderer.setPixelRatio(Math.min(devicePixelRatio, fine ? 1.5 : 2));
+    renderer.setPixelRatio(Math.min(devicePixelRatio, fine ? 1.5 : 2.5));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = fine ? 1.0 : 1.15;   // a phone screen in daylight wants a little more
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -583,26 +583,6 @@
     const ring = new THREE.Group();
     scene.add(ring);
 
-    // The pool of light a board comes forward into. A soft amber disc drawn
-    // behind whichever board is at the front — its own for each board, so
-    // as one leaves the front its light goes down while the next one's
-    // comes up, and nothing jumps. A canvas gradient, not an image.
-    const haloTex = (() => {
-      const c = document.createElement('canvas');
-      c.width = c.height = 256;
-      const g = c.getContext('2d');
-      const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
-      grad.addColorStop(0, 'rgba(243,154,0,0.62)');
-      grad.addColorStop(0.3, 'rgba(243,154,0,0.26)');
-      grad.addColorStop(0.62, 'rgba(243,154,0,0.06)');
-      grad.addColorStop(1, 'rgba(243,154,0,0)');
-      g.fillStyle = grad;
-      g.fillRect(0, 0, 256, 256);
-      const tex = new THREE.CanvasTexture(c);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      return tex;
-    })();
-    const HALO = 2.3;        // the light's width, in board heights
     const BOB = 0.06;        // how far the front board rides up and down, in units of fit
     // Phone, at rest: the board that comes to the front pops — up, forward
     // and a size larger, on a spring with a little overshoot, so its
@@ -802,11 +782,16 @@
       ring.add(slot);
 
       const mats = [];
+      const maxAniso = renderer.capabilities.getMaxAnisotropy();
       holder.traverse((o) => {
         if (!o.isMesh) return;
         (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
           if (!m || !m.color || mats.indexOf(m) !== -1) return;
           m.__tint = m.color.clone();
+          // Anisotropic filtering on every texture: a board is mostly seen
+          // at an angle, and without it the silkscreen — the pin names, the
+          // logo — goes soft the moment it turns.
+          Object.values(m).forEach((v) => { if (v && v.isTexture) { v.anisotropy = maxAniso; v.needsUpdate = true; } });
           // Same pass, no second traverse: clearcoat is the second specular
           // layer that makes the solder mask and the lenses read as wet, and
           // it is the one dial that takes the gloss off without touching the
@@ -830,16 +815,8 @@
         });
       });
 
-      // Behind the board, in the ring's frame rather than the slot's, so it
-      // stays put as the board turns. Depth-tested, not written: the board
-      // covers its middle and the light shows around it.
-      const halo = new THREE.Sprite(new THREE.SpriteMaterial({
-        map: haloTex, transparent: true, opacity: 0, depthWrite: false,
-      }));
-      ring.add(halo);
-
       nodes.push({
-        slot, holder, mats, unit, halo, fk: 0,
+        slot, holder, mats, unit, fk: 0,
         pk: 0, pv: 0,   // the pop: how far in, and its speed
         showA: 0,       // the stopped board's own gentle turn, radians
         // Each board's own extents, not its largest side: a tall board should
@@ -998,23 +975,22 @@
           q.z += (z - q.z) * onRow;
         }
         // How far to the front this board is: 1 there, gone by the sides.
-        // At rest the front board hovers — a slow ride up and down — and its
-        // light is up; a held board keeps the light and holds still.
+        // At rest the front board hovers — a slow ride up and down; a held
+        // board holds still.
         n.fk = focused >= 0 ? (i === focused ? 1 : 0) : Math.pow(Math.max(0, Math.cos(th)), 3);
         if (!reduced && focused < 0) n.slot.position.y += Math.sin(now / 1300 + i * 1.3) * BOB * fitS * n.fk;
 
-        // The pop, on a phone: sprung in when this board becomes the front
-        // one, sprung out when it stops being; the rest of the ring rises
-        // out of its way by how far the front one is in.
+        // The pop, on a phone: sprung in when the ring stops on this board,
+        // sprung out when it goes on; the rest of the ring rises out of its
+        // way by how far the front one is in.
         const popWant = phone && focused < 0 && i === frontI && atRest ? 1 : 0;
-        if (popWant && !n.popOn) n.flare = 1;   // the arrival: the light flares
         n.popOn = !!popWant;
-        // While the ring is stopped on it the board turns, gently — to catch
-        // the light, never to show its back — and turns back to face you as
-        // the ring goes on.
-        if (popWant && !reduced) n.showA += FRONT_TURN * dt;
-        else n.showA += (0 - n.showA) * (1 - Math.pow(0.05, dt / 1000));
-        n.flare = (n.flare || 0) * Math.pow(0.08, dt / 1000);
+        // While the ring is stopped on it the board swings once — to the
+        // left, then through to the right, and back to facing you as the
+        // ring goes on. Cut short by a swipe, it eases back to facing you.
+        if (popWant && !reduced && dwellAt >= 0) {
+          n.showA = -SWING * Math.sin(2 * Math.PI * Math.min(1, (now - dwellAt) / DWELL));
+        } else n.showA += (0 - n.showA) * (1 - Math.pow(0.05, dt / 1000));
         if (reduced) { n.pk = popWant; n.pv = 0; }
         else {
           const dts = Math.min(dt, 50) / 1000;
@@ -1066,15 +1042,6 @@
         if (onRow) sf += (n.shelfAt.sf - sf) * onRow;
         n.holder.scale.setScalar(n.unit * sf);
 
-        // The light: sized to the board, behind it, breathing a little.
-        const haloS = n.halfY * sf * 2 * HALO;
-        n.halo.scale.set(haloS, haloS, 1);
-        n.halo.position.copy(n.slot.position);
-        n.halo.position.z -= 0.35;
-        const breathe = reduced ? 1 : 0.9 + 0.1 * Math.sin(now / 900);
-        const wantHalo = Math.min(1, n.fk * breathe * (1 + 0.45 * (n.flare || 0)));
-        n.halo.material.opacity += (wantHalo - n.halo.material.opacity) * (1 - Math.pow(0.02, dt / 1000));
-        n.halo.visible = n.halo.material.opacity > 0.01;
 
         // Keep this board's link exactly over it, at its apparent size, so
         // the pointer and the keyboard land on the thing they can see.
@@ -1105,7 +1072,7 @@
         // meshes' materials every frame for an unchanged value is waste.
         // Held: lifted out of the dark. Not held, while another is: sat back
         // into it. Nothing held: as lit as it was.
-        const depthDim = phone ? 0.62 + 0.38 * tDepth : 1;   // portrait: the back sits back a little, no darker
+        const depthDim = phone ? 0.78 + 0.22 * tDepth : 1;   // portrait: the back sits back a little, still clearly lit
         // Phone, one held: the row is behind, not in the dark — lit enough
         // to be read as the three boards it is.
         const want = focused < 0 ? depthDim * (1 + 0.1 * n.fk)   // the front board, lifted a little

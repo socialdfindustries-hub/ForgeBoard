@@ -810,6 +810,15 @@
       // anchors, which are parented to this) follows from it, so the pose
       // the page presents is a property of the board, not of the camera.
       soften(obj, GLOSS);
+      // Anisotropic filtering on every texture: the board is seen at an
+      // angle, and without it the silkscreen goes soft the moment it turns.
+      const maxAniso = renderer.capabilities.getMaxAnisotropy();
+      obj.traverse((o) => {
+        if (!o.isMesh) return;
+        (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
+          if (m) Object.values(m).forEach((v) => { if (v && v.isTexture) { v.anisotropy = maxAniso; v.needsUpdate = true; } });
+        });
+      });
 
       // The phone stands the board upright — its own pose, the one the home
       // hero shows it in — so that it is tall on a tall screen and its parts
