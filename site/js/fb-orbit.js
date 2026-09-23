@@ -65,7 +65,7 @@
   // swipe takes over; when it is spent the ring settles on the nearest
   // board and the cycle goes on from there.
   const PHONE_TURN = TURN * 2.3;   // the ring's pace between stops on a phone
-  const DWELL = 9000;      // ms the ring stops at each board: one slow turn on the spot
+  const DWELL = 7000;      // ms the ring stops at each board: one slow turn on the spot
   let atRest = false;      // the ring is settled on a board (the pop's and the turn's cue)
   let dwellAt = -1;        // when the current stop began; -1 before it has settled
   let turning = false, turnTo = 0;   // on the way to the next board, and where that is
