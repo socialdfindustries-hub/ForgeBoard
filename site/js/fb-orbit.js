@@ -83,7 +83,6 @@
   let dwellAt = -1;        // when the current stop began; -1 before it has settled
   let turning = false, turnFrom = 0, turnTo = 0, turnT0 = 0;   // the travel: where from, where to, since when
   let travelK = 0, travelE = 0;   // how far through the travel, 0..1, and eased
-  let incoming = -1;       // the board the travel is bringing to the front
   // The boards' own motion on a phone is the product page's: a swing of
   // 0.3 rad each way over nine seconds, with a slight nod on a period that
   // does not divide into it, so it never repeats the same arc twice.
@@ -348,7 +347,6 @@
         phoneStarted = true;
         angle = -STEP;
         turning = true; turnFrom = -STEP; turnTo = 0; turnT0 = now;
-        incoming = ((Math.round(-turnTo / STEP) % N) + N) % N;
       }
       atRest = false;
       if (spin || Math.abs(spinV) > 5e-5) {
@@ -377,7 +375,6 @@
           if (dwellAt < 0) dwellAt = now;
           if (now - dwellAt > DWELL) {
             turning = true; turnFrom = angle; turnTo = angle + STEP; turnT0 = now;
-            incoming = ((Math.round(-turnTo / STEP) % N) + N) % N;
           }
         }
       }
@@ -622,16 +619,6 @@
     scene.add(ring);
 
     const BOB = 0.06;        // how far the front board rides up and down, in units of fit
-    // Phone, at rest: the board that comes to the front pops — up, forward
-    // and a size larger, on a spring with a little overshoot, so its
-    // arrival is an event rather than a drift. The ring makes room: the
-    // board across the back rises as the front one pops. Phone only; on a
-    // desktop the pointer does this on hover.
-    const POP_FRONT = 0.10;  // larger by this much
-    const POP_RISE = 0.05;   // up by this much, in units of fit
-    const POP_FWD = 0.30;    // forward by this much, in ring radii
-    const POP_ROOM = 0.2;    // how far the board across the back rises to make room, in units of fit
-    const POP_W = 9, POP_Z = 0.6;   // the spring: rad/s, damping ratio — under-damped, so it pops
     let frontI = -1;         // the board at the front, from the last frame
 
     // A field of points well behind the ring. It gives the dark somewhere to
@@ -855,7 +842,6 @@
 
       nodes.push({
         slot, holder, mats, unit, fk: 0,
-        pk: 0, pv: 0,   // the pop: how far in, and its speed
         showA: 0,       // the turn during the stop, radians
         entry: 0,       // the turn carried on the way round, radians
         showK: 1,       // how far round that turn is (1 = facing front again)
@@ -1036,13 +1022,11 @@
         // front one is in.
         // The front board's stop, on a phone, as a timeline: facing you
         // (PAUSE_IN), then the turn on the spot (TURN_MS), then facing you
-        // again and popped (PAUSE_OUT), then the ring moves on. Cut short
-        // by a swipe, a turn finishes at the same pace rather than freezing
-        // on its back; a held board finishes it too.
+        // again (PAUSE_OUT), then the ring moves on. Cut short by a swipe,
+        // a turn finishes at the same pace rather than freezing on its
+        // back; a held board finishes it too.
         const mine = phone && focused < 0 && i === frontI && atRest;
         const tIn = mine && dwellAt >= 0 ? now - dwellAt : -1;
-        const popWant = 0;   // no pop: the board holds facing you after its turn, then the ring moves on
-        n.popOn = !!popWant;
         if (reduced) n.showK = 1;
         else if (mine) n.showK = Math.max(0, Math.min(1, (tIn - PAUSE_IN) / TURN_MS));
         else if (n.showK > 0 && n.showK < 1) n.showK = Math.min(1, n.showK + dt / TURN_MS);
@@ -1062,16 +1046,6 @@
         const kk = n.showK, ra = 0.1, rs = 1 / (1 - ra);
         n.showA = Math.PI * 2 * (kk < ra ? (rs / (2 * ra)) * kk * kk
           : kk > 1 - ra ? 1 - (rs / (2 * ra)) * (1 - kk) * (1 - kk) : rs * (kk - ra / 2));
-        if (reduced) { n.pk = popWant; n.pv = 0; }
-        else {
-          const dts = Math.min(dt, 50) / 1000;
-          n.pv += ((popWant - n.pk) * POP_W * POP_W - n.pv * 2 * POP_Z * POP_W) * dts;
-          n.pk += n.pv * dts;
-        }
-        const popIn = phone ? Math.max(0, n.pk) : 0;
-        const frontIn = phone && frontI >= 0 && frontI !== i ? Math.max(0, nodes[frontI].pk) : 0;
-        n.slot.position.y += (POP_RISE * popIn + POP_ROOM * behind * behind * frontIn) * fitS;
-        n.slot.position.z += POP_FWD * fitR * popIn * (1 - p);
 
         // The board being held turns right round — a full revolution in about
         // eleven seconds — so you see its face, its edge and its back. It
@@ -1101,7 +1075,7 @@
         n.tiltX += (wantX - n.tiltX) * g;
 
         n.slot.rotation.y = n.spin + Math.sin(n.sway) * (phone ? PHONE_REACH : 0.3) * (1 - p) + n.tiltY + n.showA + entry;
-        n.slot.rotation.x = -0.22 + 0.1 * p + 0.07 * popIn + n.tiltX   // popped: leans back a touch, face to you
+        n.slot.rotation.x = -0.22 + 0.1 * p + n.tiltX
           + (phone ? Math.sin(n.sway / 1.618) * 0.078 * (1 - p) : 0);   // the product page's nod
         const popK = popEff;
         // Portrait: depth is drawn, not just implied. The board across the
@@ -1112,7 +1086,7 @@
         // a circle seen from above, each board the size its depth gives it.
         const depthK = w < h ? (0.45 + 0.55 * Math.pow(tDepth, 2)) * (1 - p) + p : 1;
         // Phone, on the row: the size the row was solved for.
-        let sf = fitS * (1 + popK * p) * depthK * (1 + POP_FRONT * popIn);
+        let sf = fitS * (1 + popK * p) * depthK;
         if (onRow) sf += (n.shelfAt.sf - sf) * onRow;
         n.holder.scale.setScalar(n.unit * sf);
 
