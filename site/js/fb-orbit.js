@@ -470,7 +470,7 @@
     // screen tall does not need more and the four models share one GPU.
     renderer.setPixelRatio(Math.min(devicePixelRatio, fine ? 1.5 : 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    renderer.toneMappingExposure = fine ? 1.0 : 1.15;   // a phone screen in daylight wants a little more
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const scene = new THREE.Scene();
@@ -820,7 +820,11 @@
         // and not as four boards laid on one another; a held board is full.
         const tDepth = (Math.cos(th) + 1) / 2;
         const depthK = w < h ? (0.42 + 0.58 * tDepth) * (1 - p) + p : 1;   // small at the back, full in front
-        n.holder.scale.setScalar(n.unit * fitS * (1 + popK * p) * depthK);
+        // Phone: a held board has the stage to itself. The other three shrink
+        // away as it comes forward and grow back as it is let go; a desktop
+        // has the width to keep them dimmed in the background instead.
+        const gone = (w < h && focused >= 0 && focused !== i) ? (1 - held) : 1;
+        n.holder.scale.setScalar(n.unit * fitS * (1 + popK * p) * depthK * gone);
 
         // Keep this board's link exactly over it, at its apparent size, so
         // the pointer and the keyboard land on the thing they can see.
@@ -830,7 +834,7 @@
         const sx = (v.x * 0.5 + 0.5) * w;
         const sy = (-v.y * 0.5 + 0.5) * h;
         n.sx = sx; n.sy = sy;
-        const perPx = (fitS * (1 + popK * p) * depthK * h) / (2 * dist * tanHalf);
+        const perPx = (fitS * (1 + popK * p) * depthK * gone * h) / (2 * dist * tanHalf);
         const li = items[i];
         if (!n.sized) {
           // Once: the box at a reference scale. Everything after is transform.
@@ -850,7 +854,7 @@
         // meshes' materials every frame for an unchanged value is waste.
         // Held: lifted out of the dark. Not held, while another is: sat back
         // into it. Nothing held: as lit as it was.
-        const depthDim = w < h ? 0.3 + 0.7 * tDepth : 1;   // portrait: the back goes dark
+        const depthDim = w < h ? 0.62 + 0.38 * tDepth : 1;   // portrait: the back sits back a little, no darker
         const want = (focused < 0 ? 1 : (focused === i ? 1.25 : 0.38)) * (focused === i ? 1 : depthDim);
         n.dim += (want - n.dim) * (1 - Math.pow(0.004, dt / 1000));
         if (Math.abs(n.dim - n.lastDim) > 0.004) {
