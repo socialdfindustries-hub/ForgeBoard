@@ -656,8 +656,8 @@
         // as the ring continuing), the one across the back at the top. The
         // ring's radius comes from the front board's own width, so the
         // sides can never sit on it; only the band's height can shrink it.
-        const WIDTH_FRAC = 0.56;   // the front board's share of the screen width
-        const RING_K = 1.5;        // ring radius, in front-board half-widths: the sides reach the screen's edges, less a little padding
+        const WIDTH_FRAC = 0.58;   // the front board's share of the screen width
+        const RING_K = 1.62;       // ring radius, in front-board half-widths: the sides reach the screen's edges
         let fr = 0.4, fs = 1;
         for (let k = 0; k < 3; k++) {          // radius and size depend on each other
           const px = h / (2 * (camera.position.z - R * fr) * tan);   // px per unit, front of ring
@@ -979,8 +979,10 @@
         // the right, ±π across the back.
         const sth = (((th + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
         const offFront = Math.abs(sth);
-        const popWant = phone && focused < 0 && offFront < POP_ZONE ? 1 : 0;
-        if (popWant) zoneI = i;
+        // No pop any more: the board at the front is simply the one nearest
+        // you on the circle. The zone still names it on the plate.
+        if (phone && focused < 0 && offFront < POP_ZONE) zoneI = i;
+        const popWant = 0;
         n.popOn = !!popWant;
         // The turn: how far across the front the board is, from its left
         // edge to its right — 0 before, 1 (facing you, a full turn done)
