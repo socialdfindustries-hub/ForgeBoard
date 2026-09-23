@@ -64,7 +64,8 @@
   // and then the ring carries it on to the right and brings the next. A
   // swipe takes over; when it is spent the ring settles on the nearest
   // board and the cycle goes on from there.
-  const PHONE_TURN = TURN * 2.3;   // the ring's pace between stops on a phone
+  const PHONE_TURN = TURN * 2.7;   // the ring's pace between stops on a phone
+  let phoneStarted = false;        // the first frame on a phone sets the ring in motion
   const DWELL = 7000;      // ms the ring stops at each board: one slow turn on the spot
   let atRest = false;      // the ring is settled on a board (the pop's and the turn's cue)
   let dwellAt = -1;        // when the current stop began; -1 before it has settled
@@ -326,6 +327,14 @@
     const dt = Math.min(now - last, 64);       // a backgrounded tab must not lurch
     last = now;
     if (focused < 0 && stepping && !reduced) {
+      if (!phoneStarted) {
+        // The page opens on motion, not on a stop: the ring is set one slot
+        // back, so the lead board starts at the left corner and is brought
+        // in to the front first.
+        phoneStarted = true;
+        angle = -STEP;
+        turning = true; turnTo = 0;
+      }
       atRest = false;
       if (spin || Math.abs(spinV) > 5e-5) {
         // A finger, or its momentum: the ring is theirs.
