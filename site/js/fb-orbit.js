@@ -544,7 +544,7 @@
   const UNIT = 2.4;          // every board reads this tall, whatever its mm
   const POP_SCALE = 0.15;    // extra size on the board that has come forward
   const POP_PHONE = 0.12;    // on a phone a tapped board comes forward and grows a little more
-  const LIFT_DESK = 0.46;    // how far the far side of the ring rides up (turntable from above)
+  const LIFT_DESK = 0.72;    // how far the far side of the ring rides up (turntable from above): the back board shows over the front one
   const LIFT_PHONE = 1.0;    // portrait has height to spend and no width: a steeper table (the back board's rise is twice this)
   const LIFT_SIDE = 1.1;     // portrait: the two beside the front board sit at the circle's widest —
                              // a little above the front board's middle — where a ring seen from above has them
