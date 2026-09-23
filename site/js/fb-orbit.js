@@ -64,12 +64,18 @@
   // and then the ring carries it on to the right and brings the next. A
   // swipe takes over; when it is spent the ring settles on the nearest
   // board and the cycle goes on from there.
-  const PHONE_TURN = TURN * 2.7;   // the ring's pace between stops on a phone
+  const PHONE_TURN = TURN * 2.7;   // the ring's average pace between stops on a phone
   let phoneStarted = false;        // the first frame on a phone sets the ring in motion
-  const DWELL = 7000;      // ms the ring stops at each board: one slow turn on the spot
-  let atRest = false;      // the ring is settled on a board (the pop's and the turn's cue)
+  // The travel between stops is eased — it gathers pace out of one stop
+  // and loses it into the next, as a carousel does — and the phases
+  // overlap: the board begins its turn and its pop while still gliding
+  // in, and the ring leaves while the turn is finishing its last degrees.
+  const DWELL = 5000;      // ms the ring rests at each board
+  const TURN_MS = 7000;    // ms a board's turn on the spot takes, right round once
+  let atRest = false;      // the ring is settled on a board
   let dwellAt = -1;        // when the current stop began; -1 before it has settled
-  let turning = false, turnTo = 0;   // on the way to the next board, and where that is
+  let turning = false, turnFrom = 0, turnTo = 0, turnT0 = 0;   // the travel: where from, where to, since when
+  let travelK = 0;         // how far through the travel, 0..1
   // The boards' own motion on a phone is the product page's: a swing of
   // 0.3 rad each way over nine seconds, with a slight nod on a period that
   // does not divide into it, so it never repeats the same arc twice.
@@ -333,18 +339,22 @@
         // in to the front first.
         phoneStarted = true;
         angle = -STEP;
-        turning = true; turnTo = 0;
+        turning = true; turnFrom = -STEP; turnTo = 0; turnT0 = now;
       }
       atRest = false;
       if (spin || Math.abs(spinV) > 5e-5) {
         // A finger, or its momentum: the ring is theirs.
         angle += spinV * dt;
         spinV *= Math.pow(0.12, dt / 1000);
-        turning = false; dwellAt = -1;
+        turning = false; dwellAt = -1; travelK = 0;
       } else if (turning) {
-        // On to the next board at the ring's own pace, and stop there.
-        angle = Math.min(turnTo, angle + PHONE_TURN * dt);
-        if (angle >= turnTo) { turning = false; dwellAt = now; }
+        // On to the next board: eased in and out over the time the ring's
+        // pace would take, so it gathers speed and brakes rather than jolts.
+        const T = (turnTo - turnFrom) / PHONE_TURN;
+        travelK = Math.min(1, (now - turnT0) / T);
+        const e = -(Math.cos(Math.PI * travelK) - 1) / 2;
+        angle = turnFrom + (turnTo - turnFrom) * e;
+        if (travelK >= 1) { turning = false; dwellAt = now; travelK = 0; }
       } else {
         // Settle on the nearest board, stop, then go on to the next.
         spinV = 0;
@@ -356,7 +366,7 @@
           angle = near;
           atRest = true;
           if (dwellAt < 0) dwellAt = now;
-          if (now - dwellAt > DWELL) { turning = true; turnTo = angle + STEP; }
+          if (now - dwellAt > DWELL) { turning = true; turnFrom = angle; turnTo = angle + STEP; turnT0 = now; }
         }
       }
     } else if (focused < 0) {
@@ -1007,19 +1017,22 @@
         // within a few degrees of it either side — sprung out as it passes
         // on; the rest of the ring rises out of its way by how far the
         // front one is in.
-        // The pop, on a phone: sprung in when the ring stops on this board,
-        // sprung out when it goes on.
-        const popWant = phone && focused < 0 && i === frontI && atRest ? 1 : 0;
-        if (popWant && !n.popOn) n.showK = 0;   // the stop begins: so does the turn
+        // The front board, on a phone: it pops as it glides in (the last
+        // stretch of the travel) and through the stop, and its turn begins
+        // a little earlier still, so the motions overlap rather than queue.
+        // Both let go as the ring leaves.
+        const mine = phone && focused < 0 && i === frontI;
+        const popWant = mine && (atRest || (turning && travelK > 0.85)) ? 1 : 0;
+        if (mine && (atRest || (turning && travelK > 0.7)) && !n.turnOn) { n.turnOn = true; n.showK = 0; }
+        if (!mine) n.turnOn = false;
         n.popOn = !!popWant;
-        // The turn on the spot: right round once, the length of the stop,
-        // at a near-constant pace — a ramp with soft ends, a tenth of the
-        // turn to get going, a tenth to stop. Cut short by a swipe, it
-        // finishes the turn at the same pace rather than freezing on its
-        // back; a held board finishes it too.
+        // The turn on the spot: right round once at a near-constant pace —
+        // a ramp with soft ends, a tenth of the turn to get going, a tenth
+        // to stop — finishing as the ring is already easing away. Cut short
+        // by a swipe it finishes at the same pace rather than freezing on
+        // its back; a held board finishes it too.
         if (reduced) n.showK = 1;
-        else if (popWant && dwellAt >= 0) n.showK = Math.min(1, (now - dwellAt) / DWELL);
-        else if (n.showK > 0 && n.showK < 1) n.showK = Math.min(1, n.showK + dt / DWELL);
+        else if (n.showK < 1) n.showK = Math.min(1, n.showK + dt / TURN_MS);
         const kk = n.showK, ra = 0.1, rs = 1 / (1 - ra);
         n.showA = Math.PI * 2 * (kk < ra ? (rs / (2 * ra)) * kk * kk
           : kk > 1 - ra ? 1 - (rs / (2 * ra)) * (1 - kk) * (1 - kk) : rs * (kk - ra / 2));
