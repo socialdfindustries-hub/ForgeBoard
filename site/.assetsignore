@@ -1,0 +1,5 @@
+# Build tooling and internal notes — never served publicly
+*.py
+*.md
+__pycache__/
+.DS_Store
