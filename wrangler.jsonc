@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "forgeboard",
+  "compatibility_date": "2026-09-21",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "site"
+  },
+  "routes": [
+    {
+      "pattern": "forgeboard.in",
+      "custom_domain": true
+    }
+  ],
+  "workers_dev": true
+}
