@@ -68,6 +68,7 @@
   // 0.3 rad each way over nine seconds, with a slight nod on a period that
   // does not divide into it, so it never repeats the same arc twice.
   const PHONE_SWAY = (Math.PI * 2) / 9000;   // radians per ms
+  const PHONE_REACH = 0.5;                   // radians each way on a phone (the product page's is 0.3)
   let stepping = false;    // set by the 3D frame: portrait, boards up
   let atRest = false;      // the ring is settled on a board (the pop's cue)
   let dwellAt = -1;        // when the current stop began; -1 before it has settled
@@ -1024,7 +1025,7 @@
         n.tiltY += (wantY - n.tiltY) * g;
         n.tiltX += (wantX - n.tiltX) * g;
 
-        n.slot.rotation.y = n.spin + Math.sin(n.sway) * 0.3 * (1 - p) + n.tiltY;
+        n.slot.rotation.y = n.spin + Math.sin(n.sway) * (phone ? PHONE_REACH : 0.3) * (1 - p) + n.tiltY;
         n.slot.rotation.x = -0.22 + 0.1 * p + 0.07 * popIn + n.tiltX   // popped: leans back a touch, face to you
           + (phone ? Math.sin(n.sway / 1.618) * 0.078 * (1 - p) : 0);   // the product page's nod
         const popK = popEff;
