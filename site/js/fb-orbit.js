@@ -58,17 +58,17 @@
   let twoD = true;
   let swipeLock = false;   // set for a beat after a swipe on the phone ring
   let spinV = 0;           // rad/ms the 3D ring is still turning from a swipe
-  // Phone, at rest: the ring does not drift — it steps. Each board comes
-  // to the front, holds there, then the ring turns to the next: an
-  // arrival, a pause and a departure, which is what a pop and a light are
-  // for. A swipe takes over; when it is spent the ring settles on the
-  // nearest board and the cycle goes on from there.
-  const DWELL = 5500;      // ms a board holds the front: one slow turn right round
-  const TURN_MS = 2200;    // ms the ring takes to bring the next one round — slow, and eased at both ends
+  // Phone, at rest: the ring turns at its own pace and stops at each
+  // board. A board comes to the front, the ring holds for a moment — the
+  // pop, the light and the plate land here — and then it goes on: an
+  // arrival, a pause and a departure. A swipe takes over; when it is
+  // spent the ring settles on the nearest board and the cycle goes on.
+  const DWELL = 2000;      // ms the ring stops at each board
+  const FRONT_TURN = (Math.PI * 2) / 24000;   // the stopped board's own gentle turn, radians per ms
   let stepping = false;    // set by the 3D frame: portrait, boards up
   let atRest = false;      // the ring is settled on a board (the pop's cue)
   let dwellAt = -1;        // when the current hold began; -1 before it has settled
-  let turning = false, turnFrom = 0, turnTo = 0, turnT0 = 0;
+  let turning = false, turnTo = 0;   // on the way to the next board, and where that is
   let named = -1;
   const pop = items.map(() => 0);               // 0 in the ring, 1 at the front
   let last = performance.now();
@@ -327,12 +327,9 @@
         spinV *= Math.pow(0.12, dt / 1000);
         turning = false; dwellAt = -1;
       } else if (turning) {
-        // Eased in and out, a sine: it gathers pace and loses it gently, so
-        // the boards travel round the circle rather than snap to the next.
-        const k = Math.min(1, (now - turnT0) / TURN_MS);
-        const e = -(Math.cos(Math.PI * k) - 1) / 2;
-        angle = turnFrom + (turnTo - turnFrom) * e;
-        if (k >= 1) { turning = false; dwellAt = now; }
+        // On to the next board at the ring's own pace, and stop there.
+        angle = Math.min(turnTo, angle + TURN * dt);
+        if (angle >= turnTo) { turning = false; dwellAt = now; }
       } else {
         // Settle on the nearest board, hold, then go on to the next.
         spinV = 0;
@@ -344,7 +341,7 @@
           angle = near;
           atRest = true;
           if (dwellAt < 0) dwellAt = now;
-          if (now - dwellAt > DWELL) { turning = true; turnT0 = now; turnFrom = angle; turnTo = angle + STEP; }
+          if (now - dwellAt > DWELL) { turning = true; turnTo = angle + STEP; }
         }
       }
     } else if (focused < 0) {
@@ -843,7 +840,7 @@
       nodes.push({
         slot, holder, mats, unit, halo, fk: 0,
         pk: 0, pv: 0,   // the pop: how far in, and its speed
-        showK: 1,       // the turn while it holds the front: how far round (1 = facing front again)
+        showA: 0,       // the stopped board's own gentle turn, radians
         // Each board's own extents, not its largest side: a tall board should
         // not claim a wide hit area it does not fill.
         halfX: (size.x * unit) / 2,
@@ -1009,16 +1006,13 @@
         // one, sprung out when it stops being; the rest of the ring rises
         // out of its way by how far the front one is in.
         const popWant = phone && focused < 0 && i === frontI && atRest ? 1 : 0;
-        if (popWant && !n.popOn) { n.flare = 1; n.showK = 0; }   // the arrival: the light flares, the turn begins
+        if (popWant && !n.popOn) n.flare = 1;   // the arrival: the light flares
         n.popOn = !!popWant;
-        // While it holds the front it turns right round once, slowly and at
-        // a near-constant pace — eased only at its start and end, so it
-        // leaves facing you and lands facing you as the ring moves on. Cut
-        // short by a swipe, it finishes the turn at the same pace rather
-        // than freezing on its back.
-        if (reduced) n.showK = 1;
-        else if (popWant && dwellAt >= 0) n.showK = Math.min(1, (now - dwellAt) / DWELL);
-        else if (n.showK > 0 && n.showK < 1) n.showK = Math.min(1, n.showK + dt / DWELL);
+        // While the ring is stopped on it the board turns, gently — to catch
+        // the light, never to show its back — and turns back to face you as
+        // the ring goes on.
+        if (popWant && !reduced) n.showA += FRONT_TURN * dt;
+        else n.showA += (0 - n.showA) * (1 - Math.pow(0.05, dt / 1000));
         n.flare = (n.flare || 0) * Math.pow(0.08, dt / 1000);
         if (reduced) { n.pk = popWant; n.pv = 0; }
         else {
@@ -1058,11 +1052,7 @@
         n.tiltY += (wantY - n.tiltY) * g;
         n.tiltX += (wantX - n.tiltX) * g;
 
-        // A ramp with soft ends: a tenth of the turn to get going, a tenth to stop.
-        const kk = n.showK, ra = 0.1, rs = 1 / (1 - ra);
-        const showTurn = Math.PI * 2 * (kk < ra ? (rs / (2 * ra)) * kk * kk
-          : kk > 1 - ra ? 1 - (rs / (2 * ra)) * (1 - kk) * (1 - kk) : rs * (kk - ra / 2));
-        n.slot.rotation.y = n.spin + Math.sin(n.sway) * 0.3 * (1 - p) + n.tiltY + showTurn;
+        n.slot.rotation.y = n.spin + Math.sin(n.sway) * 0.3 * (1 - p) + n.tiltY + n.showA;
         n.slot.rotation.x = -0.22 + 0.1 * p + 0.07 * popIn + n.tiltX;   // popped: leans back a touch, face to you
         const popK = popEff;
         // Portrait: depth is drawn, not just implied. The board across the
