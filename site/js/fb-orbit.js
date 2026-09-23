@@ -63,7 +63,7 @@
   // arrival, a pause and a departure, which is what a pop and a light are
   // for. A swipe takes over; when it is spent the ring settles on the
   // nearest board and the cycle goes on from there.
-  const DWELL = 1500;      // ms a board holds the front
+  const DWELL = 2000;      // ms a board holds the front — long enough to turn right round once
   const TURN_MS = 1000;    // ms the ring takes to bring the next one
   let stepping = false;    // set by the 3D frame: portrait, boards up
   let atRest = false;      // the ring is settled on a board (the pop's cue)
@@ -167,6 +167,34 @@
 
   const plateEl = document.querySelector('.hero-plate');
   let swapTimer = 0;
+
+  // The phone's readout, character by character. The words are set whole
+  // and then broken into their letters, each an inline block with its
+  // final width from the first frame — the box never moves — and each
+  // rising in on its own beat; the figures come in lit amber and cool to
+  // ink. A readout powering up rather than text being swapped. Words stay
+  // whole, so a figure still wraps where it always did.
+  const lit = (el, delay) => {
+    if (!el) return;
+    const words = el.textContent.split(' ');
+    let n = 0;
+    el.textContent = '';
+    words.forEach((word, wi) => {
+      if (wi) el.appendChild(document.createTextNode(' '));
+      const w = document.createElement('span');
+      w.className = 'w';
+      for (const ch of word) {
+        const s = document.createElement('span');
+        s.className = 'ch';
+        s.style.setProperty('--i', String(n++));
+        s.textContent = ch;
+        w.appendChild(s);
+      }
+      el.appendChild(w);
+    });
+    el.style.setProperty('--d', delay + 'ms');
+  };
+
   const nameBoard = (i) => {
     if (i === named) return;
     named = i;
@@ -201,6 +229,12 @@
     swapTimer = setTimeout(() => {
       setAll();
       if (!plateEl) return;
+      lit(plate.name, 0);
+      lit(plate.mcu, 100);
+      lit(plate.clock, 170);
+      lit(plate.gpio, 240);
+      lit(plate.radio, 310);
+      plateEl.classList.add('is-lit');
       plateEl.classList.remove('is-swapping');
       // Then it powers up for this board: name, figures and button rise in
       // one after another, the light crosses the strip, the rules redraw.
@@ -808,6 +842,7 @@
       nodes.push({
         slot, holder, mats, unit, halo, fk: 0,
         pk: 0, pv: 0,   // the pop: how far in, and its speed
+        showK: 1,       // the showcase spin: how far round (1 = facing front again)
         // Each board's own extents, not its largest side: a tall board should
         // not claim a wide hit area it does not fill.
         halfX: (size.x * unit) / 2,
@@ -973,8 +1008,15 @@
         // one, sprung out when it stops being; the rest of the ring rises
         // out of its way by how far the front one is in.
         const popWant = phone && focused < 0 && i === frontI && atRest ? 1 : 0;
-        if (popWant && !n.popOn) n.flare = 1;   // the arrival: the light flares
+        if (popWant && !n.popOn) { n.flare = 1; n.showK = 0; }   // the arrival: the light flares, the spin begins
         n.popOn = !!popWant;
+        // While it holds the front it turns right round once — a showcase
+        // spin, eased so it leaves facing you and lands facing you as the
+        // ring moves on. Cut short by a swipe, it finishes the turn at the
+        // same pace rather than freezing on its back.
+        if (reduced) n.showK = 1;
+        else if (popWant && dwellAt >= 0) n.showK = Math.min(1, (now - dwellAt) / DWELL);
+        else if (n.showK > 0 && n.showK < 1) n.showK = Math.min(1, n.showK + dt / DWELL);
         n.flare = (n.flare || 0) * Math.pow(0.08, dt / 1000);
         if (reduced) { n.pk = popWant; n.pv = 0; }
         else {
@@ -1014,7 +1056,9 @@
         n.tiltY += (wantY - n.tiltY) * g;
         n.tiltX += (wantX - n.tiltX) * g;
 
-        n.slot.rotation.y = n.spin + Math.sin(n.sway) * 0.3 * (1 - p) + n.tiltY;
+        const sk2 = n.showK || 0;
+        const showTurn = Math.PI * 2 * (sk2 < 0.5 ? 4 * sk2 * sk2 * sk2 : 1 - Math.pow(-2 * sk2 + 2, 3) / 2);
+        n.slot.rotation.y = n.spin + Math.sin(n.sway) * 0.3 * (1 - p) + n.tiltY + showTurn;
         n.slot.rotation.x = -0.22 + 0.1 * p + 0.07 * popIn + n.tiltX;   // popped: leans back a touch, face to you
         const popK = popEff;
         // Portrait: depth is drawn, not just implied. The board across the
