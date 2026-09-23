@@ -58,6 +58,17 @@
   let twoD = true;
   let swipeLock = false;   // set for a beat after a swipe on the phone ring
   let spinV = 0;           // rad/ms the 3D ring is still turning from a swipe
+  // Phone, at rest: the ring does not drift — it steps. Each board comes
+  // to the front, holds there, then the ring turns to the next: an
+  // arrival, a pause and a departure, which is what a pop and a light are
+  // for. A swipe takes over; when it is spent the ring settles on the
+  // nearest board and the cycle goes on from there.
+  const DWELL = 1500;      // ms a board holds the front
+  const TURN_MS = 1000;    // ms the ring takes to bring the next one
+  let stepping = false;    // set by the 3D frame: portrait, boards up
+  let atRest = false;      // the ring is settled on a board (the pop's cue)
+  let dwellAt = -1;        // when the current hold began; -1 before it has settled
+  let turning = false, turnFrom = 0, turnTo = 0, turnT0 = 0;
   let named = -1;
   const pop = items.map(() => 0);               // 0 in the ring, 1 at the front
   let last = performance.now();
@@ -274,11 +285,40 @@
   const step = (now) => {
     const dt = Math.min(now - last, 64);       // a backgrounded tab must not lurch
     last = now;
-    if (focused < 0) {
+    if (focused < 0 && stepping && !reduced) {
+      atRest = false;
+      if (spin || Math.abs(spinV) > 5e-5) {
+        // A finger, or its momentum: the ring is theirs.
+        angle += spinV * dt;
+        spinV *= Math.pow(0.12, dt / 1000);
+        turning = false; dwellAt = -1;
+      } else if (turning) {
+        // Eased in and out: it leaves as it arrives, without a jolt.
+        const k = Math.min(1, (now - turnT0) / TURN_MS);
+        const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+        angle = turnFrom + (turnTo - turnFrom) * e;
+        if (k >= 1) { turning = false; dwellAt = now; }
+      } else {
+        // Settle on the nearest board, hold, then go on to the next.
+        spinV = 0;
+        const near = Math.round(angle / STEP) * STEP;
+        if (Math.abs(near - angle) > 0.003) {
+          angle += (near - angle) * (1 - Math.pow(0.004, dt / 1000));
+          dwellAt = -1;
+        } else {
+          angle = near;
+          atRest = true;
+          if (dwellAt < 0) dwellAt = now;
+          if (now - dwellAt > DWELL) { turning = true; turnT0 = now; turnFrom = angle; turnTo = angle + STEP; }
+        }
+      }
+    } else if (focused < 0) {
+      atRest = false;
       if (!reduced) angle += TURN * dt;
       angle += spinV * dt;                       // a swipe's momentum, dying away
       spinV *= Math.pow(0.12, dt / 1000);
     } else {
+      atRest = false;
       // Keep turning the ring until the held board's own slot is the one at
       // the front of it. The three left behind then always come to rest in
       // the same three places — one either side, one across the back —
@@ -807,6 +847,7 @@
     const v = new THREE.Vector3();
     const frame = (now) => {
       requestAnimationFrame(frame);
+      stepping = host.clientWidth < host.clientHeight;
       const dt = step(now);
       const h = host.clientHeight, w = host.clientWidth;
       const tanHalf = Math.tan((FOV * Math.PI) / 360);
@@ -931,7 +972,10 @@
         // The pop, on a phone: sprung in when this board becomes the front
         // one, sprung out when it stops being; the rest of the ring rises
         // out of its way by how far the front one is in.
-        const popWant = phone && focused < 0 && i === frontI ? 1 : 0;
+        const popWant = phone && focused < 0 && i === frontI && atRest ? 1 : 0;
+        if (popWant && !n.popOn) n.flare = 1;   // the arrival: the light flares
+        n.popOn = !!popWant;
+        n.flare = (n.flare || 0) * Math.pow(0.08, dt / 1000);
         if (reduced) { n.pk = popWant; n.pv = 0; }
         else {
           const dts = Math.min(dt, 50) / 1000;
@@ -971,7 +1015,7 @@
         n.tiltX += (wantX - n.tiltX) * g;
 
         n.slot.rotation.y = n.spin + Math.sin(n.sway) * 0.3 * (1 - p) + n.tiltY;
-        n.slot.rotation.x = -0.22 + 0.1 * p + n.tiltX;
+        n.slot.rotation.x = -0.22 + 0.1 * p + 0.07 * popIn + n.tiltX;   // popped: leans back a touch, face to you
         const popK = popEff;
         // Portrait: depth is drawn, not just implied. The board across the
         // back is smaller and the sides between, so the ring reads as a ring
@@ -989,7 +1033,7 @@
         n.halo.position.copy(n.slot.position);
         n.halo.position.z -= 0.35;
         const breathe = reduced ? 1 : 0.9 + 0.1 * Math.sin(now / 900);
-        const wantHalo = n.fk * breathe;
+        const wantHalo = Math.min(1, n.fk * breathe * (1 + 0.45 * (n.flare || 0)));
         n.halo.material.opacity += (wantHalo - n.halo.material.opacity) * (1 - Math.pow(0.02, dt / 1000));
         n.halo.visible = n.halo.material.opacity > 0.01;
 
@@ -1039,7 +1083,7 @@
       });
 
       frontI = bestI;
-      nameBoard(focused >= 0 ? focused : bestI);
+      if (!(stepping && turning)) nameBoard(focused >= 0 ? focused : bestI);   // on the phone the name lands with the board
       if (cursorEl && fine) {
         cursorEl.style.transform = 'translate3d(' + px + 'px,' + py + 'px,0)';
       }
