@@ -59,13 +59,15 @@
   let swipeLock = false;   // set for a beat after a swipe on the phone ring
   let spinV = 0;           // rad/ms the 3D ring is still turning from a swipe
   // Phone, at rest: the ring turns at its own pace and stops at each
-  // board for a second. In that second the board pops and swings once,
-  // left to right, and the plate names it; then the ring goes on. A swipe
-  // takes over; when it is spent the ring settles on the nearest board
-  // and the cycle goes on from there.
-  const DWELL = 2000;      // ms the ring stops at each board: the length of one slow swing
+  // board for two seconds. In them the board pops and the plate names it;
+  // then the ring goes on. A swipe takes over; when it is spent the ring
+  // settles on the nearest board and the cycle goes on from there.
+  const DWELL = 2000;      // ms the ring stops at each board
   const PHONE_TURN = TURN * 3.2;   // the ring's pace between stops on a phone
-  const SWING = 0.34;      // radians the stopped board swings each way, left then right
+  // The boards' own motion on a phone is the product page's: a swing of
+  // 0.3 rad each way over nine seconds, with a slight nod on a period that
+  // does not divide into it, so it never repeats the same arc twice.
+  const PHONE_SWAY = (Math.PI * 2) / 9000;   // radians per ms
   let stepping = false;    // set by the 3D frame: portrait, boards up
   let atRest = false;      // the ring is settled on a board (the pop's cue)
   let dwellAt = -1;        // when the current stop began; -1 before it has settled
@@ -818,7 +820,6 @@
       nodes.push({
         slot, holder, mats, unit, fk: 0,
         pk: 0, pv: 0,   // the pop: how far in, and its speed
-        showA: 0,       // the stopped board's own gentle turn, radians
         // Each board's own extents, not its largest side: a tall board should
         // not claim a wide hit area it does not fill.
         halfX: (size.x * unit) / 2,
@@ -985,12 +986,6 @@
         // way by how far the front one is in.
         const popWant = phone && focused < 0 && i === frontI && atRest ? 1 : 0;
         n.popOn = !!popWant;
-        // While the ring is stopped on it the board swings once — to the
-        // left, then through to the right, and back to facing you as the
-        // ring goes on. Cut short by a swipe, it eases back to facing you.
-        if (popWant && !reduced && dwellAt >= 0) {
-          n.showA = -SWING * Math.sin(2 * Math.PI * Math.min(1, (now - dwellAt) / DWELL));
-        } else n.showA += (0 - n.showA) * (1 - Math.pow(0.05, dt / 1000));
         if (reduced) { n.pk = popWant; n.pv = 0; }
         else {
           const dts = Math.min(dt, 50) / 1000;
@@ -1015,7 +1010,7 @@
           } else {
             const front = Math.round(n.spin / (Math.PI * 2)) * (Math.PI * 2);
             n.spin += (front - n.spin) * (1 - Math.pow(0.12, dt / 1000));
-            n.sway += 0.00019 * dt;
+            n.sway += (phone ? PHONE_SWAY : 0.00019) * dt;
           }
         }
         // A held board leans toward the pointer. You are not spinning it — it
@@ -1029,8 +1024,9 @@
         n.tiltY += (wantY - n.tiltY) * g;
         n.tiltX += (wantX - n.tiltX) * g;
 
-        n.slot.rotation.y = n.spin + Math.sin(n.sway) * 0.3 * (1 - p) + n.tiltY + n.showA;
-        n.slot.rotation.x = -0.22 + 0.1 * p + 0.07 * popIn + n.tiltX;   // popped: leans back a touch, face to you
+        n.slot.rotation.y = n.spin + Math.sin(n.sway) * 0.3 * (1 - p) + n.tiltY;
+        n.slot.rotation.x = -0.22 + 0.1 * p + 0.07 * popIn + n.tiltX   // popped: leans back a touch, face to you
+          + (phone ? Math.sin(n.sway / 1.618) * 0.078 * (1 - p) : 0);   // the product page's nod
         const popK = popEff;
         // Portrait: depth is drawn, not just implied. The board across the
         // back is smaller and the sides between, so the ring reads as a ring
