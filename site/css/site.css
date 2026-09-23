@@ -435,6 +435,10 @@ table td,table th{font-variant-numeric:tabular-nums}
 .hero-plate .ch{display:inline-block}
 .hero-plate.is-lit.is-in .hero-plate-name b,
 .hero-plate.is-lit.is-in .hero-specs dd{animation:none}
+/* the table itself holds still: no rules redrawing, no light crossing it — the text is what refreshes */
+.hero-plate.is-lit.is-in .hero-specs,
+.hero-plate.is-lit.is-in .hero-specs::before,
+.hero-plate.is-lit.is-in .hero-specs::after{animation:none}
 .hero-plate.is-lit.is-in .ch{
   animation:ch-rise .5s cubic-bezier(.2,.85,.25,1.15) both;
   animation-delay:calc(var(--d,0ms) + var(--i) * 22ms);

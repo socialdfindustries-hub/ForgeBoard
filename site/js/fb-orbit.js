@@ -63,8 +63,9 @@
   // arrival, a pause and a departure, which is what a pop and a light are
   // for. A swipe takes over; when it is spent the ring settles on the
   // nearest board and the cycle goes on from there.
-  const DWELL = 2000;      // ms a board holds the front — long enough to turn right round once
-  const TURN_MS = 1000;    // ms the ring takes to bring the next one
+  const DWELL = 1600;      // ms a board lingers at the front
+  const TURN_MS = 2200;    // ms the ring takes to bring the next one round — slow, and eased at both ends
+  const FRONT_TURN = (Math.PI * 2) / 16000;   // the front board's own slow turn: a quarter turn in four seconds... of which it gets under two
   let stepping = false;    // set by the 3D frame: portrait, boards up
   let atRest = false;      // the ring is settled on a board (the pop's cue)
   let dwellAt = -1;        // when the current hold began; -1 before it has settled
@@ -327,9 +328,10 @@
         spinV *= Math.pow(0.12, dt / 1000);
         turning = false; dwellAt = -1;
       } else if (turning) {
-        // Eased in and out: it leaves as it arrives, without a jolt.
+        // Eased in and out, a sine: it gathers pace and loses it gently, so
+        // the boards travel round the circle rather than snap to the next.
         const k = Math.min(1, (now - turnT0) / TURN_MS);
-        const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+        const e = -(Math.cos(Math.PI * k) - 1) / 2;
         angle = turnFrom + (turnTo - turnFrom) * e;
         if (k >= 1) { turning = false; dwellAt = now; }
       } else {
@@ -842,7 +844,7 @@
       nodes.push({
         slot, holder, mats, unit, halo, fk: 0,
         pk: 0, pv: 0,   // the pop: how far in, and its speed
-        showK: 1,       // the showcase spin: how far round (1 = facing front again)
+        showA: 0,       // the front board's own slow turn, radians
         // Each board's own extents, not its largest side: a tall board should
         // not claim a wide hit area it does not fill.
         halfX: (size.x * unit) / 2,
@@ -1008,15 +1010,13 @@
         // one, sprung out when it stops being; the rest of the ring rises
         // out of its way by how far the front one is in.
         const popWant = phone && focused < 0 && i === frontI && atRest ? 1 : 0;
-        if (popWant && !n.popOn) { n.flare = 1; n.showK = 0; }   // the arrival: the light flares, the spin begins
+        if (popWant && !n.popOn) n.flare = 1;   // the arrival: the light flares
         n.popOn = !!popWant;
-        // While it holds the front it turns right round once — a showcase
-        // spin, eased so it leaves facing you and lands facing you as the
-        // ring moves on. Cut short by a swipe, it finishes the turn at the
-        // same pace rather than freezing on its back.
-        if (reduced) n.showK = 1;
-        else if (popWant && dwellAt >= 0) n.showK = Math.min(1, (now - dwellAt) / DWELL);
-        else if (n.showK > 0 && n.showK < 1) n.showK = Math.min(1, n.showK + dt / DWELL);
+        // While it holds the front it turns, slowly — what you see is the
+        // board turning to catch the light, never its back — and turns back
+        // to face you as it leaves.
+        if (popWant && !reduced) n.showA += FRONT_TURN * dt;
+        else n.showA += (0 - n.showA) * (1 - Math.pow(0.05, dt / 1000));
         n.flare = (n.flare || 0) * Math.pow(0.08, dt / 1000);
         if (reduced) { n.pk = popWant; n.pv = 0; }
         else {
@@ -1056,9 +1056,7 @@
         n.tiltY += (wantY - n.tiltY) * g;
         n.tiltX += (wantX - n.tiltX) * g;
 
-        const sk2 = n.showK || 0;
-        const showTurn = Math.PI * 2 * (sk2 < 0.5 ? 4 * sk2 * sk2 * sk2 : 1 - Math.pow(-2 * sk2 + 2, 3) / 2);
-        n.slot.rotation.y = n.spin + Math.sin(n.sway) * 0.3 * (1 - p) + n.tiltY + showTurn;
+        n.slot.rotation.y = n.spin + Math.sin(n.sway) * 0.3 * (1 - p) + n.tiltY + n.showA;
         n.slot.rotation.x = -0.22 + 0.1 * p + 0.07 * popIn + n.tiltX;   // popped: leans back a touch, face to you
         const popK = popEff;
         // Portrait: depth is drawn, not just implied. The board across the
