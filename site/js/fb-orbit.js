@@ -71,12 +71,12 @@
   // overlap: the board begins its turn and its pop while still gliding
   // in, and the ring leaves while the turn is finishing its last degrees.
   // The stop, in order: the board arrives facing you and holds; turns
-  // right round once on the spot; holds again, facing you, popped; and
-  // then the ring eases it away. On its way in it is turned 45 degrees,
+  // right round once on the spot; holds again, facing you; and then the
+  // ring eases it away. On its way in it is turned 45 degrees,
   // straightening to face you as it arrives.
   const PAUSE_IN = 1250;   // ms facing you on arrival
   const TURN_MS = 7000;    // ms the turn on the spot takes, right round once
-  const PAUSE_OUT = 1000;  // ms facing you again, popped, before the ring moves on
+  const PAUSE_OUT = 1000;  // ms facing you again before the ring moves on
   const DWELL = PAUSE_IN + TURN_MS + PAUSE_OUT;
   const ENTRY_YAW = Math.PI / 4;   // how far round the incoming board is turned as it comes in
   let atRest = false;      // the ring is settled on a board
@@ -1040,7 +1040,7 @@
         // on its back; a held board finishes it too.
         const mine = phone && focused < 0 && i === frontI && atRest;
         const tIn = mine && dwellAt >= 0 ? now - dwellAt : -1;
-        const popWant = mine && tIn > PAUSE_IN + TURN_MS ? 1 : 0;
+        const popWant = 0;   // no pop: the board holds facing you after its turn, then the ring moves on
         n.popOn = !!popWant;
         if (reduced) n.showK = 1;
         else if (mine) n.showK = Math.max(0, Math.min(1, (tIn - PAUSE_IN) / TURN_MS));
