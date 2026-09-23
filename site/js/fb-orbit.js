@@ -450,18 +450,16 @@
   const POP_PHONE = 0.12;    // on a phone a tapped board comes forward and grows a little more
   const LIFT_DESK = 0.46;    // how far the far side of the ring rides up (turntable from above)
   const LIFT_PHONE = 0.95;   // portrait has height to spend and no width: a steeper table
-  // Phone, one board held: the other three wait in a row across the back.
-  const SHELF_BACK = 1.25;   // how far back the row is, in ring radii
-  const SHELF_SIZE = 0.36;   // a board on the row, as a share of the held board's apparent size
-  const SHELF_SPREAD = 0.31; // the outer two this far either side of the middle, as a share of the width
+  // Phone, one board held: the other three stay on the ring — its circle,
+  // opened out around the held board so all four are in view. Seen from
+  // above the circle is an ellipse on the screen: the held board at its
+  // front, the two beside it level with its middle, the one across the
+  // back at its top.
+  const SHELF_BACK = 1.25;   // how far back the board across the back sits, in ring radii
+  const SHELF_SIDE = 0.6;    // the two beside, as a fraction of that depth
+  const SHELF_SIZE = 0.34;   // the board across the back, as a share of the held board's apparent size
   const SHELF_DIM = 0.72;    // lit to here: behind, not in the dark
   const SHELF_W = 11, SHELF_Z = 0.82;   // the spring that carries a board there and back: rad/s, damping ratio
-  // The row is bent into an arc, the way the ring itself lies seen from
-  // above: the board across the back stays back and high, the two beside
-  // it come forward and sit lower — so they read a little larger, and the
-  // three keep reading as the ring they came off.
-  const SHELF_ARC_Z = 0.3;     // how far forward the outer two come, in ring radii
-  const SHELF_ARC_DROP = 0.5;  // how far down they sit, in row-board half-heights
   const REF = 200;           // px per world unit the hit boxes are sized at
 
   async function run3d() {
@@ -627,7 +625,7 @@
       shelfTop = usableTop;
       if (portrait) {
         const roomH = showUsable - h * 0.035;
-        heldK = Math.min(1, roomH / (2 * heldHalf * (1 + SHELF_SIZE * (1 + SHELF_ARC_DROP / 2))));
+        heldK = Math.min(1, roomH / (2 * heldHalf * (1 + SHELF_SIZE)));
         heldDrop = -Math.max(0, showBottom - heldHalf * heldK - bandShow) * (2 * heldDist * tan) / h;
       } else { heldK = 1; heldDrop = 0; }
       perWorld = (2 * camera.position.z * tan) / h;
@@ -800,31 +798,27 @@
       let shelf = null;
       if (phone && focused >= 0) {
         const hn = nodes[focused];
-        const z = -R * fitR * SHELF_BACK;
-        const dS = camera.position.z - z;                 // the row's depth
-        const dF = camera.position.z - FRONT * fitR;      // the held board's
-        const sf = SHELF_SIZE * fitS * (1 + popEff) * (dS / dF);   // the same share of the held board's apparent size
-        const per = (sf * h) / (2 * dS * tanHalf);        // px per unit on the row
-        const wpp = (2 * dS * tanHalf) / h;               // world per px there
-        let half = 0;
-        nodes.forEach((n, j) => { if (j !== focused) half = Math.max(half, n.halfY * per); });
-        const heldTop = hn.sy - hn.halfY * hn.per;        // last frame's, a frame behind
-        // The arc: the outer two lower than the middle by `drop`, and
-        // nearer. Solved for the outer two against the gap above the held
-        // board, and for the middle against the top of the band.
-        const drop = SHELF_ARC_DROP * half;
-        const sySide = Math.max(shelfTop + half + drop, heldTop - h * 0.035 - half);
-        const syMid = sySide - drop;
-        const zSide = z + SHELF_ARC_Z * R * fitR;
-        const dSide = camera.position.z - zSide;
-        const wppS = (2 * dSide * tanHalf) / h;
-        shelf = {
-          z, zSide, sf,
-          x: SHELF_SPREAD * w * wppS,
-          // the camera looks down a little: its axis is lower back there
-          yMid: aimY - 0.75 * (dS / camera.position.z - 1) + (h / 2 - syMid) * wpp,
-          ySide: aimY - 0.75 * (dSide / camera.position.z - 1) + (h / 2 - sySide) * wppS,
-        };
+        const zBack = -R * fitR * SHELF_BACK;
+        const dB = camera.position.z - zBack;             // the back of the circle
+        const dS = camera.position.z - zBack * SHELF_SIDE; // its sides
+        const dF = camera.position.z - FRONT * fitR;      // the held board
+        const sf = SHELF_SIZE * fitS * (1 + popEff) * (dB / dF);   // the back board's share of the held board's apparent size; the sides, nearer, come out a little larger
+        const perAt = (d) => (sf * h) / (2 * d * tanHalf); // px per unit at a depth
+        let sideHalfW = 0, backHalfH = 0;
+        nodes.forEach((n, j) => {
+          if (j === focused) return;
+          sideHalfW = Math.max(sideHalfW, n.halfX * perAt(dS));
+          backHalfH = Math.max(backHalfH, n.halfY * perAt(dB));
+        });
+        // The ellipse, in screen terms, around the held board (last frame's
+        // place, a frame behind): its sides clear the held board's edges and
+        // stay on the screen; its back clears the held board's top and stays
+        // under the top of the band.
+        const gap = h * 0.035;
+        const cy = hn.sy;
+        const ax = Math.min(hn.halfX * hn.per + sideHalfW + gap * 0.5, w / 2 - sideHalfW - 8);
+        const ay = Math.min(hn.halfY * hn.per + backHalfH + gap, cy - shelfTop - backHalfH);
+        shelf = { sf, zBack, cy, ax, ay };
       }
       const spread = 1 + (phone ? 0 : held * 0.34);
 
@@ -870,12 +864,21 @@
         if (shelf && i !== focused) n.shelfAt = shelf;
         const onRow = n.shelfAt && n.sk > 0.0005 ? n.sk : 0;
         if (onRow) {
-          // Where on the arc: 1 at either side of the ring, 0 across the back.
+          // Its place on the ellipse, from its own angle on the ring: 0 at
+          // the front, 1 across the back. Solved on the screen at the depth
+          // that angle has, then put into the world there.
           const q = n.slot.position, s = n.shelfAt;
-          const k = Math.max(0, Math.min(1, 1 + Math.cos(th)));
-          q.x += (Math.sin(th) * s.x - q.x) * onRow;
-          q.y += (s.yMid + (s.ySide - s.yMid) * k - q.y) * onRow;
-          q.z += (s.z + (s.zSide - s.z) * k - q.z) * onRow;
+          const u = (1 - Math.cos(th)) / 2;
+          const sx = w / 2 + Math.sin(th) * s.ax;
+          const sy = s.cy - u * s.ay;
+          const z = s.zBack * (SHELF_SIDE + (1 - SHELF_SIDE) * Math.max(0, 2 * u - 1)) * Math.min(1, 2 * u);
+          const d = camera.position.z - z;
+          const wpp = (2 * d * tanHalf) / h;
+          const X = (sx - w / 2) * wpp;
+          const Y = aimY - 0.75 * (d / camera.position.z - 1) + (h / 2 - sy) * wpp;   // the camera looks down a little
+          q.x += (X - q.x) * onRow;
+          q.y += (Y - q.y) * onRow;
+          q.z += (z - q.z) * onRow;
         }
         // The board being held turns right round — a full revolution in about
         // eleven seconds — so you see its face, its edge and its back. It
