@@ -62,7 +62,7 @@
   // board for two seconds. In them the board pops and the plate names it;
   // then the ring goes on. A swipe takes over; when it is spent the ring
   // settles on the nearest board and the cycle goes on from there.
-  const DWELL = 8000;      // ms the ring stops at each board: a slow turn, at its slowest
+  const DWELL = 5300;      // ms the ring stops at each board: the turn below at the same slow pace
   const PHONE_TURN = TURN * 3.2;   // the ring's pace between stops on a phone
   // The boards' own motion on a phone is the product page's: a swing of
   // 0.3 rad each way over nine seconds, with a slight nod on a period that
@@ -70,9 +70,9 @@
   const PHONE_SWAY = (Math.PI * 2) / 9000;   // radians per ms
   const PHONE_REACH = 0.3;                   // radians each way on a phone, as the product page's
   // And while the ring is stopped on it, the board turns through a hundred
-  // and eighty degrees: ninety to the left, through to ninety to the right,
+  // and twenty degrees: sixty to the left, through to sixty to the right,
   // and back to facing you as the ring goes on — slowly, over the whole stop.
-  const SWING = Math.PI / 2;                 // radians each way during the stop
+  const SWING = Math.PI / 3;                 // radians each way during the stop
   let stepping = false;    // set by the 3D frame: portrait, boards up
   let atRest = false;      // the ring is settled on a board (the pop's cue)
   let dwellAt = -1;        // when the current stop began; -1 before it has settled
