@@ -454,16 +454,14 @@ table td,table th{font-variant-numeric:tabular-nums}
   .hero-plate.is-in *,.hero-plate.is-in .hero-specs::before,.hero-plate.is-in .hero-specs::after{animation:none!important}
 }
 
-@media (hover:none){
-  /* On touch the plate is always up and reads the board at the front: as
-     the ring turns, its name and figures follow. A tap still holds a board
-     and a second tap opens its page. */
-  .hero-plate,.hero-specs>div,.hero-cta,.hero-trust{opacity:1;transform:none;pointer-events:auto}
-  .hero-plate{filter:none}
-  .hero-plate-name b{transform:none;transition:none}
-  .hero-specs{background-position:-35% 0}
-  .hero-specs::before,.hero-specs::after{transform:scaleX(1)}
-}
+/* The plate is always up and reads the board at the front: as the ring
+   turns, its name and figures follow — on every screen. A click or tap
+   still holds a board, and a second one opens its page. */
+.hero-plate,.hero-specs>div,.hero-cta,.hero-trust{opacity:1;transform:none;pointer-events:auto}
+.hero-plate{filter:none}
+.hero-plate-name b{transform:none;transition:none}
+.hero-specs{background-position:-35% 0}
+.hero-specs::before,.hero-specs::after{transform:scaleX(1)}
 
 /* And the stage warms under the board being looked at. */
 .hero-scene::before{transition:opacity .6s var(--ease),filter .6s var(--ease)}

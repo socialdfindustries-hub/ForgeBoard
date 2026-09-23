@@ -88,7 +88,7 @@
   // does not divide into it, so it never repeats the same arc twice.
   const PHONE_SWAY = (Math.PI * 2) / 9000;   // radians per ms
   const PHONE_REACH = 0.3;                   // radians each way on a phone, as the product page's
-  let stepping = false;    // set by the 3D frame: portrait, boards up
+  let stepping = false;    // set by the 3D frame once the boards are up
   let named = -1;
   const pop = items.map(() => 0);               // 0 in the ring, 1 at the front
   let last = performance.now();
@@ -230,16 +230,6 @@
       if (plate.order) plate.order.textContent = 'Order ' + d.name;
       if (plate.specs) plate.specs.setAttribute('href', 'boards/' + d.board + '/');
     };
-    if (fine) {
-      // Desktop: the readout powers up — a scramble on the words, a count on
-      // the numbers — as the board you clicked comes forward.
-      setAll();
-      if (plate.mcu) scramble(plate.mcu, d.mcu);
-      if (plate.clock) countUp(plate.clock, d.clock);
-      if (plate.gpio) countUp(plate.gpio, d.gpio);
-      if (plate.radio) scramble(plate.radio, d.radio);
-      return;
-    }
     // Touch: the ring turns on its own every few seconds, and a scramble on
     // every turn is noise — random glyphs of random widths, the figures
     // jumping between one line and two. So the plate dips out, the words
@@ -884,7 +874,7 @@
     const v = new THREE.Vector3();
     const frame = (now) => {
       requestAnimationFrame(frame);
-      stepping = host.clientWidth < host.clientHeight;
+      stepping = true;   // the same cycle on every screen: in from the left, stop, turn, hold, on
       const dt = step(now);
       const h = host.clientHeight, w = host.clientWidth;
       const tanHalf = Math.tan((FOV * Math.PI) / 360);
@@ -899,7 +889,7 @@
       // Centre the boards on the whole screen until a plate is called for.
       // Without a pointer there is no hover, so the plate is always up and
       // the boards stay in the framing that clears it.
-      const room = fine ? held : 1;
+      const room = 1;
       const fitS = fitRest + (fitShow - fitRest) * room;
       const aimY = -(h / 2 - (bandRest + (bandShow - bandRest) * room)) * perWorld;
       camera.position.y = aimY + 0.75;      // a little above, looking down
@@ -1012,8 +1002,8 @@
         n.fk = focused >= 0 ? (i === focused ? 1 : 0) : Math.pow(Math.max(0, Math.cos(th)), 3);
         if (!reduced && focused < 0) {
           n.slot.position.y += Math.sin(now / 1300 + i * 1.3) * BOB * fitS * n.fk;
-          // and on a phone the boards at the back float: a slower, offset bob each
-          if (phone) n.slot.position.y += Math.sin(now / 1900 + i * 2.1) * BOB * 0.9 * fitS * (1 - n.fk);
+          // and the boards at the back float: a slower, offset bob each
+          n.slot.position.y += Math.sin(now / 1900 + i * 2.1) * BOB * 0.9 * fitS * (1 - n.fk);
         }
 
         // The pop, on a phone: sprung in as this board comes to the front —
@@ -1025,7 +1015,7 @@
         // again (PAUSE_OUT), then the ring moves on. Cut short by a swipe,
         // a turn finishes at the same pace rather than freezing on its
         // back; a held board finishes it too.
-        const mine = phone && focused < 0 && i === frontI && atRest;
+        const mine = focused < 0 && i === frontI && atRest;
         const tIn = mine && dwellAt >= 0 ? now - dwellAt : -1;
         if (reduced) n.showK = 1;
         else if (mine) n.showK = Math.max(0, Math.min(1, (tIn - PAUSE_IN) / TURN_MS));
@@ -1040,7 +1030,7 @@
           : sth < 0 ? -sth / (Math.PI / 2)
           : sth < Math.PI / 2 ? 0
           : (sth - Math.PI / 2) / (Math.PI / 2);
-        const entryWant = phone && focused < 0 ? -ENTRY_YAW * carried : 0;
+        const entryWant = focused < 0 ? -ENTRY_YAW * carried : 0;
         n.entry += (entryWant - n.entry) * (1 - Math.pow(0.02, dt / 1000));
         const entry = n.entry;
         const kk = n.showK, ra = 0.1, rs = 1 / (1 - ra);
@@ -1060,7 +1050,7 @@
           } else {
             const front = Math.round(n.spin / (Math.PI * 2)) * (Math.PI * 2);
             n.spin += (front - n.spin) * (1 - Math.pow(0.12, dt / 1000));
-            n.sway += (phone ? PHONE_SWAY : 0.00019) * dt;
+            n.sway += PHONE_SWAY * dt;
           }
         }
         // A held board leans toward the pointer. You are not spinning it — it
@@ -1076,15 +1066,15 @@
 
         n.slot.rotation.y = n.spin + Math.sin(n.sway) * (phone ? PHONE_REACH : 0.3) * (1 - p) + n.tiltY + n.showA + entry;
         n.slot.rotation.x = -0.22 + 0.1 * p + n.tiltX
-          + (phone ? Math.sin(n.sway / 1.618) * 0.078 * (1 - p) : 0);   // the product page's nod
+          + Math.sin(n.sway / 1.618) * 0.078 * (1 - p);   // the product page's nod
         const popK = popEff;
         // Portrait: depth is drawn, not just implied. The board across the
         // back is smaller and the sides between, so the ring reads as a ring
         // and not as four boards laid on one another; a held board is full.
         const tDepth = (Math.cos(th) + 1) / 2;
-        // Portrait: 45% at the back, about 60% at the sides, full in front —
-        // a circle seen from above, each board the size its depth gives it.
-        const depthK = w < h ? (0.45 + 0.55 * Math.pow(tDepth, 2)) * (1 - p) + p : 1;
+        // 45% at the back, about 60% at the sides, full in front — a circle
+        // seen from above, each board the size its depth gives it.
+        const depthK = (0.45 + 0.55 * Math.pow(tDepth, 2)) * (1 - p) + p;
         // Phone, on the row: the size the row was solved for.
         let sf = fitS * (1 + popK * p) * depthK;
         if (onRow) sf += (n.shelfAt.sf - sf) * onRow;
@@ -1120,7 +1110,7 @@
         // meshes' materials every frame for an unchanged value is waste.
         // Held: lifted out of the dark. Not held, while another is: sat back
         // into it. Nothing held: as lit as it was.
-        const depthDim = phone ? 0.78 + 0.22 * tDepth : 1;   // portrait: the back sits back a little, still clearly lit
+        const depthDim = 0.78 + 0.22 * tDepth;   // the back sits back a little, still clearly lit
         // Phone, one held: the row is behind, not in the dark — lit enough
         // to be read as the three boards it is.
         const want = focused < 0 ? depthDim * (1 + 0.1 * n.fk)   // the front board, lifted a little
