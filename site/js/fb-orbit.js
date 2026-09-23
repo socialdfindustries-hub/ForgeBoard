@@ -505,8 +505,8 @@
   const POP_PHONE = 0.12;    // on a phone a tapped board comes forward and grows a little more
   const LIFT_DESK = 0.46;    // how far the far side of the ring rides up (turntable from above)
   const LIFT_PHONE = 1.0;    // portrait has height to spend and no width: a steeper table (the back board's rise is twice this)
-  const LIFT_SIDE = 1.35;    // portrait: the two beside the front board ride higher than the table would put them —
-                             // beside its upper half, where the width is, rather than beside its middle
+  const LIFT_SIDE = 1.1;     // portrait: the two beside the front board sit at the circle's widest —
+                             // a little above the front board's middle — where a ring seen from above has them
   // Phone, one board held: the other three stay on the ring — its circle,
   // opened out around the held board so all four are in view. Seen from
   // above the circle is an ellipse on the screen: the held board at its
@@ -657,7 +657,7 @@
         // ring's radius comes from the front board's own width, so the
         // sides can never sit on it; only the band's height can shrink it.
         const WIDTH_FRAC = 0.56;   // the front board's share of the screen width
-        const RING_K = 1.7;        // ring radius, in front-board half-widths: the sides stay on the screen
+        const RING_K = 1.5;        // ring radius, in front-board half-widths: the sides reach the screen's edges, less a little padding
         let fr = 0.4, fs = 1;
         for (let k = 0; k < 3; k++) {          // radius and size depend on each other
           const px = h / (2 * (camera.position.z - R * fr) * tan);   // px per unit, front of ring
@@ -665,7 +665,7 @@
           fr = (RING_K * UNIT * fs * 0.31) / R;
         }
         const px = h / (2 * (camera.position.z - R * fr) * tan);
-        const needs = (2 * LIFT_PHONE * fs + UNIT * fs * (0.56 + 0.5 * 0.42)) * px;   // rise + front half + back half (at its 42%)
+        const needs = (2 * LIFT_PHONE * fs + UNIT * fs * (0.56 + 0.5 * 0.45)) * px;   // rise + front half + back half (at its 45%)
         if (needs > showUsable) { const k = showUsable / needs; fs *= k; fr *= k; }
         fitShow = fitRest = fs;
         fitR = fr;
@@ -1039,9 +1039,9 @@
         // back is smaller and the sides between, so the ring reads as a ring
         // and not as four boards laid on one another; a held board is full.
         const tDepth = (Math.cos(th) + 1) / 2;
-        // Portrait: small at the back, half-size at the sides, full in front —
-        // the sides are behind the front board's shoulders and must read so.
-        const depthK = w < h ? (0.42 + 0.58 * Math.pow(tDepth, 3)) * (1 - p) + p : 1;
+        // Portrait: 45% at the back, about 60% at the sides, full in front —
+        // a circle seen from above, each board the size its depth gives it.
+        const depthK = w < h ? (0.45 + 0.55 * Math.pow(tDepth, 2)) * (1 - p) + p : 1;
         // Phone, on the row: the size the row was solved for.
         let sf = fitS * (1 + popK * p) * depthK * (1 + POP_FRONT * popIn);
         if (onRow) sf += (n.shelfAt.sf - sf) * onRow;
