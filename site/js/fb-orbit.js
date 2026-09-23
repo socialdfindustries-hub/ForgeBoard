@@ -238,7 +238,11 @@
   let spin = null;
   host.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'touch' || !host.classList.contains('is-3d')) return;
-    if (focused >= 0) setFocus(-1);
+    // Not let go here. A tap lets go on its click, where the target is
+    // judged: released on the touch itself, the boards were already on
+    // their way back when the click landed a beat later, and whichever one
+    // had swung under the finger was taken as the thing tapped. A swipe
+    // lets go the moment it has moved, below.
     spin = { x0: e.clientX, a0: angle, x: e.clientX, t: performance.now(), v: 0, moved: false };
   }, { passive: true });
   host.addEventListener('pointermove', (e) => {
@@ -246,7 +250,10 @@
     const now = performance.now();
     spin.v = (e.clientX - spin.x) / Math.max(1, now - spin.t);
     spin.x = e.clientX; spin.t = now;
-    if (Math.abs(e.clientX - spin.x0) > 8) spin.moved = true;
+    if (Math.abs(e.clientX - spin.x0) > 8 && !spin.moved) {
+      spin.moved = true;
+      if (focused >= 0) { setFocus(-1); spin.a0 = angle; }   // a swipe with a board held lets it go and spins from there
+    }
     angle = spin.a0 + ((e.clientX - spin.x0) / (host.clientWidth * 0.8)) * STEP;
   }, { passive: true });
   const spinEnd = (e) => {
@@ -443,6 +450,12 @@
   const POP_PHONE = 0.12;    // on a phone a tapped board comes forward and grows a little more
   const LIFT_DESK = 0.46;    // how far the far side of the ring rides up (turntable from above)
   const LIFT_PHONE = 0.95;   // portrait has height to spend and no width: a steeper table
+  // Phone, one board held: the other three wait in a row across the back.
+  const SHELF_BACK = 1.25;   // how far back the row is, in ring radii
+  const SHELF_SIZE = 0.36;   // a board on the row, as a share of the held board's apparent size
+  const SHELF_SPREAD = 0.31; // the outer two this far either side of the middle, as a share of the width
+  const SHELF_DIM = 0.72;    // lit to here: behind, not in the dark
+  const SHELF_W = 11, SHELF_Z = 0.82;   // the spring that carries a board there and back: rad/s, damping ratio
   const REF = 200;           // px per world unit the hit boxes are sized at
 
   async function run3d() {
@@ -525,6 +538,7 @@
     // back to make room for the readout rather than as a resize.
     let fitR = 1, fitRest = 1, fitShow = 1;
     let bandRest = 0, bandShow = 0, perWorld = 0;
+    let shelfTop = 0, heldK = 1, heldDrop = 0;   // phone, one held: the row's ceiling; the held board's size and drop
     const resize = () => {
       const w = host.clientWidth, h = host.clientHeight;
       if (!w || !h) return;
@@ -600,6 +614,16 @@
       );
       const restHalf = ringPer * fitRest * 0.56 + liftPer * fitRest * 0.4;
       bandRest = Math.min(Math.max(h / 2, usableTop + restHalf), h - restHalf - h * 0.06);
+      // Phone, one held: the row across the back takes the top of the band
+      // and the held board the foot of it. Dropped from the ring's line by
+      // the room under it, and — on a short screen — sized so the two fit:
+      // its own height, the row's (a set fraction of it) and a gap.
+      shelfTop = usableTop;
+      if (portrait) {
+        const roomH = showUsable - h * 0.035;
+        heldK = Math.min(1, roomH / (2 * heldHalf * (1 + SHELF_SIZE)));
+        heldDrop = -Math.max(0, showBottom - heldHalf * heldK - bandShow) * (2 * heldDist * tan) / h;
+      } else { heldK = 1; heldDrop = 0; }
       perWorld = (2 * camera.position.z * tan) / h;
     };
     resize();
@@ -706,6 +730,7 @@
         sway: i * 1.7,
         tiltX: 0, tiltY: 0, sx: 0, sy: 0,
         dim: 1, lastDim: 1,
+        sk: 0, sv: 0, per: 0, shelfAt: null,   // the row: how far there, its speed, px per unit last frame, where it was
       });
       // Its render stays until the handoff below: hiding it here, with the
       // 3D loop not yet running, left an empty slot on the ring for every
@@ -757,7 +782,36 @@
       camera.lookAt(0, aimY, 0);
       // The ring opens out of the held board's way. How far each of the three
       // then has to go is decided per board below, by where on the ring it is.
-      const spread = 1 + held * 0.34;
+      const phone = w < h;
+      const popEff = phone ? (1 + POP_PHONE) * heldK - 1 : POP_SCALE;
+      // Phone, one board held: the other three do not stay on the ring. At
+      // this width the ring's sides sit half off the screen and its back
+      // board is hidden behind the held one, so they go to a row across the
+      // back instead — level, evenly spaced, whole, above the held board
+      // and a set fraction of its size: the boards waiting their turn, all
+      // in view. The row is solved on the screen and put into the world at
+      // its own depth, so it lands where it was drawn whatever the phone.
+      let shelf = null;
+      if (phone && focused >= 0) {
+        const hn = nodes[focused];
+        const z = -R * fitR * SHELF_BACK;
+        const dS = camera.position.z - z;                 // the row's depth
+        const dF = camera.position.z - FRONT * fitR;      // the held board's
+        const sf = SHELF_SIZE * fitS * (1 + popEff) * (dS / dF);   // the same share of the held board's apparent size
+        const per = (sf * h) / (2 * dS * tanHalf);        // px per unit on the row
+        const wpp = (2 * dS * tanHalf) / h;               // world per px there
+        let half = 0;
+        nodes.forEach((n, j) => { if (j !== focused) half = Math.max(half, n.halfY * per); });
+        const heldTop = hn.sy - hn.halfY * hn.per;        // last frame's, a frame behind
+        const sy = Math.max(shelfTop + half, heldTop - h * 0.035 - half);
+        shelf = {
+          z, sf,
+          x: SHELF_SPREAD * w * wpp,
+          // the camera looks down a little: its axis is lower back there
+          y: aimY - 0.75 * (dS / camera.position.z - 1) + (h / 2 - sy) * wpp,
+        };
+      }
+      const spread = 1 + (phone ? 0 : held * 0.34);
 
       nodes.forEach((n, i) => {
         const th = angle + i * STEP;
@@ -775,16 +829,37 @@
         // bottom edge clears the held board's top: over the shoulder rather
         // than behind the head. Squared, so the sides barely feel it.
         const behind = (1 - Math.cos(th)) / 2;
-        const tuck = held * behind * behind;
-        const away = held * 1.5 + tuck * 4.4;
+        // On a phone the row across the back does this job instead.
+        const tuck = phone ? 0 : held * behind * behind;
+        const away = phone ? 0 : held * 1.5 + tuck * 4.4;
         // portrait: the board across the back is small and the band has no
         // headroom, so it rises less when a held board needs it out of the way
-        const lift = (1 - Math.cos(th)) * (w < h ? LIFT_PHONE : LIFT_DESK) + tuck * (w < h ? 1.4 : 2.9);
+        const lift = (1 - Math.cos(th)) * (phone ? LIFT_PHONE : LIFT_DESK) + tuck * (phone ? 1.4 : 2.9);
         n.slot.position.set(
           Math.sin(th) * R * fitR * spread * (1 - p),
-          lift * fitS * (1 - p),
+          lift * fitS * (1 - p) + (phone ? heldDrop * p : 0),
           (Math.cos(th) * R * fitR - away) * (1 - p) + FRONT * fitR * p
         );
+        // To the row and back, on a spring: a little under-damped, so a
+        // board arrives and settles rather than slides to a stop — the
+        // difference between a thing put down and a thing faded in. The
+        // row's place is kept from the last frame it was solved, so a board
+        // on its way back has somewhere to come from.
+        const toRow = shelf && i !== focused ? 1 : 0;
+        if (reduced) { n.sk = toRow; n.sv = 0; }
+        else {
+          const dts = Math.min(dt, 50) / 1000;
+          n.sv += ((toRow - n.sk) * SHELF_W * SHELF_W - n.sv * 2 * SHELF_Z * SHELF_W) * dts;
+          n.sk += n.sv * dts;
+        }
+        if (shelf && i !== focused) n.shelfAt = shelf;
+        const onRow = n.shelfAt && n.sk > 0.0005 ? n.sk : 0;
+        if (onRow) {
+          const q = n.slot.position, s = n.shelfAt;
+          q.x += (Math.sin(th) * s.x - q.x) * onRow;
+          q.y += (s.y - q.y) * onRow;
+          q.z += (s.z - q.z) * onRow;
+        }
         // The board being held turns right round — a full revolution in about
         // eleven seconds — so you see its face, its edge and its back. It
         // is deliberately slow: this is the board you are being invited to
@@ -814,17 +889,16 @@
 
         n.slot.rotation.y = n.spin + Math.sin(n.sway) * 0.3 * (1 - p) + n.tiltY;
         n.slot.rotation.x = -0.22 + 0.1 * p + n.tiltX;
-        const popK = w < h ? POP_PHONE : POP_SCALE;
+        const popK = popEff;
         // Portrait: depth is drawn, not just implied. The board across the
         // back is smaller and the sides between, so the ring reads as a ring
         // and not as four boards laid on one another; a held board is full.
         const tDepth = (Math.cos(th) + 1) / 2;
         const depthK = w < h ? (0.42 + 0.58 * tDepth) * (1 - p) + p : 1;   // small at the back, full in front
-        // Phone: a held board has the stage to itself. The other three shrink
-        // away as it comes forward and grow back as it is let go; a desktop
-        // has the width to keep them dimmed in the background instead.
-        const gone = (w < h && focused >= 0 && focused !== i) ? (1 - held) : 1;
-        n.holder.scale.setScalar(n.unit * fitS * (1 + popK * p) * depthK * gone);
+        // Phone, on the row: the size the row was solved for.
+        let sf = fitS * (1 + popK * p) * depthK;
+        if (onRow) sf += (n.shelfAt.sf - sf) * onRow;
+        n.holder.scale.setScalar(n.unit * sf);
 
         // Keep this board's link exactly over it, at its apparent size, so
         // the pointer and the keyboard land on the thing they can see.
@@ -834,7 +908,8 @@
         const sx = (v.x * 0.5 + 0.5) * w;
         const sy = (-v.y * 0.5 + 0.5) * h;
         n.sx = sx; n.sy = sy;
-        const perPx = (fitS * (1 + popK * p) * depthK * gone * h) / (2 * dist * tanHalf);
+        const perPx = (sf * h) / (2 * dist * tanHalf);
+        n.per = perPx;
         const li = items[i];
         if (!n.sized) {
           // Once: the box at a reference scale. Everything after is transform.
@@ -854,8 +929,12 @@
         // meshes' materials every frame for an unchanged value is waste.
         // Held: lifted out of the dark. Not held, while another is: sat back
         // into it. Nothing held: as lit as it was.
-        const depthDim = w < h ? 0.62 + 0.38 * tDepth : 1;   // portrait: the back sits back a little, no darker
-        const want = (focused < 0 ? 1 : (focused === i ? 1.25 : 0.38)) * (focused === i ? 1 : depthDim);
+        const depthDim = phone ? 0.62 + 0.38 * tDepth : 1;   // portrait: the back sits back a little, no darker
+        // Phone, one held: the row is behind, not in the dark — lit enough
+        // to be read as the three boards it is.
+        const want = focused < 0 ? depthDim
+          : focused === i ? 1.25
+          : phone ? SHELF_DIM : 0.38 * depthDim;
         n.dim += (want - n.dim) * (1 - Math.pow(0.004, dt / 1000));
         if (Math.abs(n.dim - n.lastDim) > 0.004) {
           n.lastDim = n.dim;
