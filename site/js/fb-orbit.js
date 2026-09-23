@@ -510,6 +510,28 @@
     const ring = new THREE.Group();
     scene.add(ring);
 
+    // The pool of light a board comes forward into. A soft amber disc drawn
+    // behind whichever board is at the front — its own for each board, so
+    // as one leaves the front its light goes down while the next one's
+    // comes up, and nothing jumps. A canvas gradient, not an image.
+    const haloTex = (() => {
+      const c = document.createElement('canvas');
+      c.width = c.height = 256;
+      const g = c.getContext('2d');
+      const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+      grad.addColorStop(0, 'rgba(243,154,0,0.62)');
+      grad.addColorStop(0.3, 'rgba(243,154,0,0.26)');
+      grad.addColorStop(0.62, 'rgba(243,154,0,0.06)');
+      grad.addColorStop(1, 'rgba(243,154,0,0)');
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 256, 256);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    })();
+    const HALO = 2.3;        // the light's width, in board heights
+    const BOB = 0.06;        // how far the front board rides up and down, in units of fit
+
     // A field of points well behind the ring. It gives the dark somewhere to
     // be — the boards read as floating in a space rather than on a flat panel
     // — and parallaxes as the ring turns, for about 12 KB of geometry.
@@ -724,8 +746,16 @@
         });
       });
 
+      // Behind the board, in the ring's frame rather than the slot's, so it
+      // stays put as the board turns. Depth-tested, not written: the board
+      // covers its middle and the light shows around it.
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: haloTex, transparent: true, opacity: 0, depthWrite: false,
+      }));
+      ring.add(halo);
+
       nodes.push({
-        slot, holder, mats, unit,
+        slot, holder, mats, unit, halo, fk: 0,
         // Each board's own extents, not its largest side: a tall board should
         // not claim a wide hit area it does not fill.
         halfX: (size.x * unit) / 2,
@@ -880,6 +910,12 @@
           q.y += (Y - q.y) * onRow;
           q.z += (z - q.z) * onRow;
         }
+        // How far to the front this board is: 1 there, gone by the sides.
+        // At rest the front board hovers — a slow ride up and down — and its
+        // light is up; a held board keeps the light and holds still.
+        n.fk = focused >= 0 ? (i === focused ? 1 : 0) : Math.pow(Math.max(0, Math.cos(th)), 3);
+        if (!reduced && focused < 0) n.slot.position.y += Math.sin(now / 1300 + i * 1.3) * BOB * fitS * n.fk;
+
         // The board being held turns right round — a full revolution in about
         // eleven seconds — so you see its face, its edge and its back. It
         // is deliberately slow: this is the board you are being invited to
@@ -920,6 +956,16 @@
         if (onRow) sf += (n.shelfAt.sf - sf) * onRow;
         n.holder.scale.setScalar(n.unit * sf);
 
+        // The light: sized to the board, behind it, breathing a little.
+        const haloS = n.halfY * sf * 2 * HALO;
+        n.halo.scale.set(haloS, haloS, 1);
+        n.halo.position.copy(n.slot.position);
+        n.halo.position.z -= 0.35;
+        const breathe = reduced ? 1 : 0.9 + 0.1 * Math.sin(now / 900);
+        const wantHalo = n.fk * breathe;
+        n.halo.material.opacity += (wantHalo - n.halo.material.opacity) * (1 - Math.pow(0.02, dt / 1000));
+        n.halo.visible = n.halo.material.opacity > 0.01;
+
         // Keep this board's link exactly over it, at its apparent size, so
         // the pointer and the keyboard land on the thing they can see.
         n.slot.getWorldPosition(v);
@@ -952,7 +998,7 @@
         const depthDim = phone ? 0.62 + 0.38 * tDepth : 1;   // portrait: the back sits back a little, no darker
         // Phone, one held: the row is behind, not in the dark — lit enough
         // to be read as the three boards it is.
-        const want = focused < 0 ? depthDim
+        const want = focused < 0 ? depthDim * (1 + 0.1 * n.fk)   // the front board, lifted a little
           : focused === i ? 1.25
           : phone ? SHELF_DIM : 0.38 * depthDim;
         n.dim += (want - n.dim) * (1 - Math.pow(0.004, dt / 1000));
