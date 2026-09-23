@@ -504,7 +504,9 @@
   const POP_SCALE = 0.15;    // extra size on the board that has come forward
   const POP_PHONE = 0.12;    // on a phone a tapped board comes forward and grows a little more
   const LIFT_DESK = 0.46;    // how far the far side of the ring rides up (turntable from above)
-  const LIFT_PHONE = 0.95;   // portrait has height to spend and no width: a steeper table
+  const LIFT_PHONE = 1.0;    // portrait has height to spend and no width: a steeper table (the back board's rise is twice this)
+  const LIFT_SIDE = 1.35;    // portrait: the two beside the front board ride higher than the table would put them —
+                             // beside its upper half, where the width is, rather than beside its middle
   // Phone, one board held: the other three stay on the ring — its circle,
   // opened out around the held board so all four are in view. Seen from
   // above the circle is an ellipse on the screen: the held board at its
@@ -574,7 +576,7 @@
     const POP_FRONT = 0.10;  // larger by this much
     const POP_RISE = 0.05;   // up by this much, in units of fit
     const POP_FWD = 0.30;    // forward by this much, in ring radii
-    const POP_ROOM = 0.14;   // how far the board across the back rises to make room, in units of fit
+    const POP_ROOM = 0.2;    // how far the board across the back rises to make room, in units of fit
     const POP_W = 9, POP_Z = 0.6;   // the spring: rad/s, damping ratio — under-damped, so it pops
     let frontI = -1;         // the board at the front, from the last frame
 
@@ -655,7 +657,7 @@
         // ring's radius comes from the front board's own width, so the
         // sides can never sit on it; only the band's height can shrink it.
         const WIDTH_FRAC = 0.56;   // the front board's share of the screen width
-        const RING_K = 1.9;        // ring radius, in front-board half-widths
+        const RING_K = 1.7;        // ring radius, in front-board half-widths: the sides stay on the screen
         let fr = 0.4, fs = 1;
         for (let k = 0; k < 3; k++) {          // radius and size depend on each other
           const px = h / (2 * (camera.position.z - R * fr) * tan);   // px per unit, front of ring
@@ -920,7 +922,13 @@
         const away = phone ? 0 : held * 1.5 + tuck * 4.4;
         // portrait: the board across the back is small and the band has no
         // headroom, so it rises less when a held board needs it out of the way
-        const lift = (1 - Math.cos(th)) * (phone ? LIFT_PHONE : LIFT_DESK) + tuck * (phone ? 1.4 : 2.9);
+        // Portrait: the sides ride up to LIFT_SIDE, the back on to twice
+        // LIFT_PHONE — two straight runs rather than the table's one curve,
+        // so the sides can sit high without the back going off the top.
+        const u2 = 1 - Math.cos(th);   // 0 at the front, 1 at the sides, 2 across the back
+        const lift = phone
+          ? LIFT_SIDE * Math.min(1, u2) + (2 * LIFT_PHONE - LIFT_SIDE) * Math.max(0, u2 - 1) + tuck * 1.4
+          : u2 * LIFT_DESK + tuck * 2.9;
         n.slot.position.set(
           Math.sin(th) * R * fitR * spread * (1 - p),
           lift * fitS * (1 - p) + (phone ? heldDrop * p : 0),
@@ -1031,7 +1039,9 @@
         // back is smaller and the sides between, so the ring reads as a ring
         // and not as four boards laid on one another; a held board is full.
         const tDepth = (Math.cos(th) + 1) / 2;
-        const depthK = w < h ? (0.42 + 0.58 * tDepth) * (1 - p) + p : 1;   // small at the back, full in front
+        // Portrait: small at the back, half-size at the sides, full in front —
+        // the sides are behind the front board's shoulders and must read so.
+        const depthK = w < h ? (0.42 + 0.58 * Math.pow(tDepth, 3)) * (1 - p) + p : 1;
         // Phone, on the row: the size the row was solved for.
         let sf = fitS * (1 + popK * p) * depthK * (1 + POP_FRONT * popIn);
         if (onRow) sf += (n.shelfAt.sf - sf) * onRow;
